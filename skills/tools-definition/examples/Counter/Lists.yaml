@@ -1,0 +1,9 @@
+counterList:
+  parameters:
+    - '?string $activeFrom'
+    - '?string $activeUntil'
+  counter:
+    source: counters
+    field: 'identifier, clientIdentifier, meterLocationIdentifier, counterNumber, activeFrom, activeUntil'
+  filter: 'counter.activeFrom >= $activeFrom AND counter.activeUntil <= $activeUntil'
+  orderBy: 'counter.activeFrom DESC'

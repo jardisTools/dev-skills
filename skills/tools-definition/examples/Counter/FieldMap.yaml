@@ -1,0 +1,30 @@
+counter:
+  id: id
+  identifier: identifier
+  clientIdentifier: clientIdentifier
+  meterLocationIdentifier: meterLocationIdentifier
+  counterNumber: counterNumber
+  activeFrom: activeFrom
+  activeUntil: activeUntil
+counterGateway:
+  id: id
+  counterId: counterId
+  gatewayId: gatewayId
+  activeFrom: activeFrom
+  activeUntil: activeUntil
+counterGatewayRegister:
+  id: id
+  identifier: identifier
+  counterGatewayId: counterGatewayId
+  configurationIdentification: configurationIdentification
+  registerId: registerId
+  activeFrom: activeFrom
+  activeUntil: activeUntil
+register:
+  id: id
+  clientIdentifier: clientIdentifier
+  obis: obis
+gateway:
+  id: id
+  identifier: identifier
+  type: type
