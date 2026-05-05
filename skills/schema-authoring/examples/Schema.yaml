@@ -1,0 +1,327 @@
+tables:
+  counters:
+    name: counters
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: identifier
+        type: varchar
+        phpType: string
+        length: 36
+        nullable: false
+      -
+        name: clientIdentifier
+        type: varchar
+        phpType: string
+        length: 36
+        nullable: false
+      -
+        name: meterLocationIdentifier
+        type: varchar
+        phpType: string
+        length: 50
+        nullable: false
+      -
+        name: counterNumber
+        type: varchar
+        phpType: string
+        length: 50
+        nullable: false
+      -
+        name: activeFrom
+        type: date
+        phpType: datetime
+        nullable: false
+      -
+        name: activeUntil
+        type: date
+        phpType: datetime
+        nullable: true
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+      -
+        name: identifier
+        columns:
+          - identifier
+        type: unique
+    foreignKeys: {  }
+  register_relations:
+    name: register_relations
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: identifier
+        type: varchar
+        phpType: string
+        length: 36
+        nullable: false
+      -
+        name: relatedId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: relatedType
+        type: varchar
+        phpType: string
+        length: 20
+        nullable: false
+      -
+        name: registerId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: activeFrom
+        type: date
+        phpType: datetime
+        nullable: false
+      -
+        name: activeUntil
+        type: date
+        phpType: datetime
+        nullable: true
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+      -
+        name: identifier
+        columns:
+          - identifier
+        type: unique
+      -
+        name: idx_register_relations_registerId
+        columns:
+          - registerId
+        type: index
+    foreignKeys:
+      -
+        column: registerId
+        referencedTable: registers
+        referencedColumn: id
+  registers:
+    name: registers
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: clientIdentifier
+        type: varchar
+        phpType: string
+        length: 36
+        nullable: false
+      -
+        name: obis
+        type: varchar
+        phpType: string
+        length: 20
+        nullable: false
+      -
+        name: identifier
+        type: varchar
+        length: 36
+        phpType: string
+        nullable: false
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+      -
+        name: uq_registers_identifier
+        columns:
+          - identifier
+        type: unique
+    foreignKeys: {  }
+  counter_gateways:
+    name: counter_gateways
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: counterId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: gatewayId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: activeFrom
+        type: date
+        phpType: datetime
+        nullable: false
+      -
+        name: activeUntil
+        type: date
+        phpType: datetime
+        nullable: true
+      -
+        name: identifier
+        type: varchar
+        length: 36
+        phpType: string
+        nullable: false
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+      -
+        name: uq_counter_gateways_identifier
+        columns:
+          - identifier
+        type: unique
+      -
+        name: idx_counter_gateways_counterId
+        columns:
+          - counterId
+        type: index
+      -
+        name: idx_counter_gateways_gatewayId
+        columns:
+          - gatewayId
+        type: index
+    foreignKeys:
+      -
+        column: counterId
+        referencedTable: counters
+        referencedColumn: id
+      -
+        column: gatewayId
+        referencedTable: gateways
+        referencedColumn: id
+  gateways:
+    name: gateways
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: identifier
+        type: varchar
+        phpType: string
+        length: 50
+        nullable: false
+      -
+        name: type
+        type: varchar
+        phpType: string
+        length: 20
+        nullable: true
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+    foreignKeys: {  }
+  counter_gateway_registers:
+    name: counter_gateway_registers
+    columns:
+      -
+        name: id
+        type: int
+        phpType: int
+        nullable: false
+        primary: true
+        autoincrement: true
+      -
+        name: identifier
+        type: varchar
+        phpType: string
+        length: 36
+        nullable: false
+      -
+        name: counterGatewayId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: configurationIdentification
+        type: varchar
+        phpType: string
+        length: 100
+        nullable: false
+      -
+        name: registerId
+        type: int
+        phpType: int
+        nullable: false
+      -
+        name: activeFrom
+        type: date
+        phpType: datetime
+        nullable: false
+      -
+        name: activeUntil
+        type: date
+        phpType: datetime
+        nullable: true
+    indexes:
+      -
+        name: PRIMARY
+        columns:
+          - id
+        type: primary
+      -
+        name: identifier
+        columns:
+          - identifier
+        type: unique
+      -
+        name: idx_counter_gateway_registers_counterGatewayId
+        columns:
+          - counterGatewayId
+        type: index
+      -
+        name: idx_counter_gateway_registers_registerId
+        columns:
+          - registerId
+        type: index
+    foreignKeys:
+      -
+        column: counterGatewayId
+        referencedTable: counter_gateways
+        referencedColumn: id
+      -
+        column: registerId
+        referencedTable: registers
+        referencedColumn: id

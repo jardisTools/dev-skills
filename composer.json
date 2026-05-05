@@ -1,0 +1,58 @@
+{
+    "name": "jardis/dev-skills",
+    "description": "Composer plugin that installs Jardis Skills and aggregates AGENTS.md for AI-assisted development (Claude Code, Cursor, Continue, Aider)",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "authors": [
+        {
+            "name": "Jardis Development",
+            "email": "jardisDev@headgent.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.3",
+        "composer-plugin-api": "^2"
+    },
+    "require-dev": {
+        "composer/composer": "^2.7",
+        "phpunit/phpunit": "^11.0",
+        "phpstan/phpstan": "^2.0.4",
+        "squizlabs/php_codesniffer": "^3.11.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "JardisTools\\DevSkills\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JardisTools\\DevSkills\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "audit": {
+            "ignore": [
+                "PKSA-5jz8-6tcw-pbk4",
+                "PKSA-z3gr-8qht-p93v"
+            ]
+        }
+    },
+    "extra": {
+        "class": "JardisTools\\DevSkills\\Plugin"
+    },
+    "support": {
+        "email": "jardisDev@headgent.com"
+    },
+    "keywords": [
+        "composer-plugin",
+        "claude-code",
+        "agents.md",
+        "jardis",
+        "skills",
+        "ai-assisted",
+        "DDD",
+        "headgent"
+    ]
+}

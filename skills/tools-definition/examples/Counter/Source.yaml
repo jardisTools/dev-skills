@@ -1,0 +1,21 @@
+counterGateway:
+  source: counter_gateways
+  relates: 'counterId = counter.id'
+  orderBy: 'id ASC'
+counterGatewayRegister:
+  source: counter_gateway_registers
+  relates: 'counterGatewayId = counterGateway.id'
+  orderBy: 'id ASC'
+register:
+  source: registers
+  relates: 'id = counterGatewayRegister.registerId'
+gateway:
+  source: gateways
+  relates: 'id = counterGateway.gatewayId'
+queries:
+  default:
+    parameters:
+      - 'string $identifier'
+    counter:
+      source: counters
+      relates: 'identifier = $identifier'

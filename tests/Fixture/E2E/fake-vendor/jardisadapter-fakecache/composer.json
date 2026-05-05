@@ -1,0 +1,6 @@
+{
+    "name": "jardisadapter/fakecache",
+    "description": "Test fixture: fake adapter package for E2E plugin tests",
+    "type": "library",
+    "license": "MIT"
+}

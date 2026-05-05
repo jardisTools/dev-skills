@@ -1,0 +1,30 @@
+counter:
+  source: counters
+  erm: one
+  counterGateway:
+    source: counter_gateways
+    erm: many
+    counterGatewayRegister:
+      source: counter_gateway_registers
+      erm: many
+      depend:
+        registerId: register.id
+      register:
+        source: registers
+        erm: one
+        relates: 'id = counterGatewayRegister.registerId'
+      adopt:
+        identifier: '"__UUID7__"'
+        counterGatewayId: counterGateway.id
+      relates: 'counterGatewayId = counterGateway.id'
+    depend:
+      gatewayId: gateway.id
+    gateway:
+      source: gateways
+      erm: one
+      relates: 'id = counterGateway.gatewayId'
+    relates: 'counterId = counter.id'
+    adopt:
+      counterId: counter.id
+  adopt:
+    identifier: '"__UUID7__"'
