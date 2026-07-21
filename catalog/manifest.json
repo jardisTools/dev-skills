@@ -74,10 +74,10 @@
     "composer_require": "composer require jardissupport/classversion"
   },
   {
-    "package": "jardissupport/contract",
+    "package": "jardissupport/contracts",
     "capability": "shared port interfaces and contracts for all Jardis packages",
     "use_when": "you need the interface definitions that Jardis adapters implement, without depending on any concrete implementation",
-    "composer_require": "composer require jardissupport/contract"
+    "composer_require": "composer require jardissupport/contracts"
   },
   {
     "package": "jardissupport/data",
