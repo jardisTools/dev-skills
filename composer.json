@@ -1,0 +1,63 @@
+{
+    "name": "jardis/dev-skills",
+    "homepage": "https://jardis.io",
+    "description": "Composer plugin that installs Jardis Skills and aggregates AGENTS.md for AI-assisted development (Claude Code, Cursor, Continue, Aider)",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "authors": [
+        {
+            "name": "Jardis Development",
+            "email": "jardisDev@headgent.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.3",
+        "composer-plugin-api": "^2"
+    },
+    "require-dev": {
+        "composer/composer": "2.10.2",
+        "phpunit/phpunit": "11.5.55",
+        "phpstan/phpstan": "2.2.3",
+        "squizlabs/php_codesniffer": "3.13.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "JardisTools\\DevSkills\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JardisTools\\DevSkills\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "audit": {
+            "ignore": [
+                "PKSA-5jz8-6tcw-pbk4",
+                "PKSA-z3gr-8qht-p93v"
+            ]
+        }
+    },
+    "extra": {
+        "class": "JardisTools\\DevSkills\\Plugin"
+    },
+    "support": {
+        "issues": "https://github.com/jardisTools/dev-skills/issues",
+        "docs": "https://docs.jardis.io/en/skills",
+        "email": "jardisDev@headgent.com"
+    },
+    "keywords": [
+        "composer-plugin",
+        "claude-code",
+        "agents.md",
+        "jardis",
+        "skills",
+        "ai-assisted",
+        "ai-assisted-development",
+        "ddd",
+        "domain-driven-design",
+        "headgent"
+    ]
+}

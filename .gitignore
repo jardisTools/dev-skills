@@ -1,0 +1,15 @@
+vendor/
+composer.lock
+/.env
+.idea/
+.vscode/
+.DS_Store
+tests/reports/
+
+# Session-Handover-Doku (PROJECT WORKFLOW) — nie committen
+docs/
+CHANGELOG.md
+
+# dev-skills Skill-Backups — lokal, nie committen
+.claude/skills/*.backup/
+AGENTS.md.backup

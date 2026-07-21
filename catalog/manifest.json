@@ -1,0 +1,146 @@
+[
+  {
+    "package": "jardisadapter/cache",
+    "capability": "multi-layer caching with write-through support and namespace isolation",
+    "use_when": "you need to cache data with priority-ordered layers, write-through persistence, or namespace-separated cache regions",
+    "composer_require": "composer require jardisadapter/cache"
+  },
+  {
+    "package": "jardisadapter/dbconnection",
+    "capability": "database connection pooling with read/write splitting for MySQL, PostgreSQL, and SQLite",
+    "use_when": "you need managed database connections, a connection pool, or read/write endpoint splitting",
+    "composer_require": "composer require jardisadapter/dbconnection"
+  },
+  {
+    "package": "jardisadapter/eventdispatcher",
+    "capability": "in-process event dispatching with priority ordering, type-hierarchy matching, and stoppable events",
+    "use_when": "you need to publish or listen to domain events within a single process",
+    "composer_require": "composer require jardisadapter/eventdispatcher",
+    "alternatives": "for cross-process or queued event delivery use jardisadapter/messaging instead"
+  },
+  {
+    "package": "jardisadapter/filesystem",
+    "capability": "unified filesystem abstraction for local and S3 storage with stream support and visibility control",
+    "use_when": "you need to read, write, delete, or stream files across local or cloud storage backends",
+    "composer_require": "composer require jardisadapter/filesystem"
+  },
+  {
+    "package": "jardisadapter/http",
+    "capability": "outbound HTTP client with a composable middleware pipeline, automatic retry, and cURL transport",
+    "use_when": "you need to make outbound HTTP requests with configurable middleware, retry logic, or a custom transport",
+    "composer_require": "composer require jardisadapter/http"
+  },
+  {
+    "package": "jardisadapter/logger",
+    "capability": "structured logging with multiple output handlers, contextual enrichment, and level-based routing",
+    "use_when": "you need application logging that routes records to multiple targets or enriches them with contextual metadata",
+    "composer_require": "composer require jardisadapter/logger"
+  },
+  {
+    "package": "jardisadapter/mailer",
+    "capability": "SMTP mailer with STARTTLS, HTML and plain-text bodies, attachments, retry, and persistent keepalive",
+    "use_when": "you need to send transactional or notification emails via SMTP",
+    "composer_require": "composer require jardisadapter/mailer"
+  },
+  {
+    "package": "jardisadapter/messaging",
+    "capability": "multi-transport asynchronous messaging with publish/consume support for Redis, Kafka, RabbitMQ, Database, and in-memory",
+    "use_when": "you need asynchronous message passing, event streaming, or queue-based communication between bounded contexts",
+    "composer_require": "composer require jardisadapter/messaging",
+    "alternatives": "for synchronous, in-process domain events use jardisadapter/eventdispatcher instead"
+  },
+  {
+    "package": "jardiscore/app",
+    "capability": "HTTP delivery layer for Jardis-generated domains — a FastRoute router behind its own RouterInterface, a PSR-15 middleware pipeline, and the canonical DomainResponse-to-PSR-7 envelope mapper",
+    "use_when": "you need to expose a Jardis-generated domain's read-facades/process()/rules over HTTP, with routing, PSR-15 middleware, and a ready-made {status,data,errors,meta} response envelope",
+    "composer_require": "composer require jardiscore/app"
+  },
+  {
+    "package": "jardiscore/kernel",
+    "capability": "immutable infrastructure holder (the Koffer, DomainKernel) for Jardis-generated domains, with an optional ENV-driven bootstrap packer",
+    "use_when": "you need to assemble and inject the infrastructure (db connection, cache, logger, events, HTTP client, mailer, filesystem) that a generated {Domain} facade takes via constructor injection",
+    "composer_require": "composer require jardiscore/kernel"
+  },
+  {
+    "package": "jardissupport/auth",
+    "capability": "session management, password hashing and authentication, and role-based access control with domain events",
+    "use_when": "you need user login, session lifecycle management, password verification, or role-based permission checks",
+    "composer_require": "composer require jardissupport/auth"
+  },
+  {
+    "package": "jardissupport/classversion",
+    "capability": "versioned class resolution via namespace injection with proxy caching and fallback chain",
+    "use_when": "you need to load domain classes by version, resolve namespace-based variants, or support backward-compatible class loading",
+    "composer_require": "composer require jardissupport/classversion"
+  },
+  {
+    "package": "jardissupport/contract",
+    "capability": "shared port interfaces and contracts for all Jardis packages",
+    "use_when": "you need the interface definitions that Jardis adapters implement, without depending on any concrete implementation",
+    "composer_require": "composer require jardissupport/contract"
+  },
+  {
+    "package": "jardissupport/data",
+    "capability": "entity hydration from raw data, change tracking, field mapping, and unique identifier generation",
+    "use_when": "you need to hydrate domain entities from persistence data, detect changed fields, map column names, or generate unique entity identifiers",
+    "composer_require": "composer require jardissupport/data"
+  },
+  {
+    "package": "jardissupport/dbquery",
+    "capability": "fluent SQL query builder for SELECT, INSERT, UPDATE, DELETE, CTEs, and window functions",
+    "use_when": "you need to build SQL queries programmatically without a full ORM, or construct complex queries with CTEs or window functions",
+    "composer_require": "composer require jardissupport/dbquery",
+    "alternatives": "for standard entity CRUD with a repository abstraction use jardissupport/repository instead"
+  },
+  {
+    "package": "jardissupport/dotenv",
+    "capability": ".env file loading with type casting, variable substitution, cascade loading, and optional secret integration",
+    "use_when": "you need to load and manage environment configuration from .env files with type safety or multi-file cascade",
+    "composer_require": "composer require jardissupport/dotenv",
+    "alternatives": "for AES-256 encrypted secrets stored alongside .env values use jardissupport/secret in addition"
+  },
+  {
+    "package": "jardissupport/factory",
+    "capability": "dependency injection container with reflection-based instantiation and optional backend container delegation",
+    "use_when": "you need to resolve and wire service dependencies automatically without manual constructor calls",
+    "composer_require": "composer require jardissupport/factory"
+  },
+  {
+    "package": "jardissupport/repository",
+    "capability": "generic CRUD repository with raw-data persistence, read/write endpoint splitting, and flexible primary-key strategies",
+    "use_when": "you need a data-access layer for persisting and retrieving domain entities with built-in read/write splitting",
+    "composer_require": "composer require jardissupport/repository",
+    "alternatives": "for custom or complex SQL queries use jardissupport/dbquery instead"
+  },
+  {
+    "package": "jardissupport/scheduling",
+    "capability": "cron expression parsing, task definition with tags and priority, and schedule validation",
+    "use_when": "you need to define, parse, validate, or manage recurring scheduled tasks and cron-based job configurations",
+    "composer_require": "composer require jardissupport/scheduling"
+  },
+  {
+    "package": "jardissupport/secret",
+    "capability": "encrypted secret resolution from .env files using AES-256-GCM and Sodium",
+    "use_when": "you need to store and resolve encrypted credentials or secrets in environment files with strong cryptographic protection",
+    "composer_require": "composer require jardissupport/secret",
+    "alternatives": "for plain (unencrypted) .env loading use jardissupport/dotenv"
+  },
+  {
+    "package": "jardissupport/validation",
+    "capability": "composable object-graph validation with composite validators, field-level rules, and a fluent builder API",
+    "use_when": "you need to validate domain objects, input data, or value objects with chainable, reusable validation rules",
+    "composer_require": "composer require jardissupport/validation"
+  },
+  {
+    "package": "jardissupport/workflow",
+    "capability": "multi-step business process orchestration with sequential step execution and process state management",
+    "use_when": "you need to model and execute multi-step workflows or business processes with defined step sequences",
+    "composer_require": "composer require jardissupport/workflow"
+  },
+  {
+    "package": "jardistools/dbschema",
+    "capability": "database schema introspection and DDL/JSON export for MySQL, PostgreSQL, and SQLite",
+    "use_when": "you need to analyze, document, or export the table schema of an existing database",
+    "composer_require": "composer require jardistools/dbschema"
+  }
+]

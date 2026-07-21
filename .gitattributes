@@ -1,0 +1,17 @@
+# Development-only paths excluded from the Composer dist archive.
+# Consumers receive only the runtime essentials: src/, skills/, AGENTS.md,
+# composer.json, README.md, CHANGELOG.md, LICENSE.md.
+/.github        export-ignore
+/docs           export-ignore
+/tests          export-ignore
+/bin            export-ignore
+/support        export-ignore
+/.env.example   export-ignore
+/.gitignore     export-ignore
+/.gitattributes export-ignore
+/Makefile       export-ignore
+/REQUIREMENT.md export-ignore
+/phpunit.xml    export-ignore
+/phpstan.neon   export-ignore
+/phpcs.xml      export-ignore
+/composer.lock  export-ignore
