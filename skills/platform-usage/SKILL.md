@@ -180,6 +180,6 @@ public function __invoke(CreateCounterMessage $msg): void
 
 - Aggregate facade layout / V-rules / process modelling: `platform-implementation` §1, §4, §5
 - Response shapes per use-case kind (X-1 table): `platform-cookbook`
-- `DomainResponse` / `ContextResponse` / `DomainResponseTransformer`: generated per domain (`{Domain}\Response\`, Response-Trio) — not package classes; `ResponseStatus` + response/context interfaces: `jardissupport/contract`
+- `DomainResponse` / `ContextResponse` / `DomainResponseTransformer`: generated per domain (`{Domain}\Response\`, Response-Trio) — not package classes; `ResponseStatus` + response/context interfaces: `jardissupport/contracts`
 - ENV-driven Koffer assembly + one-time App entry point (`App/bootstrap.php`): `core-kernel` (Bootstrap-Packer `BuildDomainKernelFromEnv`) — `jardiscore/foundation` does not exist; never reach for it
 - HTTP delivery (routing, PSR-15 middleware, canonical envelope mapper `MapDomainResponse`): `core-app` (`jardiscore/app`) — optional, one of several valid transports (§4)
