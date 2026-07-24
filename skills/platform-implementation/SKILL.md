@@ -351,7 +351,6 @@ When a Process node needs a Jardis runtime tool (cache, mail, queue, repository 
 | `DomainKernelInterface` (the Koffer) + Bootstrap-Packer `BuildDomainKernelFromEnv` (ENV-driven Koffer assembly) | `core-kernel` — `DomainApp`/`BoundedContext`/`ServiceRegistry` do not exist; their role is carried by the generated Domain facade + `<Domain>Context` (this skill, §1) |
 | `DomainResponse`/`ContextResponse`/`DomainResponseTransformer` (generated per domain, `{Domain}\Response\`) | — Generat, no package skill (Response-Trio, §7 below) |
 | One-time ENV-driven App entry point (`App/bootstrap.php` + `App/.env`, wires the Koffer + every workspace domain) | `core-kernel` (Bootstrap-Packer) — `jardiscore/foundation` does not exist; never reach for it |
-| DB schema analysis / DDL / JSON export | `tools-dbschema` |
 
 ### 9. Anchors
 

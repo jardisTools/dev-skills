@@ -136,11 +136,5 @@
     "capability": "multi-step business process orchestration with sequential step execution and process state management",
     "use_when": "you need to model and execute multi-step workflows or business processes with defined step sequences",
     "composer_require": "composer require jardissupport/workflow"
-  },
-  {
-    "package": "jardistools/dbschema",
-    "capability": "database schema introspection and DDL/JSON export for MySQL, PostgreSQL, and SQLite",
-    "use_when": "you need to analyze, document, or export the table schema of an existing database",
-    "composer_require": "composer require jardistools/dbschema"
   }
 ]

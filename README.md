@@ -56,7 +56,7 @@ The plugin **detects** skills exclusively by directory name prefix. These prefix
 | `adapter-*` | `jardisadapter/*` (HTTP, Cache, Messaging, Mailer, ...) |
 | `core-*` | `jardiscore/*` — `kernel` (the Koffer: immutable `DomainKernel` infrastructure holder + optional ENV bootstrap packer) and `app` (HTTP-Delivery: FastRoute router, PSR-15 middleware pipeline, DomainResponse-to-PSR-7 mapper). `jardiscore/foundation` was removed in the Kernel-Entkopplung (2026-07); its ENV-bootstrap role was absorbed into `kernel`. |
 | `support-*` | `jardissupport/*` (Repository, Validation, Workflow, ...) |
-| `tools-*` | `jardistools/*` (DbSchema). The bundled `tools-definition` skill was retired — Designer YAML vocabulary lives in `tools-builder-engine` (Builder repo). |
+| `tools-*` | `jardistools/*`. The bundled `tools-definition` skill was retired — Designer YAML vocabulary lives in `tools-builder-engine` (Builder repo); `tools-dbschema` was retired with the `jardistools/dbschema` package (2026-07-24), its capability moves into the Builder core. |
 | `schema-*` | Plugin itself — `schema-authoring` for the Designer input format |
 | `platform-*` | Plugin itself — `platform-implementation` (working on generated code), `platform-usage` (wiring Commands/Queries into a transport), `platform-versioning` (ClassVersion resolution + versioning model), `platform-workflow` (FlowDesigner Workflow-Engine API), `platform-cookbook` (Phase-3 recipes, troubleshooting, event transport) |
 | `rules-*` | Plugin itself — `rules-architecture`, `rules-frontend` (stack-agnostic FE review constitution), `rules-patterns`, `rules-testing` |

@@ -26,7 +26,7 @@ final class RemoveJardisSkillsTest extends TestCase
     public function testRemovesPrefixedSkillsOnly(): void
     {
         foreach ([
-            'adapter-cache', 'core-kernel', 'support-data', 'tools-dbschema',
+            'adapter-cache', 'core-kernel', 'support-data', 'tools-builder-engine',
             'schema-authoring', 'platform-implementation', 'rules-architecture',
         ] as $name) {
             $this->project->writeFile('.claude/skills/' . $name . '/SKILL.md', 'x');
@@ -39,7 +39,7 @@ final class RemoveJardisSkillsTest extends TestCase
 
         self::assertSame(
             ['adapter-cache', 'core-kernel', 'platform-implementation',
-                'rules-architecture', 'schema-authoring', 'support-data', 'tools-dbschema'],
+                'rules-architecture', 'schema-authoring', 'support-data', 'tools-builder-engine'],
             $removed,
         );
         self::assertFileExists($this->project->path('.claude/skills/my-local/SKILL.md'));
