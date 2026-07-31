@@ -20,7 +20,7 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
 `jardis mcp` exposes two primitive kinds, both stateless per call (no server-side session):
 
 - **Tools** perform an action (create, save, validate, build) and return a result or a
-  structured error envelope (§5).
+  structured error envelope (§6).
 - **Resources** (plain or templated, e.g. `jardis://tree`, `jardis://schema/{domain}/{bc}`)
   are read-only projections of the current on-disk state — call them again after a write to
   see the effect, there is no push/subscribe.
@@ -50,7 +50,7 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    iterate, and check it for structural findings before building.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
-   `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§5).
+   `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6).
 7. **Read the generated code** — via the `code-tree` and `code-file` Resource templates
    (chunked reads with an offset/limit window; large files stay well inside the response cap).
    This replaces "open it in the editor" from the browser flow.
@@ -119,7 +119,24 @@ gap, not an oversight: an MCP client that wants a different workspace starts a n
 process against that workspace's root, for which registry membership is irrelevant. Do not
 invent a tool call for this — there isn't one.
 
-### 5. Error ergonomics
+### 5. Freshness/Drift at startup
+
+Every MCP session start (`New`) carries a live self-check into the server's `initialize`
+Instructions: the running `jardis` binary's embedded VCS stamp (commit, commit time) is compared
+against the git repository the binary's own executable sits in, checked live — not cached, not
+computed once at build time. Two independent, complementary signals: **staleCommit** (the
+embedded revision is not the repo's current HEAD — the binary is behind the source it claims to
+run) and **dirtyNow** (the repo's working tree has uncommitted changes right now — a binary can
+never fully reflect an as-yet-uncommitted edit, no matter when it was built). A clean, current
+binary prints one line — `jardis <version> -- Repo-Stand aktuell (Commit <short>, sauberer
+Arbeitsbaum).`; drift instead prints a multi-line `WARNUNG` block naming the embedded vs. live
+commit and/or the uncommitted-change count. This check never blocks or refuses to start (an
+outage would be a heavier intervention than the risk it guards against) — it only reports. A
+client should read this banner before trusting a reported finding: a stale binary can silently
+still be missing capabilities or fixes (including ones documented in this very skill set) that
+only exist in the newer source it has fallen behind.
+
+### 6. Error ergonomics
 
 Every Tool/Resource failure comes back as one structured envelope — `code`, an optional
 `ruleId` + `location` for validator findings, a human `message`, and an actionable `hint` —
@@ -131,7 +148,7 @@ step 6), `NOT_FOUND`, `VALIDATION` (inspect `details` for field-level findings).
 `VALIDATION` or `CONFIRM_REQUIRED` failure unchanged — read the envelope, fix the cause or
 supply the confirmation, then retry.
 
-### 6. Reference
+### 7. Reference
 
 - Full Tool/Resource catalogue + per-capability test evidence: `INVENTAR.md`
   (`/Users/Rolf/Development/headgent/jardis/tools/builder/docs/mcp-server/INVENTAR.md`).
