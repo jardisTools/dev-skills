@@ -140,7 +140,7 @@ final class CheckCatalogPackagistTest extends TestCase
     public function testExcludesDevSkillsPackageFromWarnings(): void
     {
         $fetcher = new FakePackagistFetcher([
-            'jardistools' => ['jardistools/dev-skills', 'jardistools/dbschema'],
+            'jardistools' => ['jardistools/dev-skills'],
         ]);
 
         $warnings = (new CheckCatalogPackagist())(self::$manifestPath, $fetcher);

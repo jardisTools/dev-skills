@@ -348,7 +348,7 @@ final class CounterMustBeActive extends MeterDeviceContext
     public function __invoke(UpdateCounter $cmd): RuleResult
     {
         /** @var Counter $counter */
-        $counter = $this->handle(Counter::class);   // own-BC read facade — M9: never a foreign BC
+        $counter = $this->handle(Counter::class);   // own BC only (M9: never a foreign BC) — here via the read facade; context() works too
         $read = $counter->counter()->getCounterByIdentifier(
             new QueryCounterByIdentifier(identifier: $cmd->identifier)
         );
@@ -373,8 +373,9 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Rule/v{N}/`).
-- Read bestand only through your **own** BC's read facade (V13/M9) — a cross-BC bestand-check is Prozess-Territorium, not a Rule.
+- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read (e.g. the derived Selector) — a cross-BC bestand-check is Prozess-Territorium, not a Rule.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
+- A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Rule/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
 - TOCTOU is a known v1 boundary (`platform-implementation` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
 
@@ -398,6 +399,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 | Sub-process `Domain` events missing in main response | The sub-process node returned `Internal` events under `EventScope::Domain->value` by mistake, or the orchestrator loop wasn't updated | The stub returns `[EventScope::Domain->value => $events]`; the orchestrator harvests `$data[EventScope::Domain->value]` — both use the enum value string; check that `EventScope` is imported in both files |
 | Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
+| Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
 | Command rejects with 422 but I expected the Command to just run | A bound Rule in `Rules.yaml` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Rules.yaml` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`platform-workflow` §5) |
