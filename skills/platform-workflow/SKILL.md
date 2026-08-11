@@ -106,7 +106,32 @@ Die Engine bricht ohne Throw ab, wenn
 
 In allen drei Faellen erhaelt der Aufrufer den vollstaendigen `WorkflowContext` zurueck; die Verantwortung fuer "war das jetzt ein gewolltes Ende oder ein Konfigurationsfehler?" liegt beim Orchestrator-Mantel (typisch: `try/catch` + Pruefung von `$context->getException()` und `$context->getPrevious()`).
 
+### 6. `responseStatus` und die Statusableitung am Lauf-Ende
+
+Der Knoten-Body legt zusätzlich `'responseStatus' => $response->getStatus()` in seine
+Rückgabe-Map (neben `status`/`data`); der generierte `__invoke`-Wrapper faltet den Schlüssel in
+`$result['data']` — beides Generator-Emission, kein Engine-Verhalten. Der Prozess-Handler scannt
+nach dem Lauf die Kette (`getChain()`) zweistufig, um den nach außen gemeldeten Antwortstatus zu
+bestimmen:
+
+1. **Erster Pass:** je Knoten-Identität (`getHandlerFqcn()`) wird nur der `responseStatus` der
+   **letzten** Ausführung gemerkt.
+2. **Zweiter Pass:** das erste 4xx-Kettenglied, dessen Knoten laut erstem Pass **zuletzt
+   ebenfalls 4xx** war, geht an `transform($this->result(), $status)`. Kein 4xx in der Kette →
+   `transform()` ohne Status (heutiges Verhalten).
+
+Das ist eine Verfeinerung der Drei-Ebenen-Trennung aus §1: **Verzweigung** (`ON_SUCCESS`/`ON_FAIL`
+= true/false) bleibt unverändert reine Wegwahl; **Antwort-Status** kommt weiterhin immer aus der
+tatsächlichen `DomainResponse`, aber aus der zuletzt maßgeblichen Ausführung des Knotens, nicht
+aus der Kanten-Deklaration und nicht schlicht aus dem ersten oder letzten Kettenglied — ein
+konvergenter Nein-Terminal (mehrere Vorknoten münden auf denselben Reject-Knoten) macht „letztes
+Kettenglied" strukturell falsch, ein geheilter Retry desselben Knotens macht „irgendein früheres
+4xx" strukturell falsch; **Transaktion** bleibt: der Nein-Pfad committet weiter, nur ein
+geworfener technischer Fehler rollt zurück. Anwendungsfall + Messwerte: `platform-cookbook`
+Recipe 11.
+
 ### Anchors
 
 - `platform-implementation` (Generated baseline, override targets, decision tree).
 - `support-workflow` (the engine implementation itself).
+- `platform-cookbook` (Recipe 11 — Invariante als Zustand, nutzt §6 dieser Datei).
