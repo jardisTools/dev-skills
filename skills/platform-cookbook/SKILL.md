@@ -1,6 +1,6 @@
 ---
 name: platform-cookbook
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds`, sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds`, sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 prerequisites: [platform-implementation]
@@ -378,6 +378,108 @@ final class CounterMustBeActive extends MeterDeviceContext
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Rule/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
 - TOCTOU is a known v1 boundary (`platform-implementation` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
+
+**Recipe 11 — Invariante als Zustand: eine Eindeutigkeits-Invariante über Prozessgrenzen sichern**
+
+Ein Decision-Knoten, der per Query auf Abwesenheit prüft ("gibt es schon eine Rechnung für diese
+Bestellung?") und danach schreibt, ist Check-then-Act — racy unter Nebenläufigkeit, zwei
+gleichzeitige Läufe können beide die Prüfung bestehen. Die Ablösung: die Eindeutigkeit wird nicht
+geprüft, sondern **als Zustand einer existierenden Zeile modelliert**, die per bedingtem Schreiben
+(CAS-UPDATE, `platform-implementation` Persist-Layer emittiert `$expected` = alte Werte der
+geänderten Felder automatisch) umgesetzt wird. Zwei gleichzeitige Läufe können nie beide gewinnen
+— kein neuer Mechanismus, keine Sperrtabelle, kein DB-UNIQUE-Regelträger.
+
+**Grundregel:** der Torwächter (der Knoten mit dem bedingten Schreiben) ist der **erste
+schreibende Knoten** des Prozesses. Vor ihm darf nichts Ungewolltes geschrieben worden sein — der
+Savepoint (siehe Konflikt-Kaskade unten) sichert danach nur noch die Atomarität des abgebrochenen
+Einzel-Persists, nicht die Reihenfolge.
+
+**Fall A — Torwächter/Statusaggregat** (z. B. "eine Rechnung je Bestellung"). Ein eigenes
+Zustandsaggregat trägt ein Flag (`fakturiert: bool`). Die Zeile entsteht **vorab** (z. B. per
+Domain-Event bei "Bestellung ausgeliefert"), nicht erst beim Fakturieren selbst — sonst kehrt das
+Rennen als Erstanlage-Rennen zurück. Prozessablauf:
+
+```
+K1 „MarkInvoiced"          — bedingtes UPDATE fakturiert: false → true
+   ON_SUCCESS → K2 „CreateCustomerInvoice"   (unbedingter INSERT)
+   ON_FAIL    → deklarierte 409-Kante (Reject-Terminal)
+```
+
+Ein konvergenter Abweis — mehrere fachlich verschiedene Vorknoten (nicht gefunden / bereits
+fakturiert / Validierung) münden auf denselben Reject-Terminal-Knoten — ist der **Normalfall**,
+kein Sonderfall, und braucht keine eigene Behandlung.
+
+**Fall B — Nummernkreis/Reservierung mit Retry** (das System vergibt den Schlüssel). Ein kleines
+Zähler-Aggregat (`lastNumber: int`):
+
+```
+K1 „ReserveInvoiceNumber"  — bedingtes UPDATE lastNumber: n → n+1
+   ON_SUCCESS → K2 nutzt den neuen Wert (Weitergabe via WorkflowContext::getLatest() im
+                Knoten-Body — es gibt dafür keinen deklarativen Weg im Korpus, Dev-Fläche)
+   ON_FAIL    → 409
+```
+
+**Retry ist Komfort, nicht Korrektheit** und braucht zwei Pflichten: eine **Obergrenze**
+(Versuchszähler, die Engine hat keine eingebaute Schleifenbremse) und — der belegte Fehler dieser
+Klasse — der Zielwert MUSS **pro Versuch neu berechnet** werden, aus dem frisch gelesenen
+`current`-Stand. Ein fest verdrahteter Zielwert (`lastNumber: 1` bei jedem Versuch) erzeugt beim
+zweiten Versuch ein No-Op-UPDATE, dessen `rowCount()`-Interpretation treiberabhängig unterschiedlich
+ausfällt (MySQL liest es zufällig richtig als Konflikt, Postgres fälschlich als Erfolg → Doppel-
+vergabe). Details, Ursache und Package-Folgeposten: `wissensbasis/rowcount-cas-ist-treiberabhaengig.md`.
+
+**Statusverhalten am Prozessende.** Ein Torwächter-Konflikt muss als 409 nach außen sichtbar
+werden, nicht nur intern routen. Ableitungsregel, zweistufig:
+
+1. Je Knoten-Identität (`getHandlerFqcn()`) zählt nur der Status der **letzten** Ausführung.
+2. Das erste 4xx-Kettenglied, dessen Knoten laut Schritt 1 **zuletzt ebenfalls 4xx** war, liefert
+   den Antwortstatus. Ein Torwächter, der beim Retry gelingt, trägt seinen frühen Fehlschlag nicht
+   mehr in den Antwortstatus — ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409
+   trotz tatsächlichem Erfolg samt Seiteneffekt (belegt, Postgres-Nummernkreis, s. u.).
+
+Das ist die Drei-Ebenen-Trennung aus `platform-workflow` §1: **Verzweigung** (ON_SUCCESS/ON_FAIL
+= true/false, reine Wegwahl) · **Antwort-Status** (immer aus der tatsächlichen `DomainResponse`
+des zuletzt maßgeblichen Knotens, NIE aus der Kanten-Deklaration) · **Transaktion** (der Nein-Pfad
+committet weiter — ein deklarierter 409-Terminal ist kein Rollback-Grund, nur ein geworfener
+technischer Fehler rollt zurück).
+
+**Kollisionsverlauf (Fall A):** beide Läufe laden `fakturiert=false`. Der erste K1 gewinnt. Der
+zweite K1 wartet an der Zeilensperre, wertet nach dem Warten den aktuellen Stand neu (das UPDATE
+ist ein Current-Read), trifft 0 Zeilen → 409 → K2 wird nie erreicht. Die Klammer rollt dabei
+NICHT zurück, sie committet leer — der Nein-Pfad ist ein legitimer Abschluss, kein Abbruch.
+
+**Grenzen:**
+
+- **Nur über `runInTransaction`-Prozesse.** Der direkte BC-Weg (Command ohne Prozess) bleibt
+  ungeschützt.
+- **SQLite:** ohne `busy_timeout` wartet SQLite nicht an der Sperre, sondern wirft sofort
+  `SQLITE_BUSY` — der Verlierer endet über den Throwable-Pfad als **500 mit Rollback**, nicht als
+  409. Die Invariante hält (er schreibt nichts), aber Status und Warteverhalten sind falsch.
+  Bekannter eigener Posten am dbConnection-Adapter, hier nicht gelöst.
+- **Retry heilt unter MySQL `REPEATABLE READ` innerhalb derselben Transaktion strukturell nie** —
+  jeder Snapshot des Verlierers sieht denselben `current` wie sein erster Read, nie den
+  zwischenzeitlich committeten Gewinner-Wert. Unter Postgres `READ COMMITTED` sieht der Retry nach
+  dem Warten den committeten Stand und kann gewinnen. Beide Bilder sind korrekt — ein reales
+  Treiber-Delta, kein Bug.
+- **rowCount()-Falle als Warnung:** der generierte CAS-Persist-Layer prüft Erfolg über
+  `rowCount() > 0` — treiberabhängig unzuverlässig bei No-Op-Updates (Details:
+  `wissensbasis/rowcount-cas-ist-treiberabhaengig.md`). Betrifft jeden Torwächter, dessen Zielwert
+  zufällig mit dem Ist-Zustand übereinstimmen kann — bei Fall A (bool-Flag) ebenso relevant wie bei
+  Fall B (Zähler).
+
+**Event-Erstanlage bleibt Konzept, kein fertiger Weg.** Die Statuszeile in Fall A soll idealerweise
+per Domain-Event entstehen ("Bestellung ausgeliefert" → Zeile anlegen), aber der generierte
+`<Agg>EventRouter.php` ist ein reiner Registrierungs-Stub (§1 oben) — die Zustellung über einen
+echten Transport (Kafka/HTTP/in-process, §1) ist offenes Wiring, kein fertiger Baustein. Bis dahin:
+Erstanlage per Fixture-Seed / einmaligem Migrations-Schritt, dokumentiert als bewusste Lücke, nicht
+stillschweigend übergangen.
+
+**Den realen Prozess umstellen.** Ein bestehender Check-then-Act-Decision-Knoten (liest per Query
+auf Abwesenheit) wird im Designer abgelöst, nicht daneben gebaut: das Zustandsaggregat modellieren
+(neue Tabelle, ein Flag- oder Zähler-Feld), den Torwächter-Knoten als ersten schreibenden Knoten
+vor die bisherige Schreiblogik setzen, die racy Lese-Prüfung entfernen, die 409-Kante als Terminal
+deklarieren. Die fachliche Vorprüfung ("ausgeliefert?", "gibt es die Bestellung überhaupt?") bleibt
+als Lese-Decision VOR dem Torwächter bestehen — nur die Eindeutigkeits-Hälfte wandert in den
+Torwächter.
 
 ### 3. Troubleshooting
 
