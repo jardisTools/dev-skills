@@ -27,7 +27,7 @@ User-Code laesst `handlerFqcn` immer `null` — die Engine stamped es via `Workf
 
 ### 2. `WorkflowConfig` im `config()`-Body
 
-Der Generator emittiert eine private `config(): WorkflowConfigInterface`, die **jeden** Knoten des gemalten Graphen via `addNode()` registriert (Start zuerst, in topologischer Reihenfolge; ein End-Knoten als `addNode(X::class, [])`). Routing ist eine `[WorkflowResult::ON_* => NextNode::class]`-Map pro Knoten — die Engine laeuft die gemalten Kanten, exklusive Zweige laufen exklusiv. Hand-edits am Orchestrator (z.B. zusaetzliche Transition) folgen demselben Muster:
+Der Generator emittiert eine private `config(): WorkflowConfigInterface`, die **jeden** Knoten des gemalten Graphen via `addNode()` registriert — Registrierungsreihenfolge und warum ein Endknoten trotzdem als `addNode(X::class, [])` erscheinen muss: [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.1. Routing ist eine `[WorkflowResult::ON_* => NextNode::class]`-Map pro Knoten — die Engine laeuft die gemalten Kanten, exklusive Zweige laufen exklusiv. Hand-edits am Orchestrator (z.B. zusaetzliche Transition) folgen demselben Muster:
 
 ```php
 private function config(): WorkflowConfigInterface
@@ -55,30 +55,9 @@ End-Knoten (leere Routing-Map `[]`) lassen die Engine ordentlich beenden.
 
 ### Event-Kasten ◇ (Event-Knoten)
 
-Ein Designer-Knoten kann statt **Action** als **Event ◇** markiert sein (`mode: async`). Im Designer deklariert der Autor am Knoten eine **Event-Feld-Bindung** — eine Liste `eventFields: [{label, source}]`, wobei jede `source` auf ein Command-Feld des Prozess-Inputs zeigt (`ProcessEventFieldEditor.svelte`, Details-Tab des Ticket-Panels). Der Generator loest daraus die **modell-aufgeloeste Identitaet** des betroffenen Aggregats auf (ganze Vorfahren-Kette, eine Property je Kettenglied, `{label}{EntityName}Id`) und erzeugt zweierlei:
+Ein Designer-Knoten kann statt **Action** als **Event ◇** markiert sein (`mode: async`). Im Designer deklariert der Autor am Knoten eine **Event-Feld-Bindung** — eine Liste `eventFields: [{label, source}]`, wobei jede `source` auf ein Command-Feld des Prozess-Inputs zeigt (`ProcessEventFieldEditor.svelte`, Details-Tab des Ticket-Panels). Was der Generator daraus baut (Identitätsauflösung, die erzeugte Event-Daten-Klasse, der vollständig generierte Knoten-Body, Union-/Listen-Quellen): [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.4.
 
-1. eine **`final readonly` Event-Daten-Klasse** unter `{BC}/Process/{Name}/Event/<EventClass>.php` (hermetisch, ForceOverwrite — der Knotenname ist der Event-Klassenname) mit einer Property je aufgeloester Identitaets-Kette **plus** zwei automatischen Standardfeldern: `eventId` (UUID7) und `occurredAt` (`\DateTimeImmutable`);
-2. einen **Knoten**, dessen `logic()`-Body **vollstaendig generiert** ist (kein Hand-auszufuellender Stub mehr) — die Identitaetswerte werden direkt von den public-readonly-Properties des gebundenen Command-DTOs gelesen, die `eventId` per `Identity`-Service (`generateUuid7()`) erzeugt:
-
-```php
-protected function logic(FlagReading $cmd, WorkflowContextInterface $context): array
-{
-    return [
-        'status' => WorkflowResult::ON_SUCCESS,
-        'data'   => [
-            EventScope::Domain->value => [
-                new ReadingFlagged(
-                    flaggedCounterId: $cmd->affectedCounter->counterIdentifier,
-                    eventId: $this->handle(Identity::class)->generateUuid7(),
-                    occurredAt: new \DateTimeImmutable(),
-                ),
-            ],
-        ],
-    ];
-}
-```
-
-Eine **Union-Quelle** (die Bindung zeigt auf ein Command-Feld mit mehreren `accepts:`-Zweigen) rendert einen `match(true)`/`instanceof`-Dispatch je Zweig statt eines Direkt-Lesens; eine `list:true`-Quelle rendert `array_map` ueber die Liste. Der Orchestrator erntet alle so abgelegten Domain-Events nach dem Lauf aus der Kette (`getChain()`) und haengt sie via `addEvent(…, EventScope::Domain)` an die Response. **Es gibt keine Dev-Aufgabe am generierten Knoten-Body** — die einzige Autoren-Tätigkeit ist die Feld-Bindung **im Designer**, nicht im Code. Regeln fürs Binden (V-EVT-*): mind. eine Bindung, Quelle muss identitätstragend sein, keine Namenskollision, Union-Zweige gleiche Kettentiefe. Publikation nach Commit ist Sache des Aufrufers (Event-Transport-Rezepte: `platform-cookbook` §1).
+**Es gibt keine Dev-Aufgabe am generierten Knoten-Body** — die einzige Autoren-Tätigkeit ist die Feld-Bindung **im Designer**, nicht im Code. Regeln fürs Binden (V-EVT-*): mind. eine Bindung, Quelle muss identitätstragend sein, keine Namenskollision, Union-Zweige gleiche Kettentiefe. Publikation nach Commit ist Sache des Aufrufers (Event-Transport-Rezepte: `platform-cookbook` §1).
 
 ### 3. handlerFactory-Closure
 
@@ -109,16 +88,11 @@ In allen drei Faellen erhaelt der Aufrufer den vollstaendigen `WorkflowContext` 
 ### 6. `responseStatus` und die Statusableitung am Lauf-Ende
 
 Der Knoten-Body legt zusätzlich `'responseStatus' => $response->getStatus()` in seine
-Rückgabe-Map (neben `status`/`data`); der generierte `__invoke`-Wrapper faltet den Schlüssel in
-`$result['data']` — beides Generator-Emission, kein Engine-Verhalten. Der Prozess-Handler scannt
-nach dem Lauf die Kette (`getChain()`) zweistufig, um den nach außen gemeldeten Antwortstatus zu
-bestimmen:
-
-1. **Erster Pass:** je Knoten-Identität (`getHandlerFqcn()`) wird nur der `responseStatus` der
-   **letzten** Ausführung gemerkt.
-2. **Zweiter Pass:** das erste 4xx-Kettenglied, dessen Knoten laut erstem Pass **zuletzt
-   ebenfalls 4xx** war, geht an `transform($this->result(), $status)`. Kein 4xx in der Kette →
-   `transform()` ohne Status (heutiges Verhalten).
+Rückgabe-Map (neben `status`/`data`); beides Generator-Emission, kein Engine-Verhalten. Der
+zweistufige Kettenscan, mit dem der Prozess-Handler daraus nach dem Lauf den nach außen
+gemeldeten Antwortstatus bestimmt (nur die letzte Ausführung je Knoten-Identität zählt, damit ein
+geheilter Retry seinen frühen Fehlschlag nicht mehr trägt): [[beschreibt-bauweise-von::builder-generat-bauweise]]
+§5.4.
 
 Das ist eine Verfeinerung der Drei-Ebenen-Trennung aus §1: **Verzweigung** (`ON_SUCCESS`/`ON_FAIL`
 = true/false) bleibt unverändert reine Wegwahl; **Antwort-Status** kommt weiterhin immer aus der

@@ -9,7 +9,7 @@ next: []
 
 ## Scope
 
-Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`). Generated Domain code already applies most patterns for you (Facade on `<Agg>.php`, Repository for persistence, Factory/Strategy inside `handle()`). Phase-3 extensions most often use **Value Object**, **Decorator** (via `v2` overrides), **Adapter** (via Domain Services). The gate in §3 applies to all.
+Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`). Generated Domain code already applies most patterns for you (Facade on `<Agg>.php`, Repository for persistence, Factory/Strategy inside `handle()`) — how the generator itself enforces these: [[beschreibt-bauweise-von::builder-generator-registry-bauweise]] §9. Phase-3 extensions most often use **Value Object**, **Decorator** (via `v2` overrides), **Adapter** (via Domain Services). The gate in §3 applies to all.
 
 ### 1. Pattern catalogue
 

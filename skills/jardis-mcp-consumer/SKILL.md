@@ -25,11 +25,11 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
   are read-only projections of the current on-disk state — call them again after a write to
   see the effect, there is no push/subscribe.
 
-The full catalogue (on the order of 60 tools plus 50+ resources/templates; the exact numbers
-are pinned by the live test `TestToolBudget_FinalCount` and mirrored in `INVENTAR.md`'s
-Budget-Tracking section — do not hardcode them from memory, they grow with every strategic-design
-increment) is a lived artefact, not something to memorise here — consult it before guessing a
-name (see Reference).
+The full catalogue (on the order of 60 tools plus 50+ resources/templates — do not hardcode them
+from memory, they grow with every strategic-design increment; how the count is pinned and kept
+honest: [[beschreibt-bauweise-von::builder-mcp-bauweise]] §9, mirrored in `INVENTAR.md`'s
+Budget-Tracking section) is a lived artefact, not something to memorise here — consult it before
+guessing a name (see Reference).
 
 ### 2. End-to-end workflow
 
@@ -122,19 +122,12 @@ invent a tool call for this — there isn't one.
 ### 5. Freshness/Drift at startup
 
 Every MCP session start (`New`) carries a live self-check into the server's `initialize`
-Instructions: the running `jardis` binary's embedded VCS stamp (commit, commit time) is compared
-against the git repository the binary's own executable sits in, checked live — not cached, not
-computed once at build time. Two independent, complementary signals: **staleCommit** (the
-embedded revision is not the repo's current HEAD — the binary is behind the source it claims to
-run) and **dirtyNow** (the repo's working tree has uncommitted changes right now — a binary can
-never fully reflect an as-yet-uncommitted edit, no matter when it was built). A clean, current
-binary prints one line — `jardis <version> -- Repo-Stand aktuell (Commit <short>, sauberer
-Arbeitsbaum).`; drift instead prints a multi-line `WARNUNG` block naming the embedded vs. live
-commit and/or the uncommitted-change count. This check never blocks or refuses to start (an
-outage would be a heavier intervention than the risk it guards against) — it only reports. A
-client should read this banner before trusting a reported finding: a stale binary can silently
-still be missing capabilities or fixes (including ones documented in this very skill set) that
-only exist in the newer source it has fallen behind.
+Instructions, comparing the running binary's embedded revision against the repository it sits
+in — the two signals, exact wording, and why it never blocks:
+[[beschreibt-bauweise-von::builder-mcp-bauweise]] §8. A client should read this banner before
+trusting a reported finding: a stale binary can silently still be missing capabilities or fixes
+(including ones documented in this very skill set) that only exist in the newer source it has
+fallen behind.
 
 ### 6. Error ergonomics
 

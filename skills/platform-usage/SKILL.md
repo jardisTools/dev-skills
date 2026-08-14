@@ -63,7 +63,7 @@ Tenancy still matters at the adapter level: build a fresh Koffer (fresh DB crede
 | 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — payload carries `{rule, messageKey, context}` under `data` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
 | 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's bestand-check — never a 422) |
 
-Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). Per X-1 the generator emits a minimal payload — **Command** echoes only the affected identifier, **Query** returns the projected scalar tree under the aggregate root key (see `platform-cookbook` for the full response-shape table). Examples:
+Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). Per X-1 the generator emits a minimal payload — **Command** echoes only the affected identifier, **Query** returns the projected scalar tree under the aggregate root key; which fields the generator derives per use-case: [[beschreibt-bauweise-von::builder-generat-bauweise]] §5.2 (see also `platform-cookbook` for the full response-shape table). Examples:
 
 ```json
 // Command (e.g. CreateCounter) → 201
