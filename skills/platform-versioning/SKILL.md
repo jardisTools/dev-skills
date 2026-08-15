@@ -9,36 +9,24 @@ next: []
 
 ### 1. ClassVersion resolution — Platform-free, per-class `v{N}`
 
-The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in path or namespace). Resolution does not walk a `['', 'Platform']` two-segment chain — the **Generator emits a `classVersion()` override** in the generated `<Domain>Context.php` base class that wires the reader `LoadClassFromSubDirectory`:
-
-```php
-class MeterDeviceContext implements GeneratedContextInterface
-{
-    protected function classVersion(): ClassVersionInterface
-    {
-        $config = $this->classVersionConfig();
-
-        return new ClassVersion(
-            $config,
-            new LoadClassFromSubDirectory($config),
-            cache: new ClassResolutionCache(),
-        );
-    }
-}
-```
+The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in path or namespace). Resolution does not walk a `['', 'Platform']` two-segment chain — the **Generator emits a `classVersion()` override** in the generated `<Domain>Context.php` base class that wires the reader `LoadClassFromSubDirectory`. Emitted code + wiring:
+[[beschreibt-bauweise-von::builder-generat-bauweise]] §4.1.
 
 **No domain-wide version default:** the Domain facade (`<Domain>.php`) is `final` and JardisCore-free (holds only a `DomainKernelInterface` Koffer) — it offers no override surface, and `<Domain>Context` (which hosts `classVersion()`/`classVersionConfig()`, `platform-implementation` §1) is hermetic (never hand-edited). A domain-wide default `version()` hook does not exist — the only lever is the per-call `$version` argument threaded through every facade method (see below).
 
-> **Proxy first.** The wired `ClassVersion` (no `proxyClassFinder` passed above ⇒ Ctor default `LoadClassFromProxy`) consults the **proxy cache first** and only falls to `LoadClassFromSubDirectory` when the proxy returns `null` (`support/classversion/src/ClassVersion.php:62-70`). A generated Domain has no proxy config, so the proxy yields `null` and the SubDirectory resolution below is what runs in practice.
+> **Proxy first, but a no-op here.** The wired `ClassVersion` consults the proxy cache before the
+> SubDirectory reader (order + internals: [[beschreibt-bauweise-von::builder-generat-bauweise]]
+> §4.2) — a generated Domain has no proxy config, so in practice the SubDirectory resolution below
+> is what runs.
 
-**How `LoadClassFromSubDirectory` resolves** `$this->context(<Class>::class, $dto, $version)` / `$this->handle(<Class>::class)`:
+**How `LoadClassFromSubDirectory` resolves** `$this->context(<Class>::class, $dto, $version)` / `$this->handle(<Class>::class)` — full step-by-step: [[beschreibt-bauweise-von::builder-generat-bauweise]] §4.2. What matters for placing your override:
 
-1. It **injects the version before the last namespace segment** (the class name), per class:
+1. The version is **injected before the last namespace segment** (the class name), per class:
    `…\Command\Handler\CreateCounter` + `v2` → `…\Command\Handler\v2\CreateCounter`.
    The `v2/` subdir is the class's **immediate neighbour** — not an aggregate-root `v2/` tree.
 2. The version comes from the `$version` argument threaded through the facade method (`string $version = ''`, verified on `{Agg}/{Agg}.php`). Empty version → **no version subdir is tried**; resolution falls straight to the baseline.
-3. With a non-empty version: if a `ClassVersionConfig` is present, the reader expands `config->fallbackChain($version)` (e.g. `v3 → [v3, v2, v1]`) and tries each injected class in order; without config it tries just `[$version]`.
-4. **First `class_exists` wins.** If no versioned class exists, it falls back to the **baseline** `$className` — i.e. the generated class itself. If even that is missing, `InvalidArgumentException`.
+3. With a non-empty version and a `ClassVersionConfig` present, the fallback chain is tried in order (e.g. `v3 → [v3, v2, v1]`); without config only `[$version]`.
+4. First match wins; missing versioned class → falls back to the **baseline** (the generated class itself); missing even that → `InvalidArgumentException`.
 
 ```
 Baseline (the generated, hermetic class — always present):
