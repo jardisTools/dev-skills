@@ -213,7 +213,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). `FieldMapper::fromAggregate($data, $mapProvider, '<entityName>')` walks the entity map (3rd arg = the current entity-level name; the provider supplies per-entity column maps) and renames columns to field names. The **read** projection — internal-PK strip where a business key exists (G4) plus root-id normalization — is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap: the handler keeps the root entity's PK as the leading read field `'id'` (normalised name; real PK column from the schema). The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base and the bulk-read recipe rely on; child entities stay id-free. It further strips internal FK columns entirely (the nesting replaces them), collapses pure-join tables (F3.1: tables that exist only as two FKs plus a composite PK — they disappear into the parent-child relation in the projected tree), and keeps `DateTimeImmutable` blade values inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base and the bulk-read recipe rely on; child entities stay id-free. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the identifier(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
@@ -280,7 +280,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Event bubbling (flat, Domain-scope only):** `EventScope::Domain` events from the sub-`DomainResponse` are collected flat into the `data` return array. The main-process orchestrator harvests them identically to events from any other node (`getChain()` → `$data[EventScope::Domain->value]` → `addEvent(…, Domain)`). `Internal` events of the sub-process stay sub-process-internal (they are not returned).
 
-**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the Generator's `statusSetFromEdges` (a build-time Go function, `extensionprocess/node.go`) derives the node's status set from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
+**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges (mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.1), so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
 
 **`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its YAML (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
@@ -291,7 +291,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Recipe 9 — Cross-BC write: translate → foreign `process()` → map response (G7)**
 
-A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`, appsvc-Handler-Layer): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no Prozess-Zwang). The generated Service (`{Domain}/Service/<Name>.php`, `platform-implementation` §1) is the ACL — it never passes the caller's DTO through unchanged.
+A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate, [[beschreibt-bauweise-von::builder-generat-bauweise]] §2): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no Prozess-Zwang). The generated Service (`{Domain}/Service/<Name>.php`, `platform-implementation` §1) is the ACL — it never passes the caller's DTO through unchanged.
 
 ```php
 // {Domain}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
@@ -428,13 +428,11 @@ ausfällt (MySQL liest es zufällig richtig als Konflikt, Postgres fälschlich a
 vergabe). Details, Ursache und Package-Folgeposten: `wissensbasis/rowcount-cas-ist-treiberabhaengig.md`.
 
 **Statusverhalten am Prozessende.** Ein Torwächter-Konflikt muss als 409 nach außen sichtbar
-werden, nicht nur intern routen. Ableitungsregel, zweistufig:
-
-1. Je Knoten-Identität (`getHandlerFqcn()`) zählt nur der Status der **letzten** Ausführung.
-2. Das erste 4xx-Kettenglied, dessen Knoten laut Schritt 1 **zuletzt ebenfalls 4xx** war, liefert
-   den Antwortstatus. Ein Torwächter, der beim Retry gelingt, trägt seinen frühen Fehlschlag nicht
-   mehr in den Antwortstatus — ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409
-   trotz tatsächlichem Erfolg samt Seiteneffekt (belegt, Postgres-Nummernkreis, s. u.).
+werden, nicht nur intern routen — der zweistufige Kettenscan, der das leistet (nur der Status der
+letzten Ausführung je Knoten-Identität zählt, damit ein beim Retry gelingender Torwächter seinen
+frühen Fehlschlag nicht mehr in den Antwortstatus trägt): [[beschreibt-bauweise-von::builder-generat-bauweise]]
+§5.4. Ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409 trotz tatsächlichem Erfolg
+samt Seiteneffekt (belegt, Postgres-Nummernkreis, s. u.).
 
 Das ist die Drei-Ebenen-Trennung aus `platform-workflow` §1: **Verzweigung** (ON_SUCCESS/ON_FAIL
 = true/false, reine Wegwahl) · **Antwort-Status** (immer aus der tatsächlichen `DomainResponse`
@@ -488,7 +486,7 @@ Torwächter.
 | `LogicException: Cannot resolve ClassName` | BC vs. Aggregate segment swapped in namespace | Namespace is `<Domain>\<BC>\Aggregate\<Agg>\…` — BC and Aggregate are two segments even when they share a name (the `Aggregate/` segment sits between them) |
 | Edit under `{BC}/Aggregate/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`), re-model the aggregate in the Designer, or (tenant variant) author a `v{N}/<Class>.php` next to the baseline (`platform-versioning` §1) |
 | `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — author transport in a **Process node** that publishes `$response->getEvents()` after the aggregate command (§1) |
-| Versioned override (`v2/…`) ignored | Domain facade isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing | Thread the version through the call (`$bc->{agg}()->getCounterById($dto, 'v2')` for reads, or `$this->handle(Counter::class)->createCounter($dto, 'v2')` family-internally for writes) or set a `version()` default on `<Domain>.php`; the variant must sit at `{Agg}/…/v2/<Class>.php` (immediate neighbour of the baseline) — `platform-versioning` §1 |
+| Versioned override (`v2/…`) ignored | The call isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing | Thread the version through the call (`$bc->{agg}()->getCounterById($dto, 'v2')` for reads, or `$this->handle(Counter::class)->createCounter($dto, 'v2')` family-internally for writes) — there is **no** domain-wide `version()` default to set instead, the per-call argument is the only lever; the variant must sit at `{Agg}/…/v2/<Class>.php` (immediate neighbour of the baseline) — `platform-versioning` §1 |
 | Process node body lost after rebuild | The custom node lost its `@node-id` marker, or the file had broken syntax so the body-preserve merger could not parse it | Keep the generated `@node-id` DocBlock marker intact; fix the parse error. The merger regenerates the node *header* but preserves the body keyed by `@node-id`. (The Designer's "Force" build path deliberately overwrites a node body.) |
 | Process node not invoked though it's in the graph | R5-Routing-Safety: the node isn't registered via `addNode()`, or the returned `ON_*` status has no transition in the current node | Every handler referenced in `->onSuccess()/onFail()/…` must be declared as its own `->node(...)`; add the missing status to the routing — `platform-workflow` §5 |
 | `Error: Cannot instantiate abstract class` / "Service X not in container" | Direct `new` bypassing `handle()` (V2 / V3) | Replace with `$this->handle(X::class, ...)` from inside the node |
