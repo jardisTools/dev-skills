@@ -46,7 +46,7 @@ JardisTools -> JardisAdapter -> JardisSupport -> Domain Core
           JardisSupport\Contract <-<-<-----------<-<
 ```
 
-`jardiscore/kernel` (infrastructure Koffer + ENV bootstrap) and `jardiscore/app` (HTTP delivery) drive the Domain Core — they are not it. **Their `JardisAdapter\*` imports are correct:** Application code may know concrete infrastructure (`core/kernel/README.md:277`). Inner boundary: `DomainKernel` itself stays adapter-free, only `Bootstrap\` imports adapters; generated code only ever sees `DomainKernelInterface`.
+`jardiscore/kernel` (infrastructure DomainKernel + ENV bootstrap) and `jardiscore/app` (HTTP delivery) drive the Domain Core — they are not it. **Their `JardisAdapter\*` imports are correct:** Application code may know concrete infrastructure (`core/kernel/README.md:277`). Inner boundary: `DomainKernel` itself stays adapter-free, only `Bootstrap\` imports adapters; generated code only ever sees `DomainKernelInterface`.
 
 Adapters implement Contracts. Any inner-layer `use` pointing outward is a review blocker.
 

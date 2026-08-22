@@ -73,7 +73,7 @@ External dependencies are part of the package. Canonical templates → `docker-c
 ### 6. Testing generated Domain code (Phase 3)
 
 The generated Domain facade (e.g. `MeterDevice`) is `final` and
-JardisCore-free — it holds only the Koffer (`DomainKernelInterface $kernel`)
+JardisCore-free — it holds only the DomainKernel (`DomainKernelInterface $kernel`)
 via constructor; `JardisApp`/`DomainApp` do not exist. It cannot be
 subclassed — a "`TestMeterDevice extends MeterDevice`" idiom breaks at
 compile time. Use **composition, not inheritance**: a plain test wrapper
@@ -81,7 +81,7 @@ class holds a real Domain-facade instance and delegates:
 
 ```php
 // tests/Support/TestMeterDevice.php (or inline in the TestCase file) —
-// NOT a subclass (MeterDevice is final) — holds the Koffer + a real
+// NOT a subclass (MeterDevice is final) — holds the DomainKernel + a real
 // MeterDevice instance, delegates its public accessors 1:1.
 final class TestMeterDevice
 {
@@ -100,7 +100,7 @@ final class TestMeterDevice
 }
 ```
 
-**Write access needs a family-internal harness.** The BC accessor (`$app->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context-Familie). Tests that drive a command (arrange/seed or under test) go through a `{Bc}WriteHarness` in `tests/Support/` — a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` Kernel-Naht (no Reflection tricks; a subclass can call an inherited `protected` method). The harness is built directly from the Koffer (`new CounterWriteHarness($this->kernel)`), **not** via the test wrapper's `$this->handle(...)` — the wrapper above is not part of the Context-Familie (it extends nothing generated), so it has no `handle()` of its own to delegate through.
+**Write access needs a family-internal harness.** The BC accessor (`$app->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context-Familie). Tests that drive a command (arrange/seed or under test) go through a `{Bc}WriteHarness` in `tests/Support/` — a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` Kernel-Naht (no Reflection tricks; a subclass can call an inherited `protected` method). The harness is built directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`), **not** via the test wrapper's `$this->handle(...)` — the wrapper above is not part of the Context-Familie (it extends nothing generated), so it has no `handle()` of its own to delegate through.
 
 **A. Full 4-hop chain (integration)** — real Domain Facade, real DB from `make start`, schema reset in `setUp()`:
 
@@ -116,7 +116,7 @@ final class CreateCounterTest extends TestCase
 {
     protected function createKernel(): DomainKernelInterface
     {
-        // Build the Koffer manually in tests (no .env cascade in this context) —
+        // Build the DomainKernel manually in tests (no .env cascade in this context) —
         // see core-kernel for DomainKernel/Bootstrap-Packer details.
         return new DomainKernel(domainRoot: __DIR__, connection: self::$pdo);
     }
@@ -137,7 +137,7 @@ final class CreateCounterTest extends TestCase
 
 Never assert SQL / PDO calls — assert the response and persisted state via a second query / `Get…` handler. Reads stay on the public chain: `$domain->counter()->getCounterById(...)` — the harness is for writes only.
 
-**B. v2 override** — register v2 via a dedicated `ClassVersionConfig` on the Koffer's container (see `support-classversion`). Assert only the behaviour the override adds:
+**B. v2 override** — register v2 via a dedicated `ClassVersionConfig` on the DomainKernel's container (see `support-classversion`). Assert only the behaviour the override adds:
 
 ```php
 public function testHydrateRejectsInvalidObis(): void

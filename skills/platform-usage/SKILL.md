@@ -12,14 +12,14 @@ next: []
 Two chains reach the transport layer — **read** and **process** — the BC facade's Außentür (G2) exposes no aggregate writes:
 
 ```
-new MyApp($kernel)                ← final Domain facade, holds the Koffer (DomainKernelInterface), one per request/run
+new MyApp($kernel)                ← final Domain facade, holds the DomainKernel (DomainKernelInterface), one per request/run
     ↓ $app->counter()             ← BC facade (the Außentür)
     ↓ ->counter()                 ← Aggregate READ facade `{Agg}Read` (hermetic, reached via $bc->{agg}())
     ↓ ->getCounterById($dto)      ← DomainResponseInterface
 ```
 
 ```
-new MyApp($kernel)                ← final Domain facade, holds the Koffer (DomainKernelInterface), one per request/run
+new MyApp($kernel)                ← final Domain facade, holds the DomainKernel (DomainKernelInterface), one per request/run
     ↓ $app->counter()             ← BC facade (the Außentür)
     ↓ ->process()                 ← Process facade `{BC}Process` (hermetic, reached via $bc->process())
     ↓ ->createCounter($dto)       ← DomainResponseInterface
@@ -37,16 +37,16 @@ Matching BC/aggregate names (`MeterDevice\Counter\Counter`) → two `->counter()
 
 ### 2. Bootstrap lifetime
 
-The Koffer (`$kernel: DomainKernelInterface`) is a plain immutable value object built once by `BuildDomainKernelFromEnv`, typically invoked from the generated one-time `App/bootstrap.php` — there is no static `$sharedRegistry` and no `DomainApp`/`ServiceRegistry`. Bootstrap internals (what `BuildDomainKernelFromEnv` wires, ENV shape): s. Skill `core-kernel`. `MyApp` (and every BC facade) is a cheap, uncached `new` — safe to construct fresh on every access.
+The DomainKernel (`$kernel: DomainKernelInterface`) is a plain immutable value object built once by `BuildDomainKernelFromEnv`, typically invoked from the generated one-time `App/bootstrap.php` — there is no static `$sharedRegistry` and no `DomainApp`/`ServiceRegistry`. Bootstrap internals (what `BuildDomainKernelFromEnv` wires, ENV shape): s. Skill `core-kernel`. `MyApp` (and every BC facade) is a cheap, uncached `new` — safe to construct fresh on every access.
 
-| Transport | Koffer (`$kernel`) lifetime | `MyApp` lifetime | Note |
+| Transport | DomainKernel (`$kernel`) lifetime | `MyApp` lifetime | Note |
 |---|---|---|---|
 | HTTP (PSR-15) | One per request (or DI singleton if the underlying adapters tolerate reuse) | One per request, cheap `new MyApp($kernel)` | No caching on any facade — safe to recreate |
-| Long-running worker (RoadRunner, Swoole) | One per process (built once at boot) | One per message | The Koffer holds no mutable global/shared state — reusing it across messages is safe as long as the wrapped adapters (DB pool, cache, …) are themselves safe to share across messages |
+| Long-running worker (RoadRunner, Swoole) | One per process (built once at boot) | One per message | The DomainKernel holds no mutable global/shared state — reusing it across messages is safe as long as the wrapped adapters (DB pool, cache, …) are themselves safe to share across messages |
 | Queue consumer | Same as worker | One per message | Same |
 | CLI / Cron | One per process | One per invocation | Trivial |
 
-Tenancy still matters at the adapter level: build a fresh Koffer (fresh DB credentials/connection, fresh cache namespace, …) per tenant when tenant isolation is required — there is no kernel-level `$sharedRegistry` mechanism to leak through.
+Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB credentials/connection, fresh cache namespace, …) per tenant when tenant isolation is required — there is no kernel-level `$sharedRegistry` mechanism to leak through.
 
 ### 3. DomainResponse → transport
 
@@ -181,5 +181,5 @@ public function __invoke(CreateCounterMessage $msg): void
 - Aggregate facade layout / V-rules / process modelling: `platform-implementation` §1, §4, §5
 - Response shapes per use-case kind (X-1 table): `platform-cookbook`
 - `DomainResponse` / `ContextResponse` / `DomainResponseTransformer`: generated per domain (`{Domain}\Response\`, Response-Trio) — not package classes; `ResponseStatus` + response/context interfaces: `jardissupport/contracts`
-- ENV-driven Koffer assembly + one-time App entry point (`App/bootstrap.php`): `core-kernel` (Bootstrap-Packer `BuildDomainKernelFromEnv`) — `jardiscore/foundation` does not exist; never reach for it
+- ENV-driven DomainKernel assembly + one-time App entry point (`App/bootstrap.php`): `core-kernel` (Bootstrap-Packer `BuildDomainKernelFromEnv`) — `jardiscore/foundation` does not exist; never reach for it
 - HTTP delivery (routing, PSR-15 middleware, canonical envelope mapper `MapDomainResponse`): `core-app` (`jardiscore/app`) — optional, one of several valid transports (§4)

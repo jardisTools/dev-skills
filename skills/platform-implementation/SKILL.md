@@ -108,7 +108,7 @@ Die Naht ist `protected` — laufzeit- **und** typsystemhart: Code außerhalb de
 
 | Class | Path | Mode | Purpose |
 |---|---|---|---|
-| Domain Facade | `<Domain>.php` | Generator: ForceOverwrite | `final class`, no `extends` (JardisCore-free). Constructor takes the Koffer `DomainKernelInterface $kernel`; self-registers every aggregate's event router via `$kernel->eventListenerRegistry()` (nullable-safe, unconditional); each BC accessor `new`s the BC facade directly (`new <BC>($this->kernel)`) — the Domain facade itself sits outside the Context-Familie. The `classVersion()`/`classVersionConfig()` hooks live on the generated `<Domain>Context` (next row) — see `platform-versioning` |
+| Domain Facade | `<Domain>.php` | Generator: ForceOverwrite | `final class`, no `extends` (JardisCore-free). Constructor takes the DomainKernel `DomainKernelInterface $kernel`; self-registers every aggregate's event router via `$kernel->eventListenerRegistry()` (nullable-safe, unconditional); each BC accessor `new`s the BC facade directly (`new <BC>($this->kernel)`) — the Domain facade itself sits outside the Context-Familie. The `classVersion()`/`classVersionConfig()` hooks live on the generated `<Domain>Context` (next row) — see `platform-versioning` |
 | FieldMap (BC-level) | `{BC}/FieldMap.php` | Generator: ForceOverwrite | **ONE FieldMap per BC** (namespace `<Domain>\<BC>`), built from the whole BC schema — one `{table}Columns()` write-map method per BC table (each BC table appears exactly once; shared tables collapse losslessly across the BC's aggregates). **NOT aggregate-kapsel:** BC-rooted and BC-complete, not emitted per aggregate. The read path (root-id normalisation) lives at the aggregate read edge (query handler), not in the FieldMap. |
 | Config | `Config/.env*` | Generator: CreateIfNotExists | Per-domain ENV defaults — kept on rerun |
 | Persistence Entity (BC-level) | `{BC}/Entity/<Entity>.php` | Generator: ForceOverwrite | Schema-driven persistence entity (`#[Table]`, `#[Column]`, `__snapshot`), namespace `<Domain>\<BC>\Entity`, one per BC table. **Distinct** from the DOMAIN aggregate entity (`#[Aggregate]`/`#[Relation]`) under `{Agg}/Aggregate/Entity/<Entity>.php` — the schema-driven layer (Entity/Validation/Data) lives on the BC root, the domain aggregate entity stays in the aggregate tree. |
@@ -348,9 +348,9 @@ When a Process node needs a Jardis runtime tool (cache, mail, queue, repository 
 | Hydration, identity, FieldMapper, UUID/NanoID | `support-data` |
 | ClassVersion loader / namespace injection | `support-classversion` (Designer-side: see `platform-versioning`) |
 | Factory / container | `support-factory` |
-| `DomainKernelInterface` (the Koffer) + Bootstrap-Packer `BuildDomainKernelFromEnv` (ENV-driven Koffer assembly) | `core-kernel` — `DomainApp`/`BoundedContext`/`ServiceRegistry` do not exist; their role is carried by the generated Domain facade + `<Domain>Context` (this skill, §1) |
+| `DomainKernelInterface` (the DomainKernel) + Bootstrap-Packer `BuildDomainKernelFromEnv` (ENV-driven DomainKernel assembly) | `core-kernel` — `DomainApp`/`BoundedContext`/`ServiceRegistry` do not exist; their role is carried by the generated Domain facade + `<Domain>Context` (this skill, §1) |
 | `DomainResponse`/`ContextResponse`/`DomainResponseTransformer` (generated per domain, `{Domain}\Response\`) | — Generat, no package skill (Response-Trio, §7 below) |
-| One-time ENV-driven App entry point (`App/bootstrap.php` + `App/.env`, wires the Koffer + every workspace domain) | `core-kernel` (Bootstrap-Packer) — `jardiscore/foundation` does not exist; never reach for it |
+| One-time ENV-driven App entry point (`App/bootstrap.php` + `App/.env`, wires the DomainKernel + every workspace domain) | `core-kernel` (Bootstrap-Packer) — `jardiscore/foundation` does not exist; never reach for it |
 
 ### 9. Anchors
 
