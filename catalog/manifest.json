@@ -57,7 +57,7 @@
   },
   {
     "package": "jardiscore/kernel",
-    "capability": "immutable infrastructure holder (the Koffer, DomainKernel) for Jardis-generated domains, with an optional ENV-driven bootstrap packer",
+    "capability": "immutable infrastructure holder (the DomainKernel) for Jardis-generated domains, with an optional ENV-driven bootstrap packer",
     "use_when": "you need to assemble and inject the infrastructure (db connection, cache, logger, events, HTTP client, mailer, filesystem) that a generated {Domain} facade takes via constructor injection",
     "composer_require": "composer require jardiscore/kernel"
   },
