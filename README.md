@@ -54,7 +54,7 @@ The plugin **detects** skills exclusively by directory name prefix. These prefix
 | Prefix | Source |
 |---|---|
 | `adapter-*` | `jardisadapter/*` (HTTP, Cache, Messaging, Mailer, ...) |
-| `core-*` | `jardiscore/*` — `kernel` (the Koffer: immutable `DomainKernel` infrastructure holder + optional ENV bootstrap packer) and `app` (HTTP-Delivery: FastRoute router, PSR-15 middleware pipeline, DomainResponse-to-PSR-7 mapper). `jardiscore/foundation` was removed in the Kernel-Entkopplung (2026-07); its ENV-bootstrap role was absorbed into `kernel`. |
+| `core-*` | `jardiscore/*` — `kernel` (the DomainKernel: immutable `DomainKernel` infrastructure holder + optional ENV bootstrap packer) and `app` (HTTP-Delivery: FastRoute router, PSR-15 middleware pipeline, DomainResponse-to-PSR-7 mapper). `jardiscore/foundation` was removed in the Kernel-Entkopplung (2026-07); its ENV-bootstrap role was absorbed into `kernel`. |
 | `support-*` | `jardissupport/*` (Repository, Validation, Workflow, ...) |
 | `tools-*` | `jardistools/*`. The bundled `tools-definition` skill was retired — Designer YAML vocabulary lives in `tools-builder-engine` (Builder repo); `tools-dbschema` was retired with the `jardistools/dbschema` package (2026-07-24), its capability moves into the Builder core. |
 | `schema-*` | Plugin itself — `schema-authoring` for the Designer input format |
