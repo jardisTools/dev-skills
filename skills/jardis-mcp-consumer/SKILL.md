@@ -25,7 +25,8 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
   are read-only projections of the current on-disk state — call them again after a write to
   see the effect, there is no push/subscribe.
 
-The full catalogue (on the order of 60 tools plus 50+ resources/templates — do not hardcode them
+The full catalogue (on the order of 70 tools plus 60+ resources/templates (Stand 2026-08-23,
+query-builder P6a: 71 Tools / 10 Resources / 54 Resource-Templates, `INVENTAR.md`) — do not hardcode them
 from memory, they grow with every strategic-design increment; how the count is pinned and kept
 honest: [[beschreibt-bauweise-von::builder-mcp-bauweise]] §9, mirrored in `INVENTAR.md`'s
 Budget-Tracking section) is a lived artefact, not something to memorise here — consult it before
@@ -97,6 +98,33 @@ capability here. `save_rules` persists the whole catalog+bindings document (Lock
 `rules-drift` is a read-only finding set — `policy_without_rule` / `rule_without_policy` /
 `empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
 persisted, no bulk-align tool here either).
+
+**Queries-Layer — full MCP parity (query-builder, 2026-08-23, Merges Nr. 93–96):** a BC's
+`Queries.yaml` (declarative read queries — `root:` entity, output form `selector`/`aggregate`/`list`,
+visibility `internal`/`public`, condition tree, parameters, joins) is fully MCP-reachable, same
+pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
+like `save_aggregate`/`save_rules`; a draft with findings still writes, `valid`/`errors`/
+`warnings`/`suggestions` travel in the response); `validate_queries` checks a not-yet-saved query
+set against V-QDEF-1..16 + RB1/RB2 (read-only, no write). `preview_queries` is read-only and
+returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
+never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
+folgen-Vorschau (`consequences`) of a form change against the currently saved `Queries.yaml`
+(files added/removed/changed, Außentür method added/removed/return-type-changed, a derived list
+suppressed/restored) before committing to `save_queries`. Lifecycle tools mirror `rename_process`/
+`delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Rules.yaml
+catalog entry's `reads:[]` and process nodes — `confirm=true` required), `delete_query`
+(`force=true` overrides an `IN_USE` 409 from >=1 declared reader), `duplicate_query` (auto-suggests
+a free `{name}Copy`/`{name}CopyN` name, visibility always falls back to `internal`). Read side: the
+`queries` Resource template returns the artefact as-is (a BC without one reads as an empty set,
+never an error); `queries-usage` lists which Rules/process nodes reference a given query — the
+same computation `rename_query`/`delete_query` use for their `consequences`, not a second one.
+
+**Schema→SQL export (P-56, 2026-08-12/15):** `export_schema_sql` returns one dialect's DDL as
+text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
+the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
+files into the BC directory (mutating). Neither tool exists to hand-author a `Schema.yaml` from —
+that direction is `schema-authoring` / `import_schema`; these are the reverse, DB-migration-facing
+export.
 
 ### 3. Sorte-A pattern — GUI affordance replaced by a data path
 
