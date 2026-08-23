@@ -34,7 +34,7 @@ keys at the top level; the generator handles grouping for rendering.
 
 **Excluded:**
 - `jardis/dev-skills` (the plugin itself)
-- `core/starter`, `tools/magicfaker`, `tools/builder` (not published on Packagist)
+- `tools/builder` (not published on Packagist)
 
 **Special case:** `jardissupport/contracts` has no dedicated bundle skill but **must** have a
 catalog entry. The curated text explains the package's role without referencing any
