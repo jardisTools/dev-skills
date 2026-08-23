@@ -12,7 +12,7 @@ After `composer install` or `composer update`, the plugin scans your `vendor/` d
 
 Result: Claude Code, Cursor & Co. automatically know the rules, patterns, and APIs of the packages you have pulled in via Composer.
 
-Additionally, the plugin ships **13 cross-package skills** of its own: architecture, frontend-review, pattern, and testing rules; the `schema-authoring` guide for the Jardis Designer; and five `platform-*` guides for working on Designer-generated code — `platform-implementation` (business logic on top of generated code, including the layout of generated PHP classes), `platform-usage` (wiring generated Commands/Queries into an HTTP / CLI / queue transport), `platform-versioning` (ClassVersion resolution and the versioning model), `platform-workflow` (the FlowDesigner Workflow-Engine API), and `platform-cookbook` (Phase-3 recipes, troubleshooting, and event transport). Which of these ten get copied into your project is controlled via `composer.json` — see [Configuring bundled skills](#configuring-bundled-skills). These ten skills are **opt-in**; three further skills are installed **by default**: the [Capability Catalog](#capability-catalog-jardis-catalog) (`jardis-catalog`), `jardis-start-here` (the lifecycle master entry point), and `jardis-mcp-consumer` (headless MCP-workflow guide).
+Additionally, the plugin ships **18 cross-package skills** of its own: architecture, frontend-review, pattern, and testing rules; the `schema-authoring` guide for the Jardis Designer; and five `platform-*` guides for working on Designer-generated code — `platform-implementation` (business logic on top of generated code, including the layout of generated PHP classes), `platform-usage` (wiring generated Commands/Queries into an HTTP / CLI / queue transport), `platform-versioning` (ClassVersion resolution and the versioning model), `platform-workflow` (the FlowDesigner Workflow-Engine API), and `platform-cookbook` (Phase-3 recipes, troubleshooting, and event transport). New since 2026-08: five `do-*` Gitflow skills for project repositories — `do-git-branch`, `do-git-commit`, `do-git-push` (the daily branch → commit → PR flow), `do-project-git-setup` (one-time Gitflow setup: develop branch, repo settings, branch ruleset, hooks — no release, no Packagist), and `do-git-compliance` (10 project checks). Which of these fifteen get copied into your project is controlled via `composer.json` — see [Configuring bundled skills](#configuring-bundled-skills). These fifteen skills are **opt-in**; three further skills are installed **by default**: the [Capability Catalog](#capability-catalog-jardis-catalog) (`jardis-catalog`), `jardis-start-here` (the lifecycle master entry point), and `jardis-mcp-consumer` (headless MCP-workflow guide).
 
 ---
 
@@ -60,6 +60,7 @@ The plugin **detects** skills exclusively by directory name prefix. These prefix
 | `schema-*` | Plugin itself — `schema-authoring` for the Designer input format |
 | `platform-*` | Plugin itself — `platform-implementation` (working on generated code), `platform-usage` (wiring Commands/Queries into a transport), `platform-versioning` (ClassVersion resolution + versioning model), `platform-workflow` (FlowDesigner Workflow-Engine API), `platform-cookbook` (Phase-3 recipes, troubleshooting, event transport) |
 | `rules-*` | Plugin itself — `rules-architecture`, `rules-frontend` (stack-agnostic FE review constitution), `rules-patterns`, `rules-testing` |
+| `do-*` | Plugin itself — Gitflow skills for project repositories: `do-git-branch`, `do-git-commit`, `do-git-push`, `do-project-git-setup`, `do-git-compliance` |
 
 **Custom skills with a different prefix** (`my-*`, `internal-*`, ...) are left untouched by the plugin — neither during install nor during uninstall.
 
@@ -67,7 +68,7 @@ The plugin **detects** skills exclusively by directory name prefix. These prefix
 
 ## Configuring bundled skills
 
-The 10 bundled skills (`schema-authoring`, `platform-implementation`, `platform-usage`, `platform-versioning`, `platform-workflow`, `platform-cookbook`, `rules-architecture`, `rules-frontend`, `rules-patterns`, `rules-testing`) are **opt-in**. Three further skills — the Capability Catalog (`jardis-catalog`), `jardis-start-here`, and `jardis-mcp-consumer` — are installed by default and managed separately — see [Capability Catalog](#capability-catalog-jardis-catalog). The 10 opt-in skills are controlled via `composer.json`:
+The 15 bundled skills (`schema-authoring`, `platform-implementation`, `platform-usage`, `platform-versioning`, `platform-workflow`, `platform-cookbook`, `rules-architecture`, `rules-frontend`, `rules-patterns`, `rules-testing`, `do-git-branch`, `do-git-commit`, `do-git-push`, `do-project-git-setup`, `do-git-compliance`) are **opt-in**. Three further skills — the Capability Catalog (`jardis-catalog`), `jardis-start-here`, and `jardis-mcp-consumer` — are installed by default and managed separately — see [Capability Catalog](#capability-catalog-jardis-catalog). The 15 opt-in skills are controlled via `composer.json`:
 
 ```json
 {
