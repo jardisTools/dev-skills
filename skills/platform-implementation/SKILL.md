@@ -14,7 +14,7 @@ Jardis uses DDD vocabulary (BC, Aggregate, Domain Event, Repository, VO, Ubiquit
 | Rule | Consequence |
 |---|---|
 | **V11** — no business methods on entities | Behaviour lives in Actions and Domain Services, not on entities. Aggregate invariants are protected by the generated **pipeline**; cross-aggregate behaviour is authored as a **Process** (`{BC}/Process/`). |
-| **V12** — responses are `DomainResponse` arrays | One serialisation surface across HTTP / CLI / queue. Typing is the transport adapter's job, not the domain's. |
+| **V12** — responses are `DomainResponse` arrays | One serialisation surface across HTTP / CLI / queue. Typing is the transport adapter's job, not the domain's. The generated `{Agg}/Command/Response/{Command}Response.php` classes do **not** change this: they are contract types describing the payload, never a handler return type. |
 | **Call chains** | Aggregate reads (Außentür): `$bc->{agg}()->get{Agg}ById\|ByIds\|By{Key}\|{agg}List(...)` — the `{Agg}Read` facade is the call surface, no aggregate-root hop. Aggregate writes are **not** on the BC facade (G2) — the write facade `{Agg}` is reachable only family-internally, via the Kernel-Naht: `$this->handle({Agg}::class)->{command}($dto)` (typically from a Process node body). BC-level processes (the other half of the Außentür): `$bc->process()->{process}($dto)`. Taxonomy is discoverable; `handle()` / ClassVersion resolution anchors at each level. |
 
 Upheld without compromise: aggregates are transaction boundaries with a single root; BCs are strict language boundaries (V6). The aggregate is now **100 % generated** — you do not extend it in place. A Rich-Model instinct (custom validation, a VO, a domain service, coordinating two aggregates) is satisfied by **modelling a Process** in the Process Designer, never by editing the aggregate tree.
@@ -24,6 +24,21 @@ When Domain logic needs a Jardis runtime tool (cache, mail, queue, repository, H
 ### 1. Generated baseline — Platform-free hermetic layout
 
 Facade chain: Domain → BC → **Aggregate Read facade** (`{Agg}Read`, reached via `$bc->{agg}()`) → query method — this is the Außentür (the BC facade's public surface), plus a parallel Domain → BC → Process facade → process chain (`$bc->process()`). The **Aggregate Write facade** (`{Agg}`, same directory) hosts the commands + `event()`; it sits behind the Kernel-Naht (`handle()`/`context()`) and is reachable only from inside the Context-Familie (classes extending the Domain Context) — never from the BC facade. Example: aggregate `Counter` in BC `Counter` in domain `MeterDevice`.
+
+**Route convention of the Außentür (Vorhaben `openapi-aussentuer`, 2026-08-26).** Since that vorhaben every build also writes a machine-readable description of this same surface — one OpenAPI 3.1 document per domain at `Api/{Domain}/openapi.yaml`, a sibling of `App/` outside the PSR-4 tree. The routes it declares are the canonical HTTP shape of the Außentür, and a transport layer (hand-written or generated) is expected to mount exactly these:
+
+| Command / entry | Route |
+|---|---|
+| `Update{Agg}` | `PUT /{bc}/{aggs}/{identifier}` *(full replacement of the root scalars; `PATCH` stays free for a future partial-update concept)* |
+| `Remove{Agg}` | `DELETE /{bc}/{aggs}/{identifier}` |
+| `Add{Agg}{Child}` | `POST /{bc}/{aggs}/{identifier}/{children}` |
+| `Remove{Agg}{Child}` | `DELETE /{bc}/{aggs}/{identifier}/{children}/{childKey}` |
+| `Set{Something}` | `PUT /{bc}/{aggs}/{identifier}/{something}` |
+| Process | `POST /{bc}/processes/{name}` |
+
+**There is deliberately no create route.** The create command DTO is named after the entity (it *is* the aggregate's data shape — the verb lives on the handler `Create{Agg}`), so it can never be exposed as a direct facade method (its method name would collide with the read accessor `{agg}()`, caught by `V-RULE-6`). **Creation at the Außentür runs exclusively through a Process** — model one, expose it, and it appears as `POST /{bc}/processes/{name}`.
+
+Path parameters carry the **business identifier** wherever the aggregate or child has one; the internal id is a documented fallback only, and the build emits a warning when it has to fall back, so the gap stays visible. A process carries `visibility: public | internal` in its YAML — `internal` keeps it out of the document without touching a line of PHP. The document carries no `servers:` block: base URL and mount prefix are the surrounding app's business.
 
 **Notation:** aggregate code lives under `{BC}/Aggregate/{Agg}/`; this skill abbreviates that directory as `{Agg}/`. Processes live one level up, under `{BC}/Process/` — a sibling of `{BC}/Aggregate/`, **not** under any aggregate.
 
@@ -210,7 +225,7 @@ The aggregate tree is hermetic; **nothing** under `{Agg}/` is a developer overri
 | V9 | No persistence in Domain Services — only via `Repository::persist()` |
 | V10 | No state in `{Domain}Context` subclasses (transient per call) — the generated base class that replaced the deleted `BoundedContext` (§1) |
 | V11 | No business methods on Entities |
-| V12 | Responses are arrays via FieldMapper, not typed DTOs |
+| V12 | Responses are arrays via FieldMapper, not typed DTOs. ⚠️ **Precision (Vorhaben `openapi-aussentuer`, 2026-08-26):** the generator now also emits one `{Agg}/Command/Response/{Command}Response.php` per command — a plain data class carrying the reference values (root identifier + affected child reference) the handler writes into `$this->result()->setData([...])`. That class is a **contract type**, published so a client can be typed against the write door; it is **not** a return type. The handler signature stays `DomainResponseInterface`, its payload stays the array, and nothing about the dispatch changes — **do not rewrite a handler to return one of these classes.** They are hermetic like the rest of the tree (never edit), and derived from the same source the handler body is rendered from, so they cannot drift from what the handler actually writes. |
 | V13 | A Rule (`{BC}/Rule/{Name}.php`) reads bestand only from its **own BC** — via that BC's read facade (`$this->handle({BC}::class)->{agg}()`) for a facade-exposed query, or directly via the Kernel-Naht (`$this->context({Handler}::class, $payload)()`) for a BC-internal read such as the derived Selector — no foreign-BC import, no cross-BC read from inside a Rule (M9). Enforced by convention + a stub docblock nudge, not yet by static analysis. A cross-BC bestand-check belongs in a Process, not a Rule. |
 
 ### 4. Decision tree — "I need to…"
