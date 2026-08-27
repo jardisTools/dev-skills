@@ -1,6 +1,6 @@
 ---
 name: platform-cookbook
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds`, sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key since P13, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 prerequisites: [platform-implementation]
@@ -203,6 +203,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 |---|---|
 | **Query ById / By{UniqueKey}** (and hand-modelled single variants) | `['counter' => $projected[0] ?? null]` — one projected nested scalar tree or `null` (see Query projection below) |
 | **Query ByIds** | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing ids → partial result, empty `ids` → `[]` |
+| **Query By{PluralKey}** (P13, `openapi-aussentuer`, 2026-08-27 — only on an aggregate with a public unique key) | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing keys → partial result, empty key list → `[]`; same shape as ByIds, keyed on the unique column instead of the PK |
 | **Create** | `['identifier' => $handler->getData()->getIdentifier()]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['identifier' => …, '<childIdentifier>' => …]` — root key from cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** (root scalars) | `['identifier' => $cmd->getIdentifier()]` — pure echo of input identity |
@@ -213,15 +214,25 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base and the bulk-read recipe rely on; child entities stay id-free. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. **Since P13 (`openapi-aussentuer`, 2026-08-27):** this concerns the projected Akte only — the auto-**list** SELECT is no longer uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one still leads its list with `id` as before. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the identifier(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
 **Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a response, run the aggregate query/command from a **Process node**, then add fields in the node body before returning (`$this->result()->addData('extra', $value)` — Decorator at process level, see `platform-implementation` §4).
 
-**Recipe 7 — Bulk read: list → ids → full Akten**
+**Recipe 7 — Bulk read: list → keys/ids → full Akten**
 
-Every aggregate facade carries the uniform read base `get{Agg}ById` / `get{Agg}ByIds` / `get{Agg}By{UniqueKey}` (catalog: `platform-implementation` §1), and both the auto-list items and the projected Akte lead with the root id. Loading "all matching Akten" is therefore three lines, identical across aggregates:
+Every aggregate facade carries the uniform read base `get{Agg}ById` / `get{Agg}ByIds` / `get{Agg}By{UniqueKey}` (catalog: `platform-implementation` §1). **Since P13 (`openapi-aussentuer`, 2026-08-27):** an aggregate WITH a public unique key additionally carries the bulk variant `get{Agg}By{PluralKey}` (e.g. `getOrderByOrderNumbers`), and its auto-list items lead with that key column instead of `id` — so the recipe forks:
+
+An aggregate **WITH** a unique key — list → keys → `get{Agg}By{PluralKey}`:
+
+```php
+$list  = $bc->order()->orderList($filter);                                             // filtered flat list
+$keys  = array_values(array_unique(array_column($list['items'], 'orderNumber')));
+$akten = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys)); // ['order' => list<Akte>]
+```
+
+An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds` (unchanged, pre-P13 shape):
 
 ```php
 $list  = $bc->counter()->counterList($filter);                               // filtered flat list
@@ -229,7 +240,7 @@ $ids   = array_values(array_unique(array_column($list['items'], 'id')));
 $akten = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids));  // ['counter' => list<Akte>]
 ```
 
-Edge behaviour is plain IN semantics (no new mechanics underneath): empty `ids` → `[]` · duplicates → one Akte · missing ids → partial result without error · no order guarantee — match per `id`, which every Akte carries. There is **no generated unique-key set form** (`getCounterByIdentifiers` does not exist): a key-set lookup is a hand-modelled Source query (the array-parameter pattern exists, e.g. `CounterByMeterLocation`).
+Edge behaviour is plain IN semantics either way (no new mechanics underneath): empty input → `[]` · duplicates → one Akte · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every Akte carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (Außentür/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
 
 **Recipe 8 — Sub-process node: calling another process synchronously**
 
