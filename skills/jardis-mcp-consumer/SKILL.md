@@ -25,11 +25,12 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
   are read-only projections of the current on-disk state — call them again after a write to
   see the effect, there is no push/subscribe.
 
-The full catalogue (on the order of 70 tools plus 60+ resources/templates (Stand 2026-08-23,
-query-builder P6a: 71 Tools / 10 Resources / 54 Resource-Templates, `INVENTAR.md`) — do not hardcode them
-from memory, they grow with every strategic-design increment; how the count is pinned and kept
-honest: [[beschreibt-bauweise-von::builder-mcp-bauweise]] §9, mirrored in `INVENTAR.md`'s
-Budget-Tracking section) is a lived artefact, not something to memorise here — consult it before
+The full catalogue (on the order of 80 tools plus 70+ resources/templates — do not hardcode them
+from memory, they grow with every strategic-design increment; the counts are pinned live by
+`internal/mcpserver/budget_test.go` (`TestToolBudget_FinalCount`), and every HTTP route's MCP
+decision — tool, resource, or a justified exclusion — lives in
+`internal/mcpserver/route_decisions.go`, both explained in
+[[beschreibt-bauweise-von::builder-mcp-bauweise]] §9/§12) is a lived artefact, not something to memorise here — consult it before
 guessing a name (see Reference).
 
 ### 2. End-to-end workflow
@@ -65,7 +66,7 @@ read-through, collaborators), `create_planned_bc` / `update_planned_bc` / `delet
 (a not-yet-built BC's canvas, at Domain/Subdomain level) and `promote_bc` (turn a planned BC
 into a real one). None of these are required to generate code — they capture organisational
 metadata (subdomain classification, terminology, context boundaries) a human or AI can set
-independently of the Schema→Aggregate→Process→Build chain. Full field shapes: `INVENTAR.md`.
+independently of the Schema→Aggregate→Process→Build chain. Full field shapes: the tools' JSON input schemas (`tools/list`).
 
 **Context Map (per Domain, full MCP parity with the UI board):** declared BC-to-BC
 relationships are edges carrying one of the eight canonical DDD patterns (Partnership, Shared
@@ -171,9 +172,11 @@ supply the confirmation, then retry.
 
 ### 7. Reference
 
-- Full Tool/Resource catalogue + per-capability test evidence: `INVENTAR.md`
-  (`/Users/Rolf/Development/headgent/jardis/tools/builder/docs/mcp-server/INVENTAR.md`).
-- Source of the surface itself (read-only, for disambiguating a name you cannot find in
-  `INVENTAR.md`): `/Users/Rolf/Development/headgent/jardis/tools/builder/internal/mcpserver/`.
+- Full Tool/Resource catalogue: `tools/list`, `resources/list`, `resources/templates/list` on the
+  running server — the live surface is the only catalogue (the former `INVENTAR.md` document was
+  retired 2026-09-02). Per-route MCP decision (tool / resource / justified exclusion):
+  `internal/mcpserver/route_decisions.go` in the Builder repo.
+- Source of the surface itself (read-only, for disambiguating a name):
+  `internal/mcpserver/` in the Builder repo (`tools_*.go`, `resources_*.go`).
 - Once generated code exists and you are implementing behaviour inside it: `platform-implementation`.
 - Authoring a `Schema.yaml` by hand instead of introspecting a live database: `schema-authoring`.
