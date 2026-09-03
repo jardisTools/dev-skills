@@ -106,12 +106,13 @@ visibility `internal`/`public`, condition tree, parameters, joins) is fully MCP-
 pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_rules`; a draft with findings still writes, `valid`/`errors`/
 `warnings`/`suggestions` travel in the response); `validate_queries` checks a not-yet-saved query
-set against V-QDEF-1..16 + RB1/RB2 (read-only, no write). `preview_queries` is read-only and
+set against V-QDEF-1..16, 18..24 plus RB1 (name collision with the read base, Blocker);
+V-QDEF-17 and RB2 retired 2026-09-03 alongside `form` (read-only, no write). `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
 folgen-Vorschau (`consequences`) of a form change against the currently saved `Queries.yaml`
-(files added/removed/changed, Außentür method added/removed/return-type-changed, a derived list
-suppressed/restored) before committing to `save_queries`. Lifecycle tools mirror `rename_process`/
+(fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved, basePathAdded/
+basePathRemoved) before committing to `save_queries`. Lifecycle tools mirror `rename_process`/
 `delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Rules.yaml
 catalog entry's `reads:[]` and process nodes — `confirm=true` required), `delete_query`
 (`force=true` overrides an `IN_USE` 409 from >=1 declared reader), `duplicate_query` (auto-suggests
