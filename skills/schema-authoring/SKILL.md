@@ -1,6 +1,6 @@
 ---
 name: schema-authoring
-description: Author a Schema.yaml from scratch for the Jardis Designer — from a plain-text domain idea, draft tables (snake_case plural), columns with realistic types, primary keys, indexes (primary/unique/index), optional foreign keys. Output matches the DB-export format the Designer's importer parses.
+description: Design the CONTENT of a Schema.yaml for the Jardis Designer — from a plain-text domain idea, draft tables (snake_case plural), columns with realistic types, primary keys, indexes (primary/unique/index), optional foreign keys. The finished draft enters the workspace through an authoring door — MCP `import_schema` or the schema import in `jardis ui` — never as a file placed into the workspace by hand. Output matches the DB-export format the Designer's importer parses.
 zone: pre
 persona: A
 prerequisites: []
@@ -13,9 +13,14 @@ next: [platform-implementation]
 2. Tables = plural snake_case. Implicit collections → own tables.
 3. Every table: PK (`int` autoincrement default; UUID only if domain dictates). Business identifier → `unique` index. Lookup/filter column → non-unique `index`.
 4. FKs **optional** — only include when the relation is unambiguous. Otherwise `foreignKeys: {}` and let the Designer model relations interactively.
-5. Output = one complete `Schema.yaml` block + explicit assumption list.
+5. Output = one complete `Schema.yaml` block + explicit assumption list. This block is a **draft handed to an authoring door**, not a file you write into the workspace yourself — Jardis definition files are maintained exclusively by the app.
 
-Import instruction: `Schema → Import → File` in the Designer.
+Handing the draft over — two doors, same result:
+
+- **MCP** (`jardis mcp`): call `import_schema` with the drafted YAML in its `yaml` argument, plus `domain`/`subdomain`/`bc`. It writes `{domain}/{subdomain}/{bc}/Schema.yaml` for you.
+- **Browser UI** (`jardis ui`): upload the draft as a `.yaml` schema source in the bounded context's schema-import surface, then pick the tables the BC governs.
+
+Never place the block into the workspace as a hand-written file — that is not a supported input path.
 
 ### 1. Schema.yaml structure
 
