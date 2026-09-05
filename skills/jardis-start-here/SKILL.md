@@ -23,7 +23,7 @@ that) would only fragment the routing table this skill exists to provide.
 2. **Schema** — model the domain's tables from a plain-text idea, or introspect an existing
    database. → `schema-authoring`.
 3. **Design** — draw Aggregates, Processes, and declarative read Queries in the Jardis Designer
-   (`jardis ui`). Queries (`Queries.yaml`, query-builder, 2026-08-23) are the fourth designer,
+   (`jardis ui`). Queries (`Queries.yaml`) are the fourth designer,
    sibling of Aggregates/Processes: a BC-level artefact for read-only queries against an
    aggregate's data (condition tree, joins, parameters) without hand-written PHP — the Builder
    still renders the code, never SQL. The same tool also carries the strategic layer:
