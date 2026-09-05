@@ -40,8 +40,10 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
 1. **Workspace** — point the running `jardis mcp` process at a project root (passed at process
    start). If the domain structure does not exist yet, build it up with the structural tools
    (create a domain, add a bounded context, add an aggregate) before importing schema.
-2. **`import_schema`** — introspect a database (or a hand-authored `Schema.yaml`, see
-   `schema-authoring`) into the bounded context's schema.
+2. **`import_schema`** — write the bounded context's schema, either from a database
+   introspection or from a schema drafted for a domain idea (see `schema-authoring`), whose
+   YAML you pass in the `yaml` argument. This Tool **is** the authoring door: a `Schema.yaml`
+   is never placed into the workspace as a hand-written file.
 3. **`save_aggregate`** — persist the aggregate's designer graph (entities, relations, keys).
    Returns a mtime `CONFLICT` if the on-disk graph moved under you — reload and retry, or pass
    the force flag once you have confirmed the overwrite is intended.
@@ -129,7 +131,7 @@ same computation `rename_query`/`delete_query` use for their `consequences`, not
 **Schema→SQL export:** `export_schema_sql` returns one dialect's DDL as
 text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
 the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
-files into the BC directory (mutating). Neither tool exists to hand-author a `Schema.yaml` from —
+files into the BC directory (mutating). Neither tool exists to author a `Schema.yaml` from —
 that direction is `schema-authoring` / `import_schema`; these are the reverse, DB-migration-facing
 export.
 
@@ -185,4 +187,5 @@ supply the confirmation, then retry.
 - Source of the surface itself (read-only, for disambiguating a name):
   `internal/mcpserver/` in the Builder repo (`tools_*.go`, `resources_*.go`).
 - Once generated code exists and you are implementing behaviour inside it: `platform-implementation`.
-- Authoring a `Schema.yaml` by hand instead of introspecting a live database: `schema-authoring`.
+- Designing a schema's content from a domain idea instead of introspecting a live database, then
+  feeding it through `import_schema`: `schema-authoring`.

@@ -57,7 +57,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | I want to… | Skill |
 |---|---|
 | Check if a Jardis package already covers something before I build it myself | `jardis-catalog` |
-| Draft a `Schema.yaml` by hand from a domain idea, no database yet | `schema-authoring` |
+| Design a `Schema.yaml`'s content from a domain idea, no database yet, and hand it to an authoring door (MCP `import_schema` / UI schema import) | `schema-authoring` |
 | Extend generated Command/Handler/Action code; understand the hermetic Aggregate tree, `$bc->{agg}()`, V1–V13 | `platform-implementation` |
 | Wire generated Commands/Queries into an HTTP/CLI/queue/worker transport layer | `platform-usage` |
 | Understand ClassVersion resolution, or add a versioned variant of a generated class | `platform-versioning` |
