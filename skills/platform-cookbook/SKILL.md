@@ -210,6 +210,8 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | **Remove** | `['identifier' => $cmd->getIdentifier()]` — root identity only |
 | **Remove{Child}** | `['identifier' => $cmd->getIdentifier()]` — Remove{Child} skips the child key; only the root identity is echoed |
 
+**`Remove{Child}` does not exist for every child.** A `Remove{Child}` command is only emitted when the child may actually be detached — a DEPEND leaf whose depend-FK is NOT NULL, and a `required` containment child, both get **no** remove mutation at all (rule and rationale: `platform-implementation` §1). If the row above has no counterpart in your generated aggregate, that is the rule, not a gap.
+
 Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for `identifier` where the aggregate uses a different business key. Child responses use the child's business identifier (`<childIdentifier>`, e.g. `counterGatewayId`).
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
