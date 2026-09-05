@@ -1,6 +1,6 @@
 ---
 name: platform-cookbook
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key since P13, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 prerequisites: [platform-implementation]
@@ -67,7 +67,7 @@ foreach (array_merge(...array_values($response->getEvents())) as $event) {
 - Never fill the generated `<Agg>EventRouter` bodies — the tree is hermetic (V1); the router's channel-key comments are documentation for the topic names, nothing more.
 - A node runs **synchronously** in the workflow. Long operations → enqueue and let a consumer pick up, the node only hands off.
 - A throwing node flips the process response per its `ON_FAIL` routing (`platform-workflow` §5). Wrap `try/catch` inside the node only if "event delivery must not fail the process".
-- **Tenant / feature-flag transport variant:** because ClassVersion can resolve any generated class, a `v{N}/Event/<Agg>EventRouter.php` next to the baseline is the escape hatch for a per-version router — but version *creation* is out of current scope (PRD P6); prefer the Process node (`platform-versioning` §1).
+- **Tenant / feature-flag transport variant:** because ClassVersion can resolve any generated class, a `v{N}/Event/<Agg>EventRouter.php` next to the baseline is the escape hatch for a per-version router — but version *creation* is out of scope; prefer the Process node (`platform-versioning` §1).
 
 ### 2. Phase-3 cookbook
 
@@ -203,18 +203,20 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 |---|---|
 | **Query ById / By{UniqueKey}** (and hand-modelled single variants) | `['counter' => $projected[0] ?? null]` — one projected nested scalar tree or `null` (see Query projection below) |
 | **Query ByIds** | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing ids → partial result, empty `ids` → `[]` |
-| **Query By{PluralKey}** (P13, `openapi-aussentuer`, 2026-08-27 — only on an aggregate with a public unique key) | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing keys → partial result, empty key list → `[]`; same shape as ByIds, keyed on the unique column instead of the PK |
+| **Query By{PluralKey}** (only on an aggregate with a public unique key) | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing keys → partial result, empty key list → `[]`; same shape as ByIds, keyed on the unique column instead of the PK |
 | **Create** | `['identifier' => $handler->getData()->getIdentifier()]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['identifier' => …, '<childIdentifier>' => …]` — root key from cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** (root scalars) | `['identifier' => $cmd->getIdentifier()]` — pure echo of input identity |
 | **Remove** | `['identifier' => $cmd->getIdentifier()]` — root identity only |
 | **Remove{Child}** | `['identifier' => $cmd->getIdentifier()]` — Remove{Child} skips the child key; only the root identity is echoed |
 
+**`Remove{Child}` does not exist for every child.** A `Remove{Child}` command is only emitted when the child may actually be detached — a DEPEND leaf whose depend-FK is NOT NULL, and a `required` containment child, both get **no** remove mutation at all (rule and rationale: `platform-implementation` §1). If the row above has no counterpart in your generated aggregate, that is the rule, not a gap.
+
 Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for `identifier` where the aggregate uses a different business key. Child responses use the child's business identifier (`<childIdentifier>`, e.g. `counterGatewayId`).
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. **Since P13 (`openapi-aussentuer`, 2026-08-27):** this concerns the projected Akte only — the auto-**list** SELECT is no longer uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one still leads its list with `id` as before. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected Akte only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the identifier(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
@@ -222,7 +224,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for
 
 **Recipe 7 — Bulk read: list → keys/ids → full Akten**
 
-Every aggregate facade carries the uniform read base `get{Agg}ById` / `get{Agg}ByIds` / `get{Agg}By{UniqueKey}` (catalog: `platform-implementation` §1). **Since P13 (`openapi-aussentuer`, 2026-08-27):** an aggregate WITH a public unique key additionally carries the bulk variant `get{Agg}By{PluralKey}` (e.g. `getOrderByOrderNumbers`), and its auto-list items lead with that key column instead of `id` — so the recipe forks:
+Every aggregate facade carries the uniform read base `get{Agg}ById` / `get{Agg}ByIds` / `get{Agg}By{UniqueKey}` (catalog: `platform-implementation` §1). An aggregate WITH a public unique key additionally carries the bulk variant `get{Agg}By{PluralKey}` (e.g. `getOrderByOrderNumbers`), and its auto-list items lead with that key column instead of `id` — so the recipe forks:
 
 An aggregate **WITH** a unique key — list → keys → `get{Agg}By{PluralKey}`:
 
@@ -232,7 +234,7 @@ $keys  = array_values(array_unique(array_column($list['items'], 'orderNumber')))
 $akten = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys)); // ['order' => list<Akte>]
 ```
 
-An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds` (unchanged, pre-P13 shape):
+An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
 
 ```php
 $list  = $bc->counter()->counterList($filter);                               // filtered flat list
@@ -240,7 +242,7 @@ $ids   = array_values(array_unique(array_column($list['items'], 'id')));
 $akten = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids));  // ['counter' => list<Akte>]
 ```
 
-Edge behaviour is plain IN semantics either way (no new mechanics underneath): empty input → `[]` · duplicates → one Akte · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every Akte carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (Außentür/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
+Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one Akte · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every Akte carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (Außentür/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
 
 **Recipe 8 — Sub-process node: calling another process synchronously**
 
@@ -384,7 +386,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Rule/v{N}/`).
-- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — since 2026-09-03 (`query-eine-liste`) this is a declared internal list read with `limit: 1`, decided over `total` (the earlier derived Selector is retired) — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (K3, `query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Rules.yaml` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Rules.yaml` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Rule/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
@@ -502,7 +504,7 @@ Torwächter.
 | Process node not invoked though it's in the graph | R5-Routing-Safety: the node isn't registered via `addNode()`, or the returned `ON_*` status has no transition in the current node | Every handler referenced in `->onSuccess()/onFail()/…` must be declared as its own `->node(...)`; add the missing status to the routing — `platform-workflow` §5 |
 | `Error: Cannot instantiate abstract class` / "Service X not in container" | Direct `new` bypassing `handle()` (V2 / V3) | Replace with `$this->handle(X::class, ...)` from inside the node |
 | `Cannot import OtherBC\...` review blocker | V6 violation (cross-BC import) | Add a Domain Service in the Process scope and call the other BC via `handle()` |
-| Process tries to extend an aggregate DTO (`extends platform:…`) | Removed feature — a process input is self-contained (Recipe 5) | Declare the fields the process needs in `input.fields`; fetch aggregate data by running its query from a node |
+| Process tries to extend an aggregate DTO (`extends platform:…`) | Not supported — a process input is self-contained (Recipe 5) | Declare the fields the process needs in `input.fields`; fetch aggregate data by running its query from a node |
 | `getData()` empty after `addData()` in a node | The node returned before augmenting `$this->result()`, or replaced the payload | Read aggregate data, then `addData(...)`/`setData(...)`, then return |
 | Process node throws → whole process fails | Default: an uncaught node exception routes to `ON_FAIL` (or bubbles to 500 if unrouted) | Wrap the node body in `try/catch` only if its failure must not fail the process; otherwise add the `ON_FAIL` transition — §1, `platform-workflow` §5 |
 | Sub-process node body overwritten after rebuild | Sub-process node lost its `@node-id` marker, or the file was built with an older Generator version (formerly ForceOverwrite No-Op) | Keep the `@node-id` DocBlock marker intact; if the file is an old No-Op, delete it — the next build emits the typed Dev-Stub fresh (Recipe 8) |

@@ -100,19 +100,24 @@ capability here. `save_rules` persists the whole catalog+bindings document (Lock
 `empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
 persisted, no bulk-align tool here either).
 
-**Queries-Layer — full MCP parity (query-builder, 2026-08-23, Merges Nr. 93–96):** a BC's
-`Queries.yaml` (declarative read queries — `root:` entity, output form `selector`/`aggregate`/`list`,
-visibility `internal`/`public`, condition tree, parameters, joins) is fully MCP-reachable, same
+**Queries-Layer — full MCP parity:** a BC's
+`Queries.yaml` (declarative read queries — `root:` entity, visibility `internal`/`public`,
+condition tree, parameters, joins; every query is a paginated list answering
+`{items,total,limit,offset}`, so there is no output-form key — a document still carrying `form:`
+is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
 pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_rules`; a draft with findings still writes, `valid`/`errors`/
 `warnings`/`suggestions` travel in the response); `validate_queries` checks a not-yet-saved query
-set against V-QDEF-1..16, 18..24 plus RB1 (name collision with the read base, Blocker);
-V-QDEF-17 and RB2 retired 2026-09-03 alongside `form` (read-only, no write). `preview_queries` is read-only and
+set against V-QDEF-1..16, 18..24 plus RB1 (name collision with the read base, Blocker) —
+read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
-folgen-Vorschau (`consequences`) of a form change against the currently saved `Queries.yaml`
-(fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved, basePathAdded/
-basePathRemoved) before committing to `save_queries`. Lifecycle tools mirror `rename_process`/
+Folgen-Vorschau (`consequences`) of confirming this draft — a query appearing or disappearing, a
+visibility switch `internal`↔`public`, the Außentür base path `GET …/{agg}` moving with the query
+named `{agg}List` (fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved,
+basePathAdded/basePathRemoved) — before committing to `save_queries`. The comparison state is
+always what lies on disk, never a set the caller supplies, and `consequences` stays empty for a
+draft the rules reject (the rule id then travels alone, in `errors`). Lifecycle tools mirror `rename_process`/
 `delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Rules.yaml
 catalog entry's `reads:[]` and process nodes — `confirm=true` required), `delete_query`
 (`force=true` overrides an `IN_USE` 409 from >=1 declared reader), `duplicate_query` (auto-suggests
@@ -121,7 +126,7 @@ a free `{name}Copy`/`{name}CopyN` name, visibility always falls back to `interna
 never an error); `queries-usage` lists which Rules/process nodes reference a given query — the
 same computation `rename_query`/`delete_query` use for their `consequences`, not a second one.
 
-**Schema→SQL export (P-56, 2026-08-12/15):** `export_schema_sql` returns one dialect's DDL as
+**Schema→SQL export:** `export_schema_sql` returns one dialect's DDL as
 text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
 the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
 files into the BC directory (mutating). Neither tool exists to hand-author a `Schema.yaml` from —
@@ -174,8 +179,8 @@ supply the confirmation, then retry.
 ### 7. Reference
 
 - Full Tool/Resource catalogue: `tools/list`, `resources/list`, `resources/templates/list` on the
-  running server — the live surface is the only catalogue (the former `INVENTAR.md` document was
-  retired 2026-09-02). Per-route MCP decision (tool / resource / justified exclusion):
+  running server — the live surface is the only catalogue, there is no inventory document.
+  Per-route MCP decision (tool / resource / justified exclusion):
   `internal/mcpserver/route_decisions.go` in the Builder repo.
 - Source of the surface itself (read-only, for disambiguating a name):
   `internal/mcpserver/` in the Builder repo (`tools_*.go`, `resources_*.go`).
