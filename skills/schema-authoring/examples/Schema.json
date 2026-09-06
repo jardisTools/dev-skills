@@ -1,0 +1,416 @@
+{
+  "tables": {
+    "counter_gateway_registers": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "length": 36,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "name": "counterGatewayId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "length": 100,
+          "name": "configurationIdentification",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "name": "registerId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "name": "activeFrom",
+          "nullable": false,
+          "phpType": "datetime",
+          "type": "date"
+        },
+        {
+          "name": "activeUntil",
+          "nullable": true,
+          "phpType": "datetime",
+          "type": "date"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "counterGatewayId",
+          "referencedColumn": "id",
+          "referencedTable": "counter_gateways"
+        },
+        {
+          "column": "registerId",
+          "referencedColumn": "id",
+          "referencedTable": "registers"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        },
+        {
+          "columns": [
+            "identifier"
+          ],
+          "name": "identifier",
+          "type": "unique"
+        },
+        {
+          "columns": [
+            "counterGatewayId"
+          ],
+          "name": "idx_counter_gateway_registers_counterGatewayId",
+          "type": "index"
+        },
+        {
+          "columns": [
+            "registerId"
+          ],
+          "name": "idx_counter_gateway_registers_registerId",
+          "type": "index"
+        }
+      ]
+    },
+    "counter_gateways": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "name": "counterId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "name": "gatewayId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "name": "activeFrom",
+          "nullable": false,
+          "phpType": "datetime",
+          "type": "date"
+        },
+        {
+          "name": "activeUntil",
+          "nullable": true,
+          "phpType": "datetime",
+          "type": "date"
+        },
+        {
+          "length": 36,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "counterId",
+          "referencedColumn": "id",
+          "referencedTable": "counters"
+        },
+        {
+          "column": "gatewayId",
+          "referencedColumn": "id",
+          "referencedTable": "gateways"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        },
+        {
+          "columns": [
+            "identifier"
+          ],
+          "name": "uq_counter_gateways_identifier",
+          "type": "unique"
+        },
+        {
+          "columns": [
+            "counterId"
+          ],
+          "name": "idx_counter_gateways_counterId",
+          "type": "index"
+        },
+        {
+          "columns": [
+            "gatewayId"
+          ],
+          "name": "idx_counter_gateways_gatewayId",
+          "type": "index"
+        }
+      ]
+    },
+    "counters": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "length": 36,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 36,
+          "name": "clientIdentifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 50,
+          "name": "meterLocationIdentifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 50,
+          "name": "counterNumber",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "name": "activeFrom",
+          "nullable": false,
+          "phpType": "datetime",
+          "type": "date"
+        },
+        {
+          "name": "activeUntil",
+          "nullable": true,
+          "phpType": "datetime",
+          "type": "date"
+        }
+      ],
+      "foreignKeys": {},
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        },
+        {
+          "columns": [
+            "identifier"
+          ],
+          "name": "identifier",
+          "type": "unique"
+        }
+      ]
+    },
+    "gateways": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "length": 50,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 20,
+          "name": "type",
+          "nullable": true,
+          "phpType": "string",
+          "type": "varchar"
+        }
+      ],
+      "foreignKeys": {},
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        }
+      ]
+    },
+    "register_relations": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "length": 36,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "name": "relatedId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "length": 20,
+          "name": "relatedType",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "name": "registerId",
+          "nullable": false,
+          "phpType": "int",
+          "type": "int"
+        },
+        {
+          "name": "activeFrom",
+          "nullable": false,
+          "phpType": "datetime",
+          "type": "date"
+        },
+        {
+          "name": "activeUntil",
+          "nullable": true,
+          "phpType": "datetime",
+          "type": "date"
+        }
+      ],
+      "foreignKeys": [
+        {
+          "column": "registerId",
+          "referencedColumn": "id",
+          "referencedTable": "registers"
+        }
+      ],
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        },
+        {
+          "columns": [
+            "identifier"
+          ],
+          "name": "identifier",
+          "type": "unique"
+        },
+        {
+          "columns": [
+            "registerId"
+          ],
+          "name": "idx_register_relations_registerId",
+          "type": "index"
+        }
+      ]
+    },
+    "registers": {
+      "columns": [
+        {
+          "autoincrement": true,
+          "name": "id",
+          "nullable": false,
+          "phpType": "int",
+          "primary": true,
+          "type": "int"
+        },
+        {
+          "length": 36,
+          "name": "clientIdentifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 20,
+          "name": "obis",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        },
+        {
+          "length": 36,
+          "name": "identifier",
+          "nullable": false,
+          "phpType": "string",
+          "type": "varchar"
+        }
+      ],
+      "foreignKeys": {},
+      "indexes": [
+        {
+          "columns": [
+            "id"
+          ],
+          "name": "PRIMARY",
+          "type": "primary"
+        },
+        {
+          "columns": [
+            "identifier"
+          ],
+          "name": "uq_registers_identifier",
+          "type": "unique"
+        }
+      ]
+    }
+  }
+}
