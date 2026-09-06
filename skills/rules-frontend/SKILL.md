@@ -21,7 +21,8 @@ Applies to any frontend built on or alongside Jardis — the internal Builder UI
 - **Presentational vs. container** kept distinct: view components render props + emit events; data-fetching, navigation, and domain logic live above them, not inside a leaf.
 - **Data flows down, events flow up.** No component reaches into a parent's or sibling's internals; no shared mutable global as a back-channel.
 - **No business/domain logic in the view layer.** A presentational component must be reusable in isolation, with no hidden dependency on app state.
-- Shared UI primitives are **extracted once**, not copy-pasted across screens.
+- Shared UI primitives are **extracted once**, not copy-pasted across screens. "Once" is measurable: a shared mechanic has a **denominator** (N surfaces use it, 0 private copies remain); a new surface consumes or extends the shared piece — it never re-implements it alongside.
+- **Every derivation lives in a DOM-free module next to the component**, individually unit-testable; the component renders and emits. Logic inside a component body is the split candidate before size is.
 - A component past a sane size/complexity ceiling is a split candidate — review flags it, like an over-long Closure.
 
 ### 2. State discipline
@@ -32,6 +33,7 @@ Applies to any frontend built on or alongside Jardis — the internal Builder UI
 - **Locality:** state lives at the lowest scope that needs it. Lift only when genuinely shared; do not park transient UI state in a global store.
 - **Side effects are isolated and declared** — not scattered through render paths or triggered as a hidden consequence of a getter.
 - The DOM is **not** a state channel: do not read/write element state to carry application data.
+- **URL and query parameters are an external contract.** Reading and narrowing them happens in one place; a refactor may unify the reading, never silently change what a parameter does on a given screen.
 
 ### 3. Test pyramid (e2e-heavy)
 
@@ -39,6 +41,7 @@ Applies to any frontend built on or alongside Jardis — the internal Builder UI
 - **Test observable behaviour** — what the user sees and does — **never** internal component state, private methods, or implementation detail. A refactor that preserves behaviour must not break tests.
 - **Critical user flows have e2e coverage.** Interactive widgets have component tests. A flow with no e2e is an untested flow.
 - Queries target the **accessible surface** (role, label, visible text) over brittle CSS/structural selectors — a test that breaks on restyling tested the wrong thing.
+- **Refactoring needs a net first.** Before behaviour-preserving restructuring, pin the current behaviour with characterisation tests and rendered-output snapshots taken **on the pre-change code** — never reconstructed from the new code — and diff against them afterwards.
 - **Failing-test discipline** (per `rules-testing` §3): establish what *should* happen first; fix the bug or fix the test with reason — **never** weaken or delete an assertion to go green.
 
 ### 4. A11y minimum bar
