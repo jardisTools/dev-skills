@@ -42,8 +42,9 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (create a domain, add a bounded context, add an aggregate) before importing schema.
 2. **`import_schema`** — write the bounded context's schema, either from a database
    introspection or from a schema drafted for a domain idea (see `schema-authoring`), whose
-   YAML you pass in the `yaml` argument. This Tool **is** the authoring door: a `Schema.yaml`
-   is never placed into the workspace as a hand-written file.
+   JSON you pass in the `yaml` argument (wire-key kept for contract stability — it carries JSON
+   content). This Tool **is** the authoring door: a `Schema.json` is never placed into the
+   workspace as a hand-written file.
 3. **`save_aggregate`** — persist the aggregate's designer graph (entities, relations, keys).
    Returns a mtime `CONFLICT` if the on-disk graph moved under you — reload and retry, or pass
    the force flag once you have confirmed the overwrite is intended.
@@ -91,7 +92,7 @@ computed on demand, never persisted. Resolving a finding goes through the ordina
 tools above — there is deliberately no bulk "align everything" tool; each link/delete is a
 human- or agent-confirmed single step.
 
-**Rules-Layer — full MCP parity:** a BC's `Rules.yaml`
+**Rules-Layer — full MCP parity:** a BC's `Rules.json`
 (the Rule catalog + per-Command bindings that guard writes between the aggregate and its process,
 `platform-implementation`) is fully MCP-reachable, same as everything above — no browser-only
 capability here. `save_rules` persists the whole catalog+bindings document (LockedSave — a
@@ -103,7 +104,7 @@ capability here. `save_rules` persists the whole catalog+bindings document (Lock
 persisted, no bulk-align tool here either).
 
 **Queries-Layer — full MCP parity:** a BC's
-`Queries.yaml` (declarative read queries — `root:` entity, visibility `internal`/`public`,
+`Queries.json` (declarative read queries — `root:` entity, visibility `internal`/`public`,
 condition tree, parameters, joins; every query is a paginated list answering
 `{items,total,limit,offset}`, so there is no output-form key — a document still carrying `form:`
 is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
@@ -120,7 +121,7 @@ named `{agg}List` (fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMe
 basePathAdded/basePathRemoved) — before committing to `save_queries`. The comparison state is
 always what lies on disk, never a set the caller supplies, and `consequences` stays empty for a
 draft the rules reject (the rule id then travels alone, in `errors`). Lifecycle tools mirror `rename_process`/
-`delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Rules.yaml
+`delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Rules.json
 catalog entry's `reads:[]` and process nodes — `confirm=true` required), `delete_query`
 (`force=true` overrides an `IN_USE` 409 from >=1 declared reader), `duplicate_query` (auto-suggests
 a free `{name}Copy`/`{name}CopyN` name, visibility always falls back to `internal`). Read side: the
@@ -131,7 +132,7 @@ same computation `rename_query`/`delete_query` use for their `consequences`, not
 **Schema→SQL export:** `export_schema_sql` returns one dialect's DDL as
 text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
 the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
-files into the BC directory (mutating). Neither tool exists to author a `Schema.yaml` from —
+files into the BC directory (mutating). Neither tool exists to author a `Schema.json` from —
 that direction is `schema-authoring` / `import_schema`; these are the reverse, DB-migration-facing
 export.
 

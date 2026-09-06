@@ -134,7 +134,7 @@ Call it from a custom-node body via `$this->handle(ResolveMeterLocationName::cla
 
 There is no hand-edit slot on the aggregate; the route depends on *what kind* of operation it is.
 
-**Case A — a new aggregate command or query** (mutates/reads this one aggregate's state). Re-model it in the **Aggregate Designer** (`Aggregate.yaml`) and rebuild. The Generator regenerates the Command/Query DTO + handler + validator tree and exposes the operation **inline on the matching facade** — a query on the read facade `{Agg}Read.php` (Außentür), a command on the write facade `{Agg}.php` (family-internal only):
+**Case A — a new aggregate command or query** (mutates/reads this one aggregate's state). Re-model it in the **Aggregate Designer** (`Aggregate.json`) and rebuild. The Generator regenerates the Command/Query DTO + handler + validator tree and exposes the operation **inline on the matching facade** — a query on the read facade `{Agg}Read.php` (Außentür), a command on the write facade `{Agg}.php` (family-internal only):
 
 ```php
 $bc->counter()->getCounterByIdentifier($dto);               // query — generated, reached via $bc->{agg}() (Außentür)
@@ -295,7 +295,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges (mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.1), so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
 
-**`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its YAML (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
+**`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
 **Rules:**
 - Never `new` the Sub-Handler directly — always `$this->context(SubHandler::class, $in)()` (V2 / V3).
@@ -352,7 +352,7 @@ Full reference implementation: `tests/Builder/Generated/Domain/Ecommerce/Service
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 
-A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Rules.yaml` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
+A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Rules.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
 
 ```php
 // {BC}/Rule/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
@@ -386,7 +386,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Rule/v{N}/`).
-- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Rules.yaml` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Rules.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Rule/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
@@ -513,10 +513,10 @@ Torwächter.
 | Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
 | Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
-| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Rules.yaml` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Rules.yaml` is wrong for this Command |
+| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Rules.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Rules.json` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`platform-workflow` §5) |
-| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Rules.yaml`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent bestand between them; drop the node binding if redundant |
+| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Rules.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent bestand between them; drop the node binding if redundant |
 
 ### Anchors
 
