@@ -1,6 +1,6 @@
 ---
 name: jardis-start-here
-description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.yaml authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle plus the two Builder-repo skills via a complete lookup table.
+description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.json authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle plus the two Builder-repo skills via a complete lookup table.
 zone: crosscut
 persona: X
 prerequisites: []
@@ -23,7 +23,7 @@ that) would only fragment the routing table this skill exists to provide.
 2. **Schema** — model the domain's tables from a plain-text idea, or introspect an existing
    database. → `schema-authoring`.
 3. **Design** — draw Aggregates, Processes, and declarative read Queries in the Jardis Designer
-   (`jardis ui`). Queries (`Queries.yaml`) are the fourth designer,
+   (`jardis ui`). Queries (`Queries.json`) are the fourth designer,
    sibling of Aggregates/Processes: a BC-level artefact for read-only queries against an
    aggregate's data (condition tree, joins, parameters) without hand-written PHP — the Builder
    still renders the code, never SQL. The same tool also carries the strategic layer:
@@ -57,7 +57,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | I want to… | Skill |
 |---|---|
 | Check if a Jardis package already covers something before I build it myself | `jardis-catalog` |
-| Design a `Schema.yaml`'s content from a domain idea, no database yet, and hand it to an authoring door (MCP `import_schema` / UI schema import) | `schema-authoring` |
+| Design a `Schema.json`'s content from a domain idea, no database yet, and hand it to an authoring door (MCP `import_schema` / UI schema import) | `schema-authoring` |
 | Extend generated Command/Handler/Action code; understand the hermetic Aggregate tree, `$bc->{agg}()`, V1–V13 | `platform-implementation` |
 | Wire generated Commands/Queries into an HTTP/CLI/queue/worker transport layer | `platform-usage` |
 | Understand ClassVersion resolution, or add a versioned variant of a generated class | `platform-versioning` |
@@ -70,7 +70,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Drive an entire Jardis workspace headless — no browser, an AI or script calls `jardis mcp` directly | `jardis-mcp-consumer` |
 | Classify a subdomain (Core/Supporting/Generic), maintain a BC's glossary or canvas ("Steckbrief"), or plan a not-yet-built BC — headless, additive to the code-generation workflow | `jardis-mcp-consumer` |
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `jardis-mcp-consumer` |
-| Declare a BC's declarative read Queries (`Queries.yaml`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `jardis-mcp-consumer` |
+| Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `jardis-mcp-consumer` |
 | Understand how the Builder's own generation engine/pipeline works (Builder-repo, not this bundle) | `tools-builder-engine` |
 | Understand the Builder's own browser-UI internals (Builder-repo, not this bundle) | `tools-builder-ui` |
 
