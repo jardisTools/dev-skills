@@ -30,14 +30,14 @@ The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in 
 
 ```
 Baseline (the generated, hermetic class — always present):
-  MeterDevice\Counter\Aggregate\Counter\Command\Handler\CreateCounter
+  MeterDevice\Counter\Model\Counter\Command\Handler\CreateCounter
 
 Versioned override (you author it; Generator neither emits nor deletes v{N}/):
-  MeterDevice\Counter\Aggregate\Counter\Command\Handler\v2\CreateCounter
-  (file: {BC}/Aggregate/{Agg}/Command/Handler/v2/CreateCounter.php)
+  MeterDevice\Counter\Model\Counter\Command\Handler\v2\CreateCounter
+  (file: {BC}/Model/{Agg}/Command/Handler/v2/CreateCounter.php)
 ```
 
-Namespace = `<Domain>\<BC>\Aggregate\<Agg>\…`. There is **no `Platform` segment** and **no dev-baseline-shadow** stage: the baseline *is* the generated class. The only override surface inside the aggregate tree is a per-class `v{N}/` subdir; everything else is hermetic (`platform-implementation` §1–§2).
+Namespace = `<Domain>\<BC>\Model\<Agg>\…`. There is **no `Platform` segment** and **no dev-baseline-shadow** stage: the baseline *is* the generated class. The only override surface inside the aggregate tree is a per-class `v{N}/` subdir; everything else is hermetic (`platform-implementation` §1–§2).
 
 **Two resolution modes:**
 
@@ -59,9 +59,9 @@ Versioned override skeleton (the `v2/` subdir sits next to the baseline class; y
 
 ```php
 declare(strict_types=1);
-namespace MeterDevice\Counter\Aggregate\Counter\Command\Handler\v2;
+namespace MeterDevice\Counter\Model\Counter\Command\Handler\v2;
 
-use MeterDevice\Counter\Aggregate\Counter\Command\Handler\CreateCounter as Base;
+use MeterDevice\Counter\Model\Counter\Command\Handler\CreateCounter as Base;
 
 final class CreateCounter extends Base
 {
