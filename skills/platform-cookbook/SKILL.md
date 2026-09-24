@@ -7,11 +7,11 @@ prerequisites: [platform-implementation]
 next: []
 ---
 
-> **Layout context.** The aggregate tree `{BC}/Aggregate/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); developer code lands only in the BC-level Process scope `{BC}/Process/{Name}/`, reached via `$bc->process()`. `$bc->{agg}()` reaches only the read facade `{Agg}Read` (Außentür); the write facade `{Agg}` is family-internal via the Kernel-Naht `$this->handle({Agg}::class)`. Canonical layout + Vokabular-Glossar (Aggregat-Fassade / Lese-Fassade / Außentür / Kernel-Naht / Context-Familie): `platform-implementation` §1–§2.
+> **Layout context.** The aggregate tree `{BC}/Model/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); developer code lands only in the BC-level Process scope `{BC}/Process/{Name}/`, reached via `$bc->process()`. `$bc->{agg}()` reaches only the read facade `{Agg}Read` (Außentür); the write facade `{Agg}` is family-internal via the Kernel-Naht `$this->handle({Agg}::class)`. Canonical layout + Vokabular-Glossar (Aggregat-Fassade / Lese-Fassade / Außentür / Kernel-Naht / Context-Familie): `platform-implementation` §1–§2.
 
 ### 1. Event transport — authored in a Process node
 
-The generator emits the base router at `{Agg}/Event/<Agg>EventRouter.php` (namespace `<Domain>\<BC>\Aggregate\<Agg>\Event`, ForceOverwrite). It is a plain `class <Agg>EventRouter` carrying one **empty** `protected function on<Event>(EventListenerRegistryInterface $registry): void` stub per Domain Event (body `// configure transport`), each preceded by a channel-key comment (`{ChannelPrefix}.{ChannelSuffix}`) as a topic / routing-key suggestion. The Domain facade wires it directly into `eventDispatcher()`:
+The generator emits the base router at `{Agg}/Event/<Agg>EventRouter.php` (namespace `<Domain>\<BC>\Model\<Agg>\Event`, ForceOverwrite). It is a plain `class <Agg>EventRouter` carrying one **empty** `protected function on<Event>(EventListenerRegistryInterface $registry): void` stub per Domain Event (body `// configure transport`), each preceded by a channel-key comment (`{ChannelPrefix}.{ChannelSuffix}`) as a topic / routing-key suggestion. The Domain facade wires it directly into `eventDispatcher()`:
 
 ```php
 protected function eventDispatcher(): EventDispatcherInterface|false|null
@@ -71,7 +71,7 @@ foreach (array_merge(...array_values($response->getEvents())) as $event) {
 
 ### 2. Phase-3 cookbook
 
-Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives under `{BC}/Aggregate/{Agg}/` (hermetic, never edited); **all developer code lands under `{BC}/Process/<Name>/`** — node bodies in `Command/Handler/Action/` (`@node-id` body-preserve), VOs in `ValueObject/`, Domain Services in `Service/`, optional reads in `Query/`, repos in `Repository/`.
+Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives under `{BC}/Model/{Agg}/` (hermetic, never edited); **all developer code lands under `{BC}/Process/<Name>/`** — node bodies in `Command/Handler/Action/` (`@node-id` body-preserve), VOs in `ValueObject/`, Domain Services in `Service/`, optional reads in `Query/`, repos in `Repository/`.
 
 **Recipe 1 — VO used for validation (in a Process node)**
 
@@ -496,8 +496,8 @@ Torwächter.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `LogicException: Cannot resolve ClassName` | BC vs. Aggregate segment swapped in namespace | Namespace is `<Domain>\<BC>\Aggregate\<Agg>\…` — BC and Aggregate are two segments even when they share a name (the `Aggregate/` segment sits between them) |
-| Edit under `{BC}/Aggregate/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`), re-model the aggregate in the Designer, or (tenant variant) author a `v{N}/<Class>.php` next to the baseline (`platform-versioning` §1) |
+| `LogicException: Cannot resolve ClassName` | BC vs. Model segment swapped in namespace | Namespace is `<Domain>\<BC>\Model\<Agg>\…` — BC and Model are two segments even when they share a name (the `Model/` segment sits between them) |
+| Edit under `{BC}/Model/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`), re-model the aggregate in the Designer, or (tenant variant) author a `v{N}/<Class>.php` next to the baseline (`platform-versioning` §1) |
 | `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — author transport in a **Process node** that publishes `$response->getEvents()` after the aggregate command (§1) |
 | Versioned override (`v2/…`) ignored | The call isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing | Thread the version through the call (`$bc->{agg}()->getCounterById($dto, 'v2')` for reads, or `$this->handle(Counter::class)->createCounter($dto, 'v2')` family-internally for writes) — there is **no** domain-wide `version()` default to set instead, the per-call argument is the only lever; the variant must sit at `{Agg}/…/v2/<Class>.php` (immediate neighbour of the baseline) — `platform-versioning` §1 |
 | Process node body lost after rebuild | The custom node lost its `@node-id` marker, or the file had broken syntax so the body-preserve merger could not parse it | Keep the generated `@node-id` DocBlock marker intact; fix the parse error. The merger regenerates the node *header* but preserves the body keyed by `@node-id`. (The Designer's "Force" build path deliberately overwrites a node body.) |
