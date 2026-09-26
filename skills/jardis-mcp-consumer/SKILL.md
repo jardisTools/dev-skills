@@ -101,7 +101,19 @@ capability here. `save_closures` persists the whole catalog+bindings document (L
 (read-only, no write). Read side: the `closures` Resource template returns the catalog+bindings as-is;
 `closures-drift` is a read-only finding set — `policy_without_rule` / `rule_without_policy` /
 `empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
-persisted, no bulk-align tool here either).
+persisted, no bulk-align tool here either). Lifecycle tools mirror `rename_query`/`delete_query`/
+`duplicate_query`'s pattern: `rename_closure` (`confirm=true` required, or `dryRun=true` for a
+no-write preview; cascades the rename into every binding chain naming it, every composed
+Closure's `uses` list, and every process Rule-node's `rule` field — a materialised stub or
+`Closure/v{N}/` override is never moved, only reported in `warnings`), `delete_closure` (blocked
+with a `409 IN_USE` by >=1 bound chain, >=1 composed Closure's `uses`, or >=1 process Rule-node —
+membership in a Rule-Set counts as a Wirkort too; `force=true` overrides it, stripping the name
+from every binding chain and `uses` list and dropping a chain row it empties; deleting a Rule-Set
+itself leaves its members untouched in the catalog), `duplicate_closure` (`newName` optional — a
+blank value auto-suggests the first free `{name}Copy`/`{name}CopyN`; the copy starts unbound and
+carries no dev-body, and duplicating a Rule-Set's member never enters the copy into that Set).
+Inspect `jardis://closures/{domain}/{subdomain}/{bc}/usage` before a real rename/delete — the same
+bindings/processes lists travel back in the response's `consequences` field either way.
 
 **Writing a Closure body — start from the `…/work` work package.** A Closure catalog entry
 declares **0..n** typed `input[]` parameters (`command`/`aggregate`/`scalar`/`valuelist`) and one
