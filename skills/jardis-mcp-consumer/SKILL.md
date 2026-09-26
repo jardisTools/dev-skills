@@ -103,6 +103,26 @@ capability here. `save_closures` persists the whole catalog+bindings document (L
 `empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
 persisted, no bulk-align tool here either).
 
+**Writing a Closure body — start from the `…/work` work package.** A Closure catalog entry
+declares **0..n** typed `input[]` parameters (`command`/`aggregate`/`scalar`/`valuelist`) and one
+`output` that is either `verdict` or a plain scalar — not just a single guard-bound
+`command`/`aggregate` input with a `verdict` output. Before writing (or asking an AI to write) a
+Closure's `__invoke` body, read the per-Closure Resource template
+`jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` — it composes everything needed for that
+one Closure on a single call, assembled purely from already-saved catalogs (Closures.json,
+Queries.json, the aggregate/command catalog, ValueLists.json, usage), no second source of truth:
+`task` (a plain-language brief), `contract` (description, the exact `__invoke` signature, each
+input's PHP type, the output's type plus its pass/reject or return shape, `policyRef`, `examples`),
+`files` (the stub path, the generated test's path, how to run it), `uses`/`reads` (every composed
+Closure / readable query, each with its own signature and call recipe), `types` (the PHP field
+shape of every `command`/`aggregate`/`valuelist` input), `context` (helper text and guardrails for
+the `handle()`/`context()` corridor), `usedAt` (guard chains — a guard entry carries `viaSet` when
+a Rule-Set is the only path binding the Closure to that chain — process Rule-nodes, and other
+Closures' `uses`), and `missing` (concrete next steps). Flow: read the resource → write the
+`__invoke` body at `files.stub` → `build` → run the generated test at `files.test` until it is
+green. Resource-only, no HTTP route; the contract itself is written via `save_closures` — this
+Resource only composes a read-friendly, AI-facing view of the same data.
+
 **Queries-Layer — full MCP parity:** a BC's
 `Queries.json` (declarative read queries — `root:` entity, visibility `internal`/`public`,
 condition tree, parameters, joins; every query is a paginated list answering
