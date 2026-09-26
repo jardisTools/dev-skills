@@ -178,7 +178,7 @@ final class InMemoryHttpClient implements HttpClientInterface
 }
 ```
 
-**E. Rule (Rules-Layer) — pure predicate PLUS endpoint integration, both mandatory.** A Rule (`{BC}/Rule/{Name}.php`) is a legitimate rare case for a Unit test — its `__invoke({Cmd}DTO): RuleResult` signature is a pure Ja/Nein predicate, and faking the read facade it calls is the whole point:
+**E. Rule (Rules-Layer) — pure predicate PLUS endpoint integration, both mandatory.** A Rule (`{BC}/Closure/{Name}.php`) is a legitimate rare case for a Unit test — its `__invoke({Cmd}DTO): RuleResult` signature is a pure Ja/Nein predicate, and faking the read facade it calls is the whole point:
 
 ```php
 final class CounterMustBeActiveTest extends TestCase
