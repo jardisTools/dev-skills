@@ -59,6 +59,10 @@ Ein Designer-Knoten kann statt **Action** als **Event ◇** markiert sein (`mode
 
 **Es gibt keine Dev-Aufgabe am generierten Knoten-Body** — die einzige Autoren-Tätigkeit ist die Feld-Bindung **im Designer**, nicht im Code. Regeln fürs Binden (V-EVT-*): mind. eine Bindung, Quelle muss identitätstragend sein, keine Namenskollision, Union-Zweige gleiche Kettentiefe. Publikation nach Commit ist Sache des Aufrufers (Event-Transport-Rezepte: `platform-cookbook` §1).
 
+### Rule-node
+
+A Designer node can instead be marked **Rule** — it references one entry of the BC's own `Closures.json` catalog (`platform-implementation`), never authoring predicate logic itself. The node must declare `ruleSubject.payloadField`, naming exactly one field of the process's own input as the referenced Closure's subject: for a `command`-subject entry, a command-field whose `accepts:` list includes that Command; for an `aggregate`-subject entry, a scalar Wurzel-Identifier field. A node with no `ruleSubject.payloadField`, or one naming a field that does not fit the entry's subject, is a build-blocking `V-PROC-RULE-SUBJECT` finding at every door (Designer, `build`, `validate`) — the generated adapter cannot invoke the Closure without it. Routing is fixed, not authored per node: `passed → ON_SUCCESS`, `rejected → ON_FAIL`.
+
 ### 3. handlerFactory-Closure
 
 `new Workflow($factory)` akzeptiert optional `Closure(string $fqcn, mixed $data): object`. Die Konvention im Aggregat-Kontext ist `fn($cls, $data) => $this->context($cls, $data)`, sodass jeder Node eine frische BC mit `$data` als Payload bekommt — Nodes lesen es via `$this->payload()`. Bei `$data === null` ist `$this->handle($cls)` der Default, und der aeussere Payload bleibt erhalten. Ohne Factory ruft die Engine `new $fqcn()` (`$data` ignoriert) — fuer puren PHP-Code ausserhalb des Aggregat-Kontexts brauchbar.
