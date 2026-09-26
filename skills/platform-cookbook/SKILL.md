@@ -352,10 +352,10 @@ Full reference implementation: `tests/Builder/Generated/Domain/Ecommerce/Service
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 
-A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Rules.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
+A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Closures.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
 
 ```php
-// {BC}/Rule/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
+// {BC}/Closure/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
 final class CounterMustBeActive extends MeterDeviceContext
 {
     public function __invoke(UpdateCounter $cmd): RuleResult
@@ -380,16 +380,16 @@ final class CounterMustBeActive extends MeterDeviceContext
 }
 ```
 
-**What's generated, what's yours:** the Generator emits the stub signature + the `Rule/Data/RuleResult.php` VO + a hermetic `Rule/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. Your only job is the `__invoke()` body above.
+**What's generated, what's yours:** the Generator emits the stub signature + the `Closure/Data/RuleResult.php` VO + a hermetic `Closure/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. Your only job is the `__invoke()` body above.
 
 **Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a Katalog-Referenz (matrix-ineligible, like a sub-process node), the generated adapter maps `passed → ON_SUCCESS` / `rejected → ON_FAIL`. This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time Warnung, not an Error: possible double-execution / inconsistent bestand-reads between the two runs).
 
 **Rules:**
-- Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Rule/v{N}/`).
-- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Rules.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Closure/v{N}/`).
+- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
-- Versioning a Rule (`Rule/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
+- Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
 - TOCTOU is a known v1 boundary (`platform-implementation` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
 
 **Recipe 11 — Invariante als Zustand: eine Eindeutigkeits-Invariante über Prozessgrenzen sichern**
@@ -513,14 +513,14 @@ Torwächter.
 | Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
 | Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
-| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Rules.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Rules.json` is wrong for this Command |
+| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`platform-workflow` §5) |
-| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Rules.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent bestand between them; drop the node binding if redundant |
+| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent bestand between them; drop the node binding if redundant |
 
 ### Anchors
 
-- `platform-implementation` (hermetic aggregate layout, the customization surfaces incl. the `{BC}/Rule/` catalog, prohibitions incl. M9/V13, decision tree, TOCTOU boundary).
+- `platform-implementation` (hermetic aggregate layout, the customization surfaces incl. the `{BC}/Closure/` catalog, prohibitions incl. M9/V13, decision tree, TOCTOU boundary).
 - `platform-versioning` (ClassVersion resolution — `LoadClassFromSubDirectory`, per-class `v{N}`).
 - `platform-workflow` (Workflow-Engine API used by the Process orchestrators + node routing referenced above).
 - `adapter-messaging`, `adapter-http`, `adapter-eventdispatcher` (event-transport recipes).
