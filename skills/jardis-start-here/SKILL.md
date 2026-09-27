@@ -71,6 +71,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Classify a subdomain (Core/Supporting/Generic), maintain a BC's glossary or canvas ("Steckbrief"), or plan a not-yet-built BC — headless, additive to the code-generation workflow | `jardis-mcp-consumer` |
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `jardis-mcp-consumer` |
 | Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `jardis-mcp-consumer` |
+| Guard a Command with a business Rule, declare a BC's `Closures.json` catalog+bindings, or drive Closure rename/delete/duplicate — headless | `jardis-mcp-consumer` |
 | Understand how the Builder's own generation engine/pipeline works (Builder-repo, not this bundle) | `tools-builder-engine` |
 | Understand the Builder's own browser-UI internals (Builder-repo, not this bundle) | `tools-builder-ui` |
 

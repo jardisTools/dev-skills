@@ -354,6 +354,8 @@ Full reference implementation: `tests/Builder/Generated/Domain/Ecommerce/Service
 
 A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Closures.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
 
+**Where the catalog entry comes from.** You author it in the Closure-Editor (`…/closures/{name}/{closure|code}`, reached from the Model-Liste's "Neu ▾" or the "Closure andocken ▾" guard-chain menu on the Aggregate's "API" tab) or headless via MCP `save_closures` — never by hand-editing `Closures.json`. Before writing `__invoke()`, pull the ready-composed work package: the MCP Resource template `jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` (same JSON over `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work`) hands you the free-text task, the contract/signature, `uses`/`reads` call recipes, the generated test's path, and `body: "offen"`/`"geschrieben"` telling you whether the stub still throws `Not implemented`.
+
 ```php
 // {BC}/Closure/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
 final class CounterMustBeActive extends MeterDeviceContext

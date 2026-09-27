@@ -238,6 +238,8 @@ The aggregate tree is hermetic; **nothing** under `{Agg}/` is a developer overri
 - **Node rename** (Ticket panel) keeps the `@node-id` body across the file rename; event-mode nodes get their `Event/` class swept along.
 - Renaming back (new → old) is a normal rename with the same rules; a rename preview (impact list incl. foreign-BC consumers and dev-surface hints) runs before every level rename in the UI.
 
+**A Closure/Rule catalog-entry rename does NOT follow the rule above — your stub is not moved.** Renaming a `Closures.json` entry (Closure-Editor or MCP `rename_closure`) rewrites the JSON catalog key, every binding chain naming it, every other Closure's `uses` (Set member or free reference alike), and every process Rule-node's `rule` field — but the **developer-owned stub file itself stays where it is**, under its old class name; the rename response carries an explicit warning ("generated dev stub … was not moved — rename it by hand, or let the next build regenerate a fresh one under the new name"). Move your `__invoke()` body yourself, or accept a freshly generated (unimplemented, throwing) stub at the new path. Deleting a Closure still bound to ≥1 chain, referenced by ≥1 `uses`, or used by ≥1 process Rule-node is blocked with `409 IN_USE` and the list of referencing bindings/processes/sets; `force=true` deletes anyway and leaves those references dangling.
+
 ### 3. Prohibitions (V1–V13)
 
 | # | Rule |
