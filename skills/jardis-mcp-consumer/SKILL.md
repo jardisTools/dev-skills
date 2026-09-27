@@ -98,16 +98,24 @@ human- or agent-confirmed single step.
 capability here. `save_closures` persists the whole catalog+bindings document (LockedSave — a
 `CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`);
 `validate_closures` checks a not-yet-saved catalog/bindings set against the V-RULE-* rules
-(read-only, no write). Read side: the `closures` Resource template returns the catalog+bindings as-is;
+(read-only, no write). Read side: the `closures` Resource template returns the catalog+bindings
+as-is, plus `dockable` (per closure: `guard` — commands whose chain it may still join; `ruleNode` —
+whether it may back a Process Rule-node; `sets` — Rule-Sets it may join as a member), `usedAt`
+(per closure: guard chains, Rule-nodes, other Closures' `uses`), `usedAtUnknown` (true when the
+process-usage scan itself failed, so an empty `usedAt` must NOT be read as "genuinely unused"),
+`scalarTypes` (the closed column-type vocabulary a scalar input/output may declare) and
+`policyCoverage` (Steckbrief policy id → `{level, closures, wirkorte}`, `level` one of `covered` /
+`no-effect` / `no-anchor` / `unknown-usage` — `no-anchor` also stands for a policy with no
+anchoring closure at all when the usage scan failed, since that fact is Usage-independent);
 `closures-drift` is a read-only finding set — `policy_without_rule` / `rule_without_policy` /
 `empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
 persisted, no bulk-align tool here either). Lifecycle tools mirror `rename_query`/`delete_query`/
 `duplicate_query`'s pattern: `rename_closure` (`confirm=true` required, or `dryRun=true` for a
-no-write preview; cascades the rename into every binding chain naming it, every composed
-Closure's `uses` list, and every process Rule-node's `rule` field — a materialised stub or
-`Closure/v{N}/` override is never moved, only reported in `warnings`), `delete_closure` (blocked
-with a `409 IN_USE` by >=1 bound chain, >=1 composed Closure's `uses`, or >=1 process Rule-node —
-membership in a Rule-Set counts as a Wirkort too; `force=true` overrides it, stripping the name
+no-write preview; cascades the rename into every binding chain naming it, every Closure's `uses`
+list — Set member or free sub-closure reference alike — and every process Rule-node's `rule`
+field — a materialised stub or `Closure/v{N}/` override is never moved, only reported in
+`warnings`), `delete_closure` (blocked with a `409 IN_USE` by >=1 bound chain, >=1 Closure's `uses`
+(Set membership or a free sub-closure reference), or >=1 process Rule-node — `force=true` overrides it, stripping the name
 from every binding chain and `uses` list and dropping a chain row it empties; deleting a Rule-Set
 itself leaves its members untouched in the catalog), `duplicate_closure` (`newName` optional — a
 blank value auto-suggests the first free `{name}Copy`/`{name}CopyN`; the copy starts unbound and
@@ -125,15 +133,20 @@ one Closure on a single call, assembled purely from already-saved catalogs (Clos
 Queries.json, the aggregate/command catalog, ValueLists.json, usage), no second source of truth:
 `task` (a plain-language brief), `contract` (description, the exact `__invoke` signature, each
 input's PHP type, the output's type plus its pass/reject or return shape, `policyRef`, `examples`),
-`files` (the stub path, the generated test's path, how to run it), `uses`/`reads` (every composed
-Closure / readable query, each with its own signature and call recipe), `types` (the PHP field
-shape of every `command`/`aggregate`/`valuelist` input), `context` (helper text and guardrails for
-the `handle()`/`context()` corridor), `usedAt` (guard chains — a guard entry carries `viaSet` when
-a Rule-Set is the only path binding the Closure to that chain — process Rule-nodes, and other
-Closures' `uses`), and `missing` (concrete next steps). Flow: read the resource → write the
+`files` (the stub path plus `stubExists`, the generated test's path plus `testExists` — both
+Go-derived facts, true only when that file was actually found on disk —, and how to run the
+test), `uses`/`reads` (every composed Closure / readable query, each with its own signature and
+call recipe), `types` (the PHP field shape of every `command`/`aggregate`/`valuelist` input),
+`context` (helper text and guardrails for the `handle()`/`context()` corridor), `usedAt` (guard
+chains — a guard entry carries `viaSet` when a Rule-Set is the only path binding the Closure to
+that chain — process Rule-nodes, and other Closures' `uses`), `body` (`offen`/`geschrieben` —
+whether the generated stub still throws its Not-implemented marker; absent for a Rule-Set, which
+has no body of its own), and `missing` (concrete next steps). Flow: read the resource → write the
 `__invoke` body at `files.stub` → `build` → run the generated test at `files.test` until it is
-green. Resource-only, no HTTP route; the contract itself is written via `save_closures` — this
-Resource only composes a read-friendly, AI-facing view of the same data.
+green. Also reachable over HTTP — `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work` calls
+the SAME service method and returns the SAME JSON shape; the contract itself is written via
+`save_closures` — Resource and HTTP route only compose a read-friendly, AI-facing view of the same
+data.
 
 **Queries-Layer — full MCP parity:** a BC's
 `Queries.json` (declarative read queries — `root:` entity, visibility `internal`/`public`,
