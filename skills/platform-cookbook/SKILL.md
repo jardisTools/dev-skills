@@ -348,7 +348,7 @@ final class CheckStockInCatalog extends EcommerceContext
 }
 ```
 
-Full reference implementation: `tests/Builder/Generated/Domain/Ecommerce/Service/CheckStockInCatalog.php` in the Builder repo. **Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own Außentür, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the Kernel-Naht (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
+**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own Außentür, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the Kernel-Naht (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 

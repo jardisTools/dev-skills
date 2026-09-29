@@ -315,7 +315,7 @@ No skipping, no parallel levels. PHPStan L8 + tests + review green between level
 
 | # | Level | Where | Anchor |
 |---|---|---|---|
-| 1 | Aggregate structure + invariants | Aggregate Designer (`Aggregate.json`) → generated `{Agg}/` tree | `tools-builder-engine`, `schema-authoring` |
+| 1 | Aggregate structure + invariants | Aggregate Designer (`Aggregate.json`) → generated `{Agg}/` tree | `schema-authoring` |
 | 2 | BC-level processes (behaviour) | Process Designer: `{BC}/Process/{Name}/Command/` (DTO) + `Command/Handler/` (orchestrator) + `Command/Handler/Action/` (one `<NodeClass>.php` per node) — your logic in the custom-node bodies (`@node-id` preserve) | `jardissupport/workflow` |
 | 2a | Endpoint business rule (bestand-check gate before a Command runs) | `Closures.json` catalog + binding → `{BC}/Closure/{Name}.php` stub, your logic in `__invoke()` (own BC only via the Kernel-Naht, M9). **A stub not yet implemented throws (500), never `RuleResult::pass()`** — implement it before binding it live. | — (Rules-Layer, no separate package skill) |
 | 3 | VOs + business validation used by a process | VO authored in the Process scope, used from a custom-node body | `jardissupport/validation` |
