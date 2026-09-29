@@ -27,7 +27,7 @@ User-Code laesst `handlerFqcn` immer `null` — die Engine stamped es via `Workf
 
 ### 2. `WorkflowConfig` im `config()`-Body
 
-Der Generator emittiert eine private `config(): WorkflowConfigInterface`, die **jeden** Knoten des gemalten Graphen via `addNode()` registriert — Registrierungsreihenfolge und warum ein Endknoten trotzdem als `addNode(X::class, [])` erscheinen muss: [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.1. Routing ist eine `[WorkflowResult::ON_* => NextNode::class]`-Map pro Knoten — die Engine laeuft die gemalten Kanten, exklusive Zweige laufen exklusiv. Hand-edits am Orchestrator (z.B. zusaetzliche Transition) folgen demselben Muster:
+Der Generator emittiert eine private `config(): WorkflowConfigInterface`, die **jeden** Knoten des gemalten Graphen via `addNode()` registriert — Registrierungsreihenfolge und warum ein Endknoten trotzdem als `addNode(X::class, [])` erscheinen muss: [[beschreibt-bauweise-von::jardis-builder-wissen:generator-pipeline-und-registry]] (vormals §6.1). Routing ist eine `[WorkflowResult::ON_* => NextNode::class]`-Map pro Knoten — die Engine laeuft die gemalten Kanten, exklusive Zweige laufen exklusiv. Hand-edits am Orchestrator (z.B. zusaetzliche Transition) folgen demselben Muster:
 
 ```php
 private function config(): WorkflowConfigInterface
@@ -55,7 +55,7 @@ End-Knoten (leere Routing-Map `[]`) lassen die Engine ordentlich beenden.
 
 ### Event-Kasten ◇ (Event-Knoten)
 
-Ein Designer-Knoten kann statt **Action** als **Event ◇** markiert sein (`mode: async`). Im Designer deklariert der Autor am Knoten eine **Event-Feld-Bindung** — eine Liste `eventFields: [{label, source}]`, wobei jede `source` auf ein Command-Feld des Prozess-Inputs zeigt (`ProcessEventFieldEditor.svelte`, Details-Tab des Ticket-Panels). Was der Generator daraus baut (Identitätsauflösung, die erzeugte Event-Daten-Klasse, der vollständig generierte Knoten-Body, Union-/Listen-Quellen): [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.4.
+Ein Designer-Knoten kann statt **Action** als **Event ◇** markiert sein (`mode: async`). Im Designer deklariert der Autor am Knoten eine **Event-Feld-Bindung** — eine Liste `eventFields: [{label, source}]`, wobei jede `source` auf ein Command-Feld des Prozess-Inputs zeigt (`ProcessEventFieldEditor.svelte`, Details-Tab des Ticket-Panels). Was der Generator daraus baut (Identitätsauflösung, die erzeugte Event-Daten-Klasse, der vollständig generierte Knoten-Body, Union-/Listen-Quellen): [[beschreibt-bauweise-von::jardis-builder-wissen:prozess-event-transaktionsmodell]] (vormals §6.4).
 
 **Es gibt keine Dev-Aufgabe am generierten Knoten-Body** — die einzige Autoren-Tätigkeit ist die Feld-Bindung **im Designer**, nicht im Code. Regeln fürs Binden (V-EVT-*): mind. eine Bindung, Quelle muss identitätstragend sein, keine Namenskollision, Union-Zweige gleiche Kettentiefe. Publikation nach Commit ist Sache des Aufrufers (Event-Transport-Rezepte: `platform-cookbook` §1).
 
@@ -95,8 +95,8 @@ Der Knoten-Body legt zusätzlich `'responseStatus' => $response->getStatus()` in
 Rückgabe-Map (neben `status`/`data`); beides Generator-Emission, kein Engine-Verhalten. Der
 zweistufige Kettenscan, mit dem der Prozess-Handler daraus nach dem Lauf den nach außen
 gemeldeten Antwortstatus bestimmt (nur die letzte Ausführung je Knoten-Identität zählt, damit ein
-geheilter Retry seinen frühen Fehlschlag nicht mehr trägt): [[beschreibt-bauweise-von::builder-generat-bauweise]]
-§5.4.
+geheilter Retry seinen frühen Fehlschlag nicht mehr trägt): [[beschreibt-bauweise-von::jardis-builder-wissen:generator-pipeline-und-registry]]
+(vormals §5.4).
 
 Das ist eine Verfeinerung der Drei-Ebenen-Trennung aus §1: **Verzweigung** (`ON_SUCCESS`/`ON_FAIL`
 = true/false) bleibt unverändert reine Wegwahl; **Antwort-Status** kommt weiterhin immer aus der
