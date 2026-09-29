@@ -29,8 +29,7 @@ The full catalogue (on the order of 80 tools plus 70+ resources/templates — do
 from memory, they grow with every strategic-design increment; the counts are pinned live by
 `internal/mcpserver/budget_test.go` (`TestToolBudget_FinalCount`), and every HTTP route's MCP
 decision — tool, resource, or a justified exclusion — lives in
-`internal/mcpserver/route_decisions.go`, both explained in
-[[beschreibt-bauweise-von::jardis-builder-wissen:mcp-bauweise-kern]] (vormals §9, Zähler) and [[beschreibt-bauweise-von::jardis-builder-wissen:mcp-paritaet-grenze-selbstverwaltung]] (vormals §12, Routen-Tabelle)) is a lived artefact, not something to memorise here — consult it before
+`internal/mcpserver/route_decisions.go`) is a lived artefact, not something to memorise here — consult it before
 guessing a name (see Reference).
 
 ### 2. End-to-end workflow
@@ -206,8 +205,7 @@ invent a tool call for this — there isn't one.
 
 Every MCP session start (`New`) carries a live self-check into the server's `initialize`
 Instructions, comparing the running binary's embedded revision against the repository it sits
-in — the two signals, exact wording, and why it never blocks:
-[[beschreibt-bauweise-von::jardis-builder-wissen:mcp-paritaet-grenze-selbstverwaltung]] (vormals §8). A client should read this banner before
+in. A client should read this banner before
 trusting a reported finding: a stale binary can silently still be missing capabilities or fixes
 (including ones documented in this very skill set) that only exist in the newer source it has
 fallen behind.

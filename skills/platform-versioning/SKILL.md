@@ -9,17 +9,15 @@ next: []
 
 ### 1. ClassVersion resolution — Platform-free, per-class `v{N}`
 
-The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in path or namespace). Resolution does not walk a `['', 'Platform']` two-segment chain — the **Generator emits a `classVersion()` override** in the generated `<Domain>Context.php` base class that wires the reader `LoadClassFromSubDirectory`. Emitted code + wiring:
-[[beschreibt-bauweise-von::jardis-builder-wissen:generator-pipeline-und-registry]] (vormals §4.1).
+The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in path or namespace). Resolution does not walk a `['', 'Platform']` two-segment chain — the **Generator emits a `classVersion()` override** in the generated `<Domain>Context.php` base class that wires the reader `LoadClassFromSubDirectory`.
 
 **No domain-wide version default:** the Domain facade (`<Domain>.php`) is `final` and JardisCore-free (holds only a `DomainKernelInterface` DomainKernel) — it offers no override surface, and `<Domain>Context` (which hosts `classVersion()`/`classVersionConfig()`, `platform-implementation` §1) is hermetic (never hand-edited). A domain-wide default `version()` hook does not exist — the only lever is the per-call `$version` argument threaded through every facade method (see below).
 
 > **Proxy first, but a no-op here.** The wired `ClassVersion` consults the proxy cache before the
-> SubDirectory reader (order + internals: [[beschreibt-bauweise-von::jardis-builder-wissen:generator-pipeline-und-registry]]
-> vormals §4.2) — a generated Domain has no proxy config, so in practice the SubDirectory resolution below
+> SubDirectory reader — a generated Domain has no proxy config, so in practice the SubDirectory resolution below
 > is what runs.
 
-**How `LoadClassFromSubDirectory` resolves** `$this->context(<Class>::class, $dto, $version)` / `$this->handle(<Class>::class)` — full step-by-step: [[beschreibt-bauweise-von::jardis-builder-wissen:generator-pipeline-und-registry]] (vormals §4.2). What matters for placing your override:
+**How `LoadClassFromSubDirectory` resolves** `$this->context(<Class>::class, $dto, $version)` / `$this->handle(<Class>::class)`. What matters for placing your override:
 
 1. The version is **injected before the last namespace segment** (the class name), per class:
    `…\Command\Handler\CreateCounter` + `v2` → `…\Command\Handler\v2\CreateCounter`.
