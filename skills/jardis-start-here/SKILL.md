@@ -1,6 +1,6 @@
 ---
 name: jardis-start-here
-description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.json authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle plus the two Builder-repo skills via a complete lookup table.
+description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.json authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle via a complete lookup table.
 zone: crosscut
 persona: X
 prerequisites: []
@@ -72,12 +72,6 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `jardis-mcp-consumer` |
 | Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `jardis-mcp-consumer` |
 | Guard a Command with a business Rule, declare a BC's `Closures.json` catalog+bindings, or drive Closure rename/delete/duplicate — headless | `jardis-mcp-consumer` |
-| Understand how the Builder's own generation engine/pipeline works (Builder-repo, not this bundle) | `tools-builder-engine` |
-| Understand the Builder's own browser-UI internals (Builder-repo, not this bundle) | `tools-builder-ui` |
-
-The last two rows are **named pointers only** — `tools-builder-engine` and `tools-builder-ui`
-live in the Builder repository's own `.claude/skills/`, not in this bundle; there is nothing to
-load here, only somewhere else to look.
 
 ### 4. Reference
 

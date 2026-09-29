@@ -26,11 +26,7 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
   see the effect, there is no push/subscribe.
 
 The full catalogue (on the order of 80 tools plus 70+ resources/templates — do not hardcode them
-from memory, they grow with every strategic-design increment; the counts are pinned live by
-`internal/mcpserver/budget_test.go` (`TestToolBudget_FinalCount`), and every HTTP route's MCP
-decision — tool, resource, or a justified exclusion — lives in
-`internal/mcpserver/route_decisions.go`, both explained in
-[[beschreibt-bauweise-von::builder-mcp-bauweise]] §9/§12) is a lived artefact, not something to memorise here — consult it before
+from memory, they grow with every strategic-design increment) is a lived artefact, not something to memorise here — consult it before
 guessing a name (see Reference).
 
 ### 2. End-to-end workflow
@@ -206,8 +202,7 @@ invent a tool call for this — there isn't one.
 
 Every MCP session start (`New`) carries a live self-check into the server's `initialize`
 Instructions, comparing the running binary's embedded revision against the repository it sits
-in — the two signals, exact wording, and why it never blocks:
-[[beschreibt-bauweise-von::builder-mcp-bauweise]] §8. A client should read this banner before
+in. A client should read this banner before
 trusting a reported finding: a stale binary can silently still be missing capabilities or fixes
 (including ones documented in this very skill set) that only exist in the newer source it has
 fallen behind.
@@ -228,10 +223,6 @@ supply the confirmation, then retry.
 
 - Full Tool/Resource catalogue: `tools/list`, `resources/list`, `resources/templates/list` on the
   running server — the live surface is the only catalogue, there is no inventory document.
-  Per-route MCP decision (tool / resource / justified exclusion):
-  `internal/mcpserver/route_decisions.go` in the Builder repo.
-- Source of the surface itself (read-only, for disambiguating a name):
-  `internal/mcpserver/` in the Builder repo (`tools_*.go`, `resources_*.go`).
 - Once generated code exists and you are implementing behaviour inside it: `platform-implementation`.
 - Designing a schema's content from a domain idea instead of introspecting a live database, then
   feeding it through `import_schema`: `schema-authoring`.

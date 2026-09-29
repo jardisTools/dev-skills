@@ -216,7 +216,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap — traversal mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §8. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected Akte only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected Akte only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the identifier(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
@@ -293,7 +293,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Event bubbling (flat, Domain-scope only):** `EventScope::Domain` events from the sub-`DomainResponse` are collected flat into the `data` return array. The main-process orchestrator harvests them identically to events from any other node (`getChain()` → `$data[EventScope::Domain->value]` → `addEvent(…, Domain)`). `Internal` events of the sub-process stay sub-process-internal (they are not returned).
 
-**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges (mechanics: [[beschreibt-bauweise-von::builder-generat-bauweise]] §6.1), so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
+**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
 
 **`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
@@ -304,7 +304,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Recipe 9 — Cross-BC write: translate → foreign `process()` → map response (G7)**
 
-A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate, [[beschreibt-bauweise-von::builder-generat-bauweise]] §2): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no Prozess-Zwang). The generated Service (`{Domain}/Service/<Name>.php`, `platform-implementation` §1) is the ACL — it never passes the caller's DTO through unchanged.
+A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no Prozess-Zwang). The generated Service (`{Domain}/Service/<Name>.php`, `platform-implementation` §1) is the ACL — it never passes the caller's DTO through unchanged.
 
 ```php
 // {Domain}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
@@ -348,7 +348,7 @@ final class CheckStockInCatalog extends EcommerceContext
 }
 ```
 
-Full reference implementation: `tests/Builder/Generated/Domain/Ecommerce/Service/CheckStockInCatalog.php` in the Builder repo. **Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own Außentür, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the Kernel-Naht (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
+**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own Außentür, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the Kernel-Naht (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 
@@ -390,7 +390,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Closure/v{N}/`).
 - Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
-- A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
+- A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `platform-versioning`).
 - TOCTOU is a known v1 boundary (`platform-implementation` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
 
@@ -440,13 +440,10 @@ Klasse — der Zielwert MUSS **pro Versuch neu berechnet** werden, aus dem frisc
 `current`-Stand. Ein fest verdrahteter Zielwert (`lastNumber: 1` bei jedem Versuch) erzeugt beim
 zweiten Versuch ein No-Op-UPDATE, dessen `rowCount()`-Interpretation treiberabhängig unterschiedlich
 ausfällt (MySQL liest es zufällig richtig als Konflikt, Postgres fälschlich als Erfolg → Doppel-
-vergabe). Details, Ursache und Package-Folgeposten: `wissensbasis/rowcount-cas-ist-treiberabhaengig.md`.
+vergabe).
 
 **Statusverhalten am Prozessende.** Ein Torwächter-Konflikt muss als 409 nach außen sichtbar
-werden, nicht nur intern routen — der zweistufige Kettenscan, der das leistet (nur der Status der
-letzten Ausführung je Knoten-Identität zählt, damit ein beim Retry gelingender Torwächter seinen
-frühen Fehlschlag nicht mehr in den Antwortstatus trägt): [[beschreibt-bauweise-von::builder-generat-bauweise]]
-§5.4. Ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409 trotz tatsächlichem Erfolg
+werden, nicht nur intern routen. Ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409 trotz tatsächlichem Erfolg
 samt Seiteneffekt (belegt, Postgres-Nummernkreis, s. u.).
 
 Das ist die Drei-Ebenen-Trennung aus `platform-workflow` §1: **Verzweigung** (ON_SUCCESS/ON_FAIL
@@ -474,8 +471,7 @@ NICHT zurück, sie committet leer — der Nein-Pfad ist ein legitimer Abschluss,
   dem Warten den committeten Stand und kann gewinnen. Beide Bilder sind korrekt — ein reales
   Treiber-Delta, kein Bug.
 - **rowCount()-Falle als Warnung:** der generierte CAS-Persist-Layer prüft Erfolg über
-  `rowCount() > 0` — treiberabhängig unzuverlässig bei No-Op-Updates (Details:
-  `wissensbasis/rowcount-cas-ist-treiberabhaengig.md`). Betrifft jeden Torwächter, dessen Zielwert
+  `rowCount() > 0` — treiberabhängig unzuverlässig bei No-Op-Updates. Betrifft jeden Torwächter, dessen Zielwert
   zufällig mit dem Ist-Zustand übereinstimmen kann — bei Fall A (bool-Flag) ebenso relevant wie bei
   Fall B (Zähler).
 
@@ -514,7 +510,7 @@ Torwächter.
 | Sub-process `Domain` events missing in main response | The sub-process node returned `Internal` events under `EventScope::Domain->value` by mistake, or the orchestrator loop wasn't updated | The stub returns `[EventScope::Domain->value => $events]`; the orchestrator harvests `$data[EventScope::Domain->value]` — both use the enum value string; check that `EventScope` is imported in both files |
 | Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
-| Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03, `wissensbasis/stub-ausfallphilosophie.md`); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
+| Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
 | Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`platform-workflow` §5) |

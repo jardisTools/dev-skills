@@ -29,7 +29,7 @@ Composer plugin that distributes Jardis skills (`<vendor>/.claude/skills/<name>/
 - Do not introduce a new top-level skill prefix without updating `RemoveJardisSkills::MANAGED_PREFIXES` and `docs/SKILL-FORMAT.md` §2.
 - Do not edit a generated AGENTS.md block in a consumer project — the plugin overwrites it on next install.
 - Do not bypass `TempProject` in tests with raw `tempnam()` / hardcoded paths.
-- Do not duplicate content across bundle skills. Patterns live only in `rules-patterns`, architecture only in `rules-architecture`, frontend review rules only in `rules-frontend`, test rules only in `rules-testing`, generated-code layout only in `platform-implementation` §1, transport wiring only in `platform-usage`. Designer YAML vocabulary (Aggregate / Source / FieldMap / Lists / Flow) lives in `tools-builder-engine` in the Builder repo — outside this bundle. Other skills link.
+- Do not duplicate content across bundle skills. Patterns live only in `rules-patterns`, architecture only in `rules-architecture`, frontend review rules only in `rules-frontend`, test rules only in `rules-testing`, generated-code layout only in `platform-implementation` §1, transport wiring only in `platform-usage`. Other skills link.
 
 ## Pointers
 
