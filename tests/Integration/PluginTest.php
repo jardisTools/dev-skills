@@ -11,8 +11,10 @@ use Composer\DependencyResolver\Operation\UninstallOperation;
 use Composer\Installer\PackageEvent;
 use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
+use Composer\Package\Link;
 use Composer\Package\PackageInterface;
 use Composer\Package\RootPackageInterface;
+use Composer\Semver\Constraint\MatchAllConstraint;
 use Composer\Script\Event as ScriptEvent;
 use Composer\Script\ScriptEvents;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
@@ -199,6 +201,46 @@ final class PluginTest extends TestCase
         $plugin->onPackageUninstall($this->createPackageEvent('jardis/adapter/cache'));
 
         self::assertFileExists($this->project->path('.claude/skills/adapter-cache/SKILL.md'));
+        self::assertFileExists($this->project->path('AGENTS.md'));
+    }
+
+    public function testOnComposerRunDoesNothingInTheGlobalContext(): void
+    {
+        $plugin = new Plugin();
+        $plugin->activate(
+            $this->createComposer($this->allBundledExtra(), home: $this->project->root),
+            $this->createMock(IOInterface::class),
+        );
+        $plugin->onComposerRun($this->createMock(ScriptEvent::class));
+
+        self::assertSame([], glob($this->project->root . '/*') ?: []);
+        self::assertDirectoryDoesNotExist($this->project->path('.claude'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents'));
+    }
+
+    public function testOnPackageUninstallDeletesNothingInTheGlobalContext(): void
+    {
+        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'y');
+
+        $composer = $this->createComposer(home: $this->project->root);
+        $plugin = new Plugin();
+        $plugin->activate($composer, $this->createMock(IOInterface::class));
+        $plugin->onPackageUninstall($this->createPackageEvent('jardis/dev-skills', $composer));
+
+        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+    }
+
+    public function testOnPackageUninstallDeletesNothingWhileTheRootPackageStillRequiresThePlugin(): void
+    {
+        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'y');
+        $this->project->writeFile('AGENTS.md', AnalyzeAgentsMd::HEADER . "\ncontent\n" . AnalyzeAgentsMd::FOOTER . "\n");
+
+        $composer = $this->createComposer(requiresSelf: true);
+        $plugin = new Plugin();
+        $plugin->activate($composer, $this->createMock(IOInterface::class));
+        $plugin->onPackageUninstall($this->createPackageEvent('jardis/dev-skills', $composer));
+
+        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
         self::assertFileExists($this->project->path('AGENTS.md'));
     }
 
@@ -452,17 +494,24 @@ final class PluginTest extends TestCase
     /**
      * @param array<string, mixed> $extra
      */
-    private function createComposer(array $extra = []): Composer
+    private function createComposer(array $extra = [], ?string $home = null, bool $requiresSelf = false): Composer
     {
         $vendorDir = $this->project->path('vendor');
 
         $config = $this->createMock(Config::class);
         $config->method('get')->willReturnCallback(
-            static fn (string $key): mixed => $key === 'vendor-dir' ? $vendorDir : null,
+            static fn (string $key): mixed => match ($key) {
+                'vendor-dir' => $vendorDir,
+                'home' => $home,
+                default => null,
+            },
         );
 
         $package = $this->createMock(RootPackageInterface::class);
         $package->method('getExtra')->willReturn($extra);
+        $package->method('getDevRequires')->willReturn($requiresSelf
+            ? ['jardis/dev-skills' => new Link('consumer/app', 'jardis/dev-skills', new MatchAllConstraint())]
+            : []);
 
         $composer = $this->createMock(Composer::class);
         $composer->method('getConfig')->willReturn($config);
@@ -479,7 +528,7 @@ final class PluginTest extends TestCase
         return ['jardis/dev-skills' => ['bundled-skills' => true]];
     }
 
-    private function createPackageEvent(string $packageName): PackageEvent
+    private function createPackageEvent(string $packageName, ?Composer $composer = null): PackageEvent
     {
         $package = $this->createMock(PackageInterface::class);
         $package->method('getName')->willReturn($packageName);
@@ -493,6 +542,9 @@ final class PluginTest extends TestCase
             ->disableOriginalConstructor()
             ->getMock();
         $event->method('getOperation')->willReturn($operation);
+        if ($composer !== null) {
+            $event->method('getComposer')->willReturn($composer);
+        }
 
         return $event;
     }

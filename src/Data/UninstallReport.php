@@ -11,9 +11,19 @@ final class UninstallReport
 
     private AgentsMdUninstallAction $agentsMdAction = AgentsMdUninstallAction::Untouched;
 
+    /** @var list<string> */
+    private array $warnings = [];
+
     public function addRemovedSkill(string $name): void
     {
         $this->removedSkills[] = $name;
+    }
+
+    public function addWarningIfAny(?string $warning): void
+    {
+        if ($warning !== null && $warning !== '') {
+            $this->warnings[] = $warning;
+        }
     }
 
     public function setAgentsMdAction(AgentsMdUninstallAction $action): void
@@ -27,6 +37,14 @@ final class UninstallReport
     public function removedSkills(): array
     {
         return $this->removedSkills;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function warnings(): array
+    {
+        return $this->warnings;
     }
 
     public function removedSkillCount(): int

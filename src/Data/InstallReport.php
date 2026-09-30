@@ -29,6 +29,13 @@ final class InstallReport
         $this->warnings[] = $warning;
     }
 
+    public function addWarningIfAny(?string $warning): void
+    {
+        if ($warning !== null && $warning !== '') {
+            $this->warnings[] = $warning;
+        }
+    }
+
     public function addInstalledSkill(string $name): void
     {
         $this->installedSkills[] = $name;

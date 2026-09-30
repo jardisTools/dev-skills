@@ -19,6 +19,8 @@ use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
 use JardisTools\DevSkills\Handler\Manifest\ResolvePluginVersion;
+use JardisTools\DevSkills\Handler\Support\IsGlobalContext;
+use JardisTools\DevSkills\Handler\Uninstall\IsSelfStillRequired;
 
 final class Plugin implements PluginInterface, EventSubscriberInterface
 {
@@ -29,6 +31,14 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
     private ?SkillInstaller $installer = null;
     private ?SkillUninstaller $uninstaller = null;
     private ?PluginConfig $config = null;
+    private IsGlobalContext $isGlobalContext;
+    private IsSelfStillRequired $isSelfStillRequired;
+
+    public function __construct()
+    {
+        $this->isGlobalContext = new IsGlobalContext();
+        $this->isSelfStillRequired = new IsSelfStillRequired();
+    }
 
     public function activate(Composer $composer, IOInterface $io): void
     {
@@ -77,6 +87,10 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
         }
 
         $projectRoot = (string) getcwd();
+        if (($this->isGlobalContext)($projectRoot, $this->composer->getConfig()->get('home'))) {
+            return;
+        }
+
         $vendorDir = (string) $this->composer->getConfig()->get('vendor-dir');
 
         if ($this->config !== null && $this->config->warning !== null) {
@@ -137,9 +151,21 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
             return;
         }
 
-        $report = ($this->uninstaller)((string) getcwd());
+        $projectRoot = (string) getcwd();
+        $composer = $event->getComposer();
+        if (
+            ($this->isGlobalContext)($projectRoot, $composer->getConfig()->get('home'))
+            || ($this->isSelfStillRequired)($composer->getPackage())
+        ) {
+            return;
+        }
+
+        $report = ($this->uninstaller)($projectRoot, (new ResolvePluginVersion())($composer));
 
         $this->io->write($this->summarizeUninstall($report));
+        foreach ($report->warnings() as $warning) {
+            $this->io->writeError(sprintf('<warning>jardis/dev-skills: %s</warning>', $warning));
+        }
         if ($report->agentsMdAction() === AgentsMdUninstallAction::Corrupt) {
             $this->io->writeError(
                 '<warning>jardis/dev-skills: AGENTS.md has corrupt markers; left untouched. Fix manually.</warning>',

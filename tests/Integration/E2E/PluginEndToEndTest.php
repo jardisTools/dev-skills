@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\E2E;
 
 use JardisTools\DevSkills\Tests\Support\ComposerFixture;
+use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -141,6 +143,184 @@ final class PluginEndToEndTest extends TestCase
             $this->project->path('AGENTS.md'),
             "AGENTS.md containing only the managed block should be deleted on plugin removal.\nRemaining AGENTS.md content:\n" . $remaining . "\n---\nComposer output:\n" . $output,
         );
+    }
+
+    public function testComposerRemoveDeletesExactlyTheManifestPathsInBothFoldersAndKeepsUserContent(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        $this->runComposer('install');
+
+        $userFolders = ['.claude/skills/do-mine', '.claude/skills/rules-mine', '.claude/skills/git-foo',
+            '.agents/skills/do-mine', '.agents/skills/git-foo'];
+        foreach ($userFolders as $folder) {
+            $this->project->writeFile($folder . '/SKILL.md', 'mine: ' . $folder);
+        }
+        $this->project->writeFile('.claude/.jardis-backup/adapter-fakecache/SKILL.md', 'kept backup');
+        $checksum = new ChecksumDirectory();
+        $userBefore = array_map(fn (string $f): string => $checksum($this->project->path($f)), $userFolders);
+
+        $manifest = json_decode((string) file_get_contents($this->project->path('.claude/skills/.jardis-managed.json')), true);
+        $managedPaths = array_keys($manifest['paths']);
+        self::assertContains('.claude/skills/adapter-fakecache', $managedPaths);
+        self::assertContains('.agents/skills/rules-architecture', $managedPaths);
+        foreach ($managedPaths as $path) {
+            self::assertDirectoryExists($this->project->path($path));
+        }
+
+        $this->runComposer('remove jardis/dev-skills');
+
+        foreach ($managedPaths as $path) {
+            self::assertDirectoryDoesNotExist($this->project->path($path), $path . ' must be removed.');
+        }
+        self::assertFileDoesNotExist($this->project->path('.claude/skills/.jardis-managed.json'));
+        self::assertSame(
+            array_map(fn (string $f): string => $checksum($this->project->path($f)), $userFolders),
+            $userBefore,
+            'User skill folders must stay byte-identical.',
+        );
+        self::assertSame(
+            ['do-mine', 'git-foo', 'rules-mine'],
+            array_map('basename', glob($this->project->path('.claude/skills') . '/*') ?: []),
+        );
+        self::assertSame(
+            ['do-mine', 'git-foo'],
+            array_map('basename', glob($this->project->path('.agents/skills') . '/*') ?: []),
+        );
+        self::assertSame('kept backup', file_get_contents($this->project->path('.claude/.jardis-backup/adapter-fakecache/SKILL.md')));
+    }
+
+    public function testNoDevInstallDeletesNothing(): void
+    {
+        ComposerFixture::writeConsumerComposerJson(
+            $this->project,
+            $this->pluginRoot,
+            $this->fakeVendorRoot,
+            bundledSkills: true,
+            pluginAsDevRequirement: true,
+        );
+        $this->runComposer('install');
+        $before = TreeSnapshot::ofProject($this->project);
+        self::assertDirectoryExists($this->project->path('.claude/skills/rules-architecture'));
+
+        $output = $this->runComposer('install --no-dev');
+
+        self::assertDirectoryDoesNotExist(
+            $this->project->path('vendor/jardis/dev-skills'),
+            'Precondition: --no-dev really uninstalled the plugin package.',
+        );
+        self::assertSame($before, TreeSnapshot::ofProject($this->project), "Nothing may change.\n" . $output);
+    }
+
+    public function testGlobalContextWritesAndDeletesNothing(): void
+    {
+        $home = $this->project->mkdir('global-home');
+        $workdir = $this->project->mkdir('elsewhere');
+        $this->project->writeFile('global-home/composer.json', (string) json_encode([
+            'repositories' => [
+                ['type' => 'path', 'url' => $this->pluginRoot, 'options' => ['symlink' => false]],
+                ['type' => 'path', 'url' => $this->fakeVendorRoot, 'options' => ['symlink' => false]],
+            ],
+            'minimum-stability' => 'dev',
+            'config' => ['allow-plugins' => ['jardis/dev-skills' => true]],
+        ], JSON_UNESCAPED_SLASHES));
+        $this->project->writeFile('global-home/.claude/skills/adapter-fakecache/SKILL.md', 'global user data');
+        $this->project->writeFile('global-home/AGENTS.md', "# hand written\n");
+        $claudeBefore = TreeSnapshot::of($home . '/.claude');
+
+        [$exit, $output] = ComposerFixture::run($workdir, $home, 'global require jardis/dev-skills jardisadapter/fakecache');
+        self::assertSame(0, $exit, $output);
+        self::assertDirectoryExists($home . '/vendor/jardis/dev-skills', 'Precondition: plugin installed globally.');
+
+        self::assertSame($claudeBefore, TreeSnapshot::of($home . '/.claude'));
+        self::assertDirectoryDoesNotExist($home . '/.agents');
+        self::assertSame('global user data', file_get_contents($home . '/.claude/skills/adapter-fakecache/SKILL.md'));
+        self::assertSame("# hand written\n", file_get_contents($home . '/AGENTS.md'));
+        self::assertSame([], TreeSnapshot::of($workdir));
+
+        [$exit, $output] = ComposerFixture::run($workdir, $home, 'global remove jardis/dev-skills');
+        self::assertSame(0, $exit, $output);
+        self::assertDirectoryDoesNotExist($home . '/vendor/jardis/dev-skills');
+        self::assertSame($claudeBefore, TreeSnapshot::of($home . '/.claude'));
+        self::assertSame('global user data', file_get_contents($home . '/.claude/skills/adapter-fakecache/SKILL.md'));
+        self::assertSame("# hand written\n", file_get_contents($home . '/AGENTS.md'));
+    }
+
+    public function testInstallWorksWithoutGitDirectory(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        self::assertDirectoryDoesNotExist($this->project->path('.git'));
+
+        $this->runComposer('install');
+
+        self::assertDirectoryDoesNotExist($this->project->path('.git'));
+        self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
+        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.agents/skills/adapter-fakecache/SKILL.md'));
+        self::assertFileExists($this->project->path('AGENTS.md'));
+    }
+
+    public function testInstallWorksWithHomeUnset(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+
+        [$exit, $output] = ComposerFixture::run(
+            $this->project->root,
+            $this->project->path('.composer-home'),
+            'install',
+            'env -u HOME',
+        );
+
+        self::assertSame(0, $exit, $output);
+        self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
+        self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
+    }
+
+    public function testNoScriptsInstallsLikeNormal(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        $this->runComposer('install');
+        $normal = TreeSnapshot::ofProject($this->project);
+
+        $other = new TempProject('dev-skills-e2e-noscripts-');
+        try {
+            ComposerFixture::writeConsumerComposerJson($other, $this->pluginRoot, $this->fakeVendorRoot, true);
+            ComposerFixture::runComposer($other, 'install --no-scripts');
+
+            self::assertSame($normal, TreeSnapshot::ofProject($other));
+        } finally {
+            $other->cleanup();
+        }
+    }
+
+    public function testCoreFailureExitsNonZeroAndAfterRemovingTheObstacleTheRerunSucceeds(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        // A directory where the manifest file must go: the core cannot finish.
+        $this->project->mkdir('.claude/skills/.jardis-managed.json');
+
+        [$exit, $output] = ComposerFixture::run($this->project->root, $this->project->path('.composer-home'), 'install');
+        self::assertNotSame(0, $exit, "Core failure must fail the run.\n" . $output);
+
+        rmdir($this->project->path('.claude/skills/.jardis-managed.json'));
+        $this->runComposer('install');
+
+        self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
+    }
+
+    public function testManifestTooNewLeavesEverythingByteIdenticalAndExitsZero(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        $this->project->writeFile(
+            '.claude/skills/.jardis-managed.json',
+            '{"schemaVersion":2,"pluginVersion":"9.9.9","paths":{}}' . "\n",
+        );
+        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'old content');
+        $before = TreeSnapshot::ofProject($this->project);
+
+        $output = $this->runComposer('install');
+
+        self::assertSame($before, TreeSnapshot::ofProject($this->project));
+        self::assertStringContainsString('schema 2', $output);
     }
 
     private function writeConsumerComposerJson(bool $bundledSkills): void

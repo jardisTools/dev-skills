@@ -15,10 +15,17 @@ use JardisTools\DevSkills\Handler\Discovery\ScanAgentsFiles;
 use JardisTools\DevSkills\Handler\Install\AggregateAgentsMd;
 use JardisTools\DevSkills\Handler\Install\IsCatalogInstalled;
 use JardisTools\DevSkills\Handler\Install\RecordAgentsAggregation;
+use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
+use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 
 final class SkillInstaller
 {
     private readonly InstallSkills $installSkills;
+
+    private readonly InstallAddons $installAddons;
+
+    /** @var Closure(string, string, Closure(): void): ?string */
+    private readonly Closure $guardManifestVersion;
 
     /** @var Closure(string): list<AgentsDescriptor> */
     private readonly Closure $scanAgentsFiles;
@@ -36,6 +43,7 @@ final class SkillInstaller
         ?PluginConfig $config = null,
         ?Filesystem $filesystem = null,
         ?string $pluginRoot = null,
+        ?InstallAddons $installAddons = null,
     ) {
         $fs = $filesystem ?? new Filesystem();
 
@@ -44,6 +52,9 @@ final class SkillInstaller
             $pluginRoot ?? dirname(__DIR__),
             $fs,
         );
+        $this->installAddons = $installAddons ?? new InstallAddons();
+        $this->guardManifestVersion = (new GuardManifestVersion((new ReadManifest())->__invoke(...)))
+            ->__invoke(...);
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
         $this->isCatalogInstalled = (new IsCatalogInstalled())->__invoke(...);
         $this->aggregateAgentsMd = (new AggregateAgentsMd($fs))->__invoke(...);
@@ -54,6 +65,19 @@ final class SkillInstaller
     {
         $report = new InstallReport();
 
+        $report->addWarningIfAny(($this->guardManifestVersion)(
+            $projectRoot,
+            $pluginVersion,
+            function () use ($projectRoot, $vendorDir, $pluginVersion, $report): void {
+                $this->run($projectRoot, $vendorDir, $pluginVersion, $report);
+            },
+        ));
+
+        return $report;
+    }
+
+    private function run(string $projectRoot, string $vendorDir, string $pluginVersion, InstallReport $report): void
+    {
         $keptBundled = ($this->installSkills)($projectRoot, $vendorDir, $report, $pluginVersion);
 
         $result = ($this->aggregateAgentsMd)(
@@ -63,6 +87,6 @@ final class SkillInstaller
         );
         ($this->recordAgentsAggregation)($report, $result);
 
-        return $report;
+        ($this->installAddons)($projectRoot, $vendorDir, $report);
     }
 }

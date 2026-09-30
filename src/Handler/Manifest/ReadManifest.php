@@ -12,6 +12,10 @@ use JardisTools\DevSkills\Data\ManifestState;
  * Reads the manifest file and classifies it. Never throws on a broken file:
  * invalid JSON or schema yields Defective, a newer schema or plugin version
  * yields TooNew, an absent file yields Missing.
+ *
+ * A dev checkout resolves to ResolvePluginVersion::DEV_VERSION and has no
+ * comparable release number: for it only the schema version decides, so a
+ * manifest written by a release is not mistaken for "too new".
  */
 final class ReadManifest
 {
@@ -48,7 +52,10 @@ final class ReadManifest
 
         if (
             $schemaVersion > $supportedSchemaVersion
-            || version_compare($pluginVersion, $currentPluginVersion, '>')
+            || (
+                $currentPluginVersion !== ResolvePluginVersion::DEV_VERSION
+                && version_compare($pluginVersion, $currentPluginVersion, '>')
+            )
         ) {
             return new ManifestReadResult(
                 ManifestState::TooNew,

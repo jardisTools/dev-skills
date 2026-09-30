@@ -101,6 +101,22 @@ final class ReadManifestTest extends TestCase
         self::assertStringContainsString('plugin 2.0.0', $result->warning);
     }
 
+    public function testDevVersionIgnoresThePluginVersionOfTheManifest(): void
+    {
+        $path = $this->project->writeFile(Manifest::FILE, $this->json(1, '1.4.0', []));
+
+        $result = (new ReadManifest())($path, '0.0.0');
+
+        self::assertSame(ManifestState::Healthy, $result->state);
+    }
+
+    public function testDevVersionStillRejectsANewerSchemaVersion(): void
+    {
+        $path = $this->project->writeFile(Manifest::FILE, $this->json(2, '1.4.0', []));
+
+        self::assertSame(ManifestState::TooNew, (new ReadManifest())($path, '0.0.0')->state);
+    }
+
     public function testOlderPluginVersionIsStillHealthy(): void
     {
         $path = $this->project->writeFile(Manifest::FILE, $this->json(1, '1.0.0', []));

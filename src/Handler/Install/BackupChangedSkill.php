@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Handler\Install;
 
 use Closure;
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Data\StagedSkill;
 
 /**
@@ -22,31 +23,6 @@ use JardisTools\DevSkills\Data\StagedSkill;
  */
 final class BackupChangedSkill
 {
-    /**
-     * Skill names bundled up to 1.3.x.
-     * TODO: moves to RenamedSkills in P2.5 (single public source for old names).
-     */
-    private const LEGACY_BUNDLE_NAMES = [
-        'do-git-branch',
-        'do-git-commit',
-        'do-git-compliance',
-        'do-git-push',
-        'do-project-git-setup',
-        'jardis-catalog',
-        'jardis-mcp-consumer',
-        'jardis-start-here',
-        'platform-cookbook',
-        'platform-implementation',
-        'platform-usage',
-        'platform-versioning',
-        'platform-workflow',
-        'rules-architecture',
-        'rules-frontend',
-        'rules-patterns',
-        'rules-testing',
-        'schema-authoring',
-    ];
-
     /**
      * @param Closure(string, string, string): string $backupFolder
      * @param Closure(string): string                 $checksumDirectory
@@ -78,7 +54,7 @@ final class BackupChangedSkill
             return $entry['sha256'] !== $current;
         }
 
-        if ($manifest === null && in_array($staged->skill->name, self::LEGACY_BUNDLE_NAMES, true)) {
+        if ($manifest === null && array_key_exists($staged->skill->name, RenamedSkills::MAPPING)) {
             return true;
         }
 

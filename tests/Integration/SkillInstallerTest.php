@@ -13,9 +13,11 @@ use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\InstallAddons;
 use JardisTools\DevSkills\SkillInstaller;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 final class SkillInstallerTest extends TestCase
@@ -462,6 +464,177 @@ final class SkillInstallerTest extends TestCase
         // No cascade: unchanged runs never create a backup of any kind.
         self::assertSame([], $this->backupSiblings());
         self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function tooNewManifests(): array
+    {
+        $newerSchema = '{"schemaVersion":2,"pluginVersion":"1.4.0","paths":{}}' . "\n";
+        $newerPlugin = '{"schemaVersion":1,"pluginVersion":"9.9.9","paths":{}}' . "\n";
+
+        return [
+            'newer schema, after an earlier install' => [$newerSchema, true],
+            'newer schema, without an earlier install' => [$newerSchema, false],
+            'newer plugin version, after an earlier install' => [$newerPlugin, true],
+            'newer plugin version, without an earlier install' => [$newerPlugin, false],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('tooNewManifests')]
+    public function testTooNewManifestChangesNothingAndWarnsWithBothVersions(string $manifestJson, bool $installedBefore): void
+    {
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'bundle');
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/adapter-cache/SKILL.md', 'cache');
+        $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+        $installedBefore ? $this->install('1.4.0') : LegacyFixture::writeInstalledBundle($this->project, ['rules-architecture']);
+        $this->project->writeFile('.claude/skills/user-mine/SKILL.md', 'mine');
+        $this->project->writeFile(Manifest::FILE, $manifestJson);
+        $before = TreeSnapshot::ofProject($this->project);
+
+        $report = $this->install('1.4.0');
+
+        self::assertSame($before, TreeSnapshot::ofProject($this->project));
+        self::assertSame(0, $report->installedSkillCount());
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('nothing was changed', $report->warnings()[0]);
+        self::assertMatchesRegularExpression('/schema \d+, plugin \d+\.\d+\.\d+.*schema 1 and plugin 1\.4\.0/', $report->warnings()[0]);
+    }
+
+    public function testDevCheckoutInstallsOverAManifestWrittenByARelease(): void
+    {
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'bundle');
+        $this->install('1.4.0');
+
+        // A dev checkout resolves to 0.0.0: the manifest of release 1.4.0 must not read as "too new".
+        $report = $this->install('0.0.0');
+
+        self::assertSame([], $report->warnings());
+        self::assertSame(['rules-architecture'], $report->installedSkills());
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function defectiveManifests(): array
+    {
+        return [
+            'not JSON' => ['this is not json'],
+            'wrong schema' => ['{"schemaVersion":"one","paths":[]}'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('defectiveManifests')]
+    public function testDefectiveManifestAfterAnEarlierInstallDeletesNothingAndIsRewritten(string $broken): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $this->install('1.4.0');
+        $this->project->writeFile(Manifest::FILE, $broken);
+
+        // The config would deselect rules-architecture; with an unreadable manifest nothing may go.
+        $report = $this->installer(PluginConfig::onlyMandatory());
+
+        self::assertSame([], $report->removedBundledSkills());
+        foreach (['.claude/skills', '.agents/skills'] as $root) {
+            self::assertFileExists($this->project->path($root . '/rules-architecture/SKILL.md'));
+        }
+        self::assertStringContainsString('defective manifest', implode("\n", $report->warnings()));
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '0.0.0')->state);
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('defectiveManifests')]
+    public function testDefectiveManifestOverLegacyFoldersDeletesNothingAndIsRewritten(string $broken): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        LegacyFixture::writeInstalledBundle($this->project, ['rules-architecture', 'platform-usage']);
+        $this->project->writeFile('.claude/skills/user-mine/SKILL.md', 'mine');
+        $this->project->writeFile(Manifest::FILE, $broken);
+
+        $report = $this->installer(PluginConfig::onlyMandatory());
+
+        self::assertSame([], $report->removedBundledSkills());
+        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/platform-usage/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/user-mine/SKILL.md'));
+        self::assertStringContainsString('defective manifest', implode("\n", $report->warnings()));
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '0.0.0')->state);
+    }
+
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function coreObstacles(): array
+    {
+        return [
+            'directory where the manifest file goes' => ['.claude/skills/.jardis-managed.json', false],
+            'file where a skill folder goes' => ['.agents/skills/beta', true],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('coreObstacles')]
+    public function testRerunAfterACoreFailureEndsInTheStateOfAnUndisturbedRun(string $obstacle, bool $isFile): void
+    {
+        $reference = new TempProject('dev-skills-reference-');
+        try {
+            foreach ([$this->project, $reference] as $project) {
+                $project->writeFile('vendor/jardisadapter/cache/.claude/skills/alpha/SKILL.md', 'alpha');
+                $project->writeFile('vendor/jardisadapter/cache/.claude/skills/beta/SKILL.md', 'beta');
+                $project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+            }
+            $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+            $installer = new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root);
+
+            $installer($reference->root, $reference->path('vendor'), '1.4.0');
+
+            if ($isFile) {
+                $this->project->writeFile($obstacle, 'a file, not a folder');
+            } else {
+                $this->project->mkdir($obstacle);
+            }
+            try {
+                $installer($this->project->root, $this->project->path('vendor'), '1.4.0');
+                self::fail('The core failure must surface as an exception (exit code != 0).');
+            } catch (\RuntimeException) {
+                // expected
+            }
+
+            $isFile ? unlink($this->project->path($obstacle)) : rmdir($this->project->path($obstacle));
+            $installer($this->project->root, $this->project->path('vendor'), '1.4.0');
+
+            self::assertSame(TreeSnapshot::ofProject($reference), TreeSnapshot::ofProject($this->project));
+            self::assertSame([], glob($this->project->path('.claude/skills') . '/.jardis-staging-*') ?: [], 'No staging leftovers');
+            self::assertSame([], glob($this->project->path('.claude/skills') . '/.jardis-managed.*.tmp') ?: [], 'No temp manifest leftovers');
+        } finally {
+            $reference->cleanup();
+        }
+    }
+
+    public function testFailingAddonOnlyWarnsAndTheCoreResultStays(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+        $blocked = $this->project->mkdir('addon-target.txt');
+        $addons = new InstallAddons([
+            'demo' => static function () use ($blocked): void {
+                if (@file_put_contents($blocked, 'x') === false) {
+                    throw new \RuntimeException('cannot write ' . $blocked);
+                }
+            },
+        ]);
+
+        $report = (new SkillInstaller(
+            config: PluginConfig::all(),
+            pluginRoot: $this->pluginRepo->root,
+            installAddons: $addons,
+        ))($this->project->root, $this->project->path('vendor'), '1.4.0');
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('add-on "demo" failed and was skipped', $report->warnings()[0]);
+        self::assertSame(['foundation-alpha'], $report->installedSkills());
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->state);
+        self::assertStringContainsString('Cache rules.', (string) file_get_contents($this->project->path('AGENTS.md')));
     }
 
     /**

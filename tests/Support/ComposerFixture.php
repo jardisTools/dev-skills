@@ -16,6 +16,7 @@ final class ComposerFixture
         string $pluginRoot,
         string $fakeVendorRoot,
         bool $bundledSkills,
+        bool $pluginAsDevRequirement = false,
     ): void {
         $extra = $bundledSkills
             ? ['jardis/dev-skills' => ['bundled-skills' => true]]
@@ -39,10 +40,12 @@ final class ComposerFixture
                     'options' => ['symlink' => false],
                 ],
             ],
-            'require' => [
-                'jardis/dev-skills'         => '*',
-                'jardisadapter/fakecache'   => '*',
-            ],
+            'require' => $pluginAsDevRequirement
+                ? ['jardisadapter/fakecache' => '*']
+                : ['jardis/dev-skills' => '*', 'jardisadapter/fakecache' => '*'],
+            'require-dev' => $pluginAsDevRequirement
+                ? ['jardis/dev-skills' => '*']
+                : new \stdClass(),
             'config' => [
                 'allow-plugins' => [
                     'jardis/dev-skills' => true,
@@ -61,27 +64,40 @@ final class ComposerFixture
 
     public static function runComposer(TempProject $project, string $command): string
     {
-        $cmd = sprintf(
-            'cd %s && COMPOSER_HOME=%s composer %s --no-interaction --no-progress 2>&1',
-            escapeshellarg($project->root),
-            escapeshellarg($project->root . '/.composer-home'),
-            $command,
-        );
-
-        $output    = [];
-        $exitCode  = 0;
-        exec($cmd, $output, $exitCode);
-        $joined = implode("\n", $output);
+        [$exitCode, $output] = self::run($project->root, $project->root . '/.composer-home', $command);
 
         if ($exitCode !== 0) {
             Assert::fail(sprintf(
                 "Composer command failed (exit %d): composer %s\nOutput:\n%s",
                 $exitCode,
                 $command,
-                $joined,
+                $output,
             ));
         }
 
-        return $joined;
+        return $output;
+    }
+
+    /**
+     * Runs a real Composer command and returns its exit code and combined output.
+     *
+     * @param string $envPrefix extra shell prefix in front of `composer`, e.g. `env -u HOME`
+     * @return array{int, string}
+     */
+    public static function run(string $cwd, string $composerHome, string $command, string $envPrefix = ''): array
+    {
+        $cmd = sprintf(
+            'cd %s && %s COMPOSER_HOME=%s composer %s --no-interaction --no-progress 2>&1',
+            escapeshellarg($cwd),
+            $envPrefix === '' ? 'env' : $envPrefix,
+            escapeshellarg($composerHome),
+            $command,
+        );
+
+        $output = [];
+        $exitCode = 0;
+        exec($cmd, $output, $exitCode);
+
+        return [$exitCode, implode("\n", $output)];
     }
 }
