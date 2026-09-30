@@ -4,7 +4,7 @@ description: Use when a task is an undertaking (tier 3) and stage 0 starts — c
 zone: process
 persona: O
 prerequisites: [process-choose-tier]
-next: []
+next: [process-write-prd]
 ---
 
 ## Scope

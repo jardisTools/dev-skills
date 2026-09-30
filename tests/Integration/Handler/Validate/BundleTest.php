@@ -20,7 +20,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -376,6 +376,74 @@ final class BundleTest extends TestCase
         self::assertNotNull($document);
         self::assertSame(['process-choose-tier'], $document['fields']['prerequisites'] ?? null);
         self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+    }
+
+    public function testWriteSkillsChainAndAddWhatThePictureDoesNotShow(): void
+    {
+        $prd  = (string) file_get_contents($this->skillFile('process-write-prd'));
+        $plan = (string) file_get_contents($this->skillFile('process-write-plan'));
+
+        $prdDocument  = (new ParseSkillFrontmatter())($prd);
+        $planDocument = (new ParseSkillFrontmatter())($plan);
+        self::assertNotNull($prdDocument);
+        self::assertNotNull($planDocument);
+        self::assertSame(['process-concept'], $prdDocument['fields']['prerequisites'] ?? null);
+        self::assertSame(['process-write-plan'], $prdDocument['fields']['next'] ?? null);
+        self::assertSame(['process-write-prd'], $planDocument['fields']['prerequisites'] ?? null);
+
+        foreach (['process-concept', 'process-resume'] as $name) {
+            $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
+            self::assertNotNull($document);
+            self::assertSame(['process-write-prd'], $document['fields']['next'] ?? null, $name);
+        }
+
+        foreach (['Error cases', 'States', 'Limits', 'Data paths', 'never re-describe', 'docs/vorhaben/<name>/PRD.md', 'The human confirms'] as $keyword) {
+            self::assertStringContainsString($keyword, $prd);
+        }
+        foreach (
+            [
+                'Stages first, then phases',
+                'File list measured, exhaustively',
+                'same phase or an earlier one',
+                'in every AK list',
+                'Every commitment has an AK',
+                'never split a phase afterwards',
+                'docs/vorhaben/<name>/PLAN.md',
+                'The human releases it',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $plan);
+        }
+        self::assertLessThanOrEqual(250, substr_count($prd, "\n"));
+        self::assertLessThanOrEqual(250, substr_count($plan, "\n"));
+    }
+
+    public function testWritePlanNamesCapsAndPoolCheckScript(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-write-plan'));
+
+        foreach (['`150`', '`16 KB`', '6 KB', '8 commitments', '30 KB', 'scripts/pool-check.php', '`process-run-stage`'] as $keyword) {
+            self::assertStringContainsString($keyword, $content);
+        }
+        self::assertFileExists(dirname(__DIR__, 4) . '/scripts/pool-check.php');
+    }
+
+    public function testWriteSkillsRunBoardsOncePerProject(): void
+    {
+        $prd  = (string) file_get_contents($this->skillFile('process-write-prd'));
+        $plan = (string) file_get_contents($this->skillFile('process-write-plan'));
+
+        foreach ([$prd, $plan] as $content) {
+            self::assertStringContainsString('exactly once per undertaking', $content);
+            self::assertStringContainsString('blind and in parallel', $content);
+            self::assertStringContainsString('`process-review-board`', $content);
+        }
+        self::assertStringContainsString('before the human confirms the PRD', $prd);
+        self::assertStringContainsString('The skeptic is always part of it', $prd);
+        self::assertStringContainsString('does not run a second time', $prd);
+        self::assertStringContainsString('two roles, architecture and test strategy', $plan);
+        self::assertStringContainsString('only when the plan touches new package APIs', $plan);
+        self::assertStringContainsString('there is no second run', $plan);
     }
 
     public function testExistingCapabilityCheckSourceParses(): void

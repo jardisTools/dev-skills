@@ -4,7 +4,7 @@ description: Use to continue a running undertaking in a fresh session — find t
 zone: process
 persona: O
 prerequisites: [process-choose-tier]
-next: []
+next: [process-write-prd]
 ---
 
 ## Scope
