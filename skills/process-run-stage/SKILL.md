@@ -4,7 +4,7 @@ description: Use when the plan is released and a stage is built — one brief pe
 zone: process
 persona: O
 prerequisites: [process-write-plan]
-next: []
+next: [process-verify]
 ---
 
 ## Scope

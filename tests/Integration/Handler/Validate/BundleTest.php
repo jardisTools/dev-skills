@@ -21,7 +21,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage', 'process-verify', 'process-close'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -470,7 +470,7 @@ final class BundleTest extends TestCase
         self::assertStringContainsString('../process-review-board/reviewers/existing-capability-check.md', $check);
     }
 
-    public function testFifteenReviewerSourcesParseAndNoneExistsForGo(): void
+    public function testEveryReviewerSourceParsesCarriesReturnAndNoneExistsForGo(): void
     {
         $dir    = dirname(__DIR__, 4) . '/skills/process-review-board/reviewers';
         $parser = new ParseSkillFrontmatter();
@@ -482,25 +482,8 @@ final class BundleTest extends TestCase
         );
         sort($roles);
 
-        $expected = [
-            'existing-capability-check',
-            'plan-review-architecture',
-            'plan-review-ddd-tactics',
-            'plan-review-frontend-a11y',
-            'plan-review-frontend-architecture',
-            'plan-review-frontend-tests',
-            'plan-review-frontend-types',
-            'plan-review-frontend-ux',
-            'plan-review-packages',
-            'plan-review-php',
-            'plan-review-test-strategy',
-            'prd-review-ddd-strategy',
-            'prd-review-domain-expert',
-            'prd-review-frontend-ux',
-            'prd-review-skeptic',
-        ];
-        self::assertSame($expected, $roles);
-        self::assertCount(15, $roles);
+        // The names of all nineteen sources are pinned in BundleReviewersTest.
+        self::assertCount(19, $roles);
         foreach ($roles as $role) {
             self::assertSame(0, preg_match('/(^|-)go($|-)/', $role), 'No reviewer source exists for Go.');
             self::assertStringNotContainsString('senior', $role);
@@ -607,6 +590,71 @@ final class BundleTest extends TestCase
         }
 
         self::assertStringNotContainsStringIgnoringCase('make qa', $content);
+    }
+
+    public function testVerifyChainsBetweenRunStageAndClose(): void
+    {
+        $chain = [
+            'process-run-stage' => ['prerequisites' => ['process-write-plan'], 'next' => ['process-verify']],
+            'process-verify' => ['prerequisites' => ['process-run-stage'], 'next' => ['process-close']],
+        ];
+        foreach ($chain as $name => $expected) {
+            $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
+            self::assertNotNull($document);
+            self::assertSame($expected['prerequisites'], $document['fields']['prerequisites'] ?? null, $name);
+            self::assertSame($expected['next'], $document['fields']['next'] ?? null, $name);
+        }
+
+        $content = (string) file_get_contents($this->skillFile('process-verify'));
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+        foreach (
+            [
+                'once per stage',
+                'blind',
+                'doer and checker are two sessions',
+                'at most `5`',
+                'at most `3`',
+                'once per undertaking',
+                'end to end',
+                'reviewers/stage-verifier.md',
+                'reviewers/acceptance-gate.md',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $content, $keyword);
+        }
+    }
+
+    public function testCloseChainsToRecordDecision(): void
+    {
+        $content  = (string) file_get_contents($this->skillFile('process-close'));
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['process-verify'], $document['fields']['prerequisites'] ?? null);
+        self::assertSame(['knowledge-record-decision'], $document['fields']['next'] ?? null);
+        self::assertSame([], (new CheckSkillLinks())($this->skillFile('process-close')));
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+
+        $record = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile('knowledge-record-decision')));
+        self::assertNotNull($record);
+        self::assertSame(['foundation-working-principles', 'knowledge-maintain-pool'], $record['fields']['prerequisites'] ?? null);
+
+        foreach (
+            [
+                'Fix now',
+                'Let the human decide now',
+                'Strike',
+                'Own item',
+                'Collective blocks are forbidden',
+                'docs/digests/digest-<name>-<jjjj-mm>.md',
+                '`process-docs` set to `local`',
+                'never stage it',
+                '**delete** `docs/vorhaben/<name>/`',
+                'Deliver **once**',
+                'Retro',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $content, $keyword);
+        }
     }
 
     public function testBriefTemplateCarriesCapsAndReturnSchema(): void
