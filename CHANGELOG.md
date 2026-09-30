@@ -1,0 +1,184 @@
+# Changelog
+
+All notable changes to `jardis/dev-skills` are documented in this file.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [1.3.6] - 2026-09-29
+
+### Changed
+- CI: Dependabot configuration unified, unused Claude workflow removed, `composer/composer` dev requirement updated. No user-visible changes to the skills.
+
+## [1.3.5] - 2026-09-29
+
+### Changed
+- Public skills no longer refer to private knowledge sources.
+
+## [1.3.4] - 2026-09-27
+
+### Changed
+- **Closure-Editor consumer state caught up (2026-09-27).** `jardis-mcp-consumer`: load-door fields `dockable`/`usedAt`/`usedAtUnknown`/`scalarTypes`/`policyCoverage`, the `…/work` package (`body`, `files.stubExists`/`testExists`) and its HTTP twin `GET /api/closures/.../work`, plus a rename/delete cascade over every `uses` reference instead of Set members only. `platform-cookbook` recipe 10 names the authoring path (Closure-Editor or `save_closures`) and the work package before the `__invoke()` body; `platform-implementation` states that a Closure rename does NOT move the dev stub (warning instead of merge) and a delete with references returns `409 IN_USE`; `platform-workflow` names rule-node capability (verdict + exactly one input) as its own blocker condition before `ruleSubject.payloadField`; `jardis-start-here` routes headless Closure authoring to `jardis-mcp-consumer`.
+
+## [1.3.3] - 2026-09-26
+
+### Fixed
+- Skills caught up on the Rule-subject state: aggregate input, Specification glossary, Closure lifecycle tools and the Rule node.
+
+## [1.3.2] - 2026-09-26
+
+### Fixed
+- Skills caught up on the "Closure with contract" state: n-input contract and the MCP work package.
+
+## [1.3.1] - 2026-09-26
+
+### Fixed
+- Skills caught up on the Closure move: `Rules.json`, the `{BC}/Rule/*` paths and the MCP tool names now read `Closures.json`, `{BC}/Closure/*/*` and the `*_closures` tools.
+
+## [1.3.0] - 2026-09-24
+
+### Fixed
+- Four skills caught up on the generated tree: the aggregate collector directory is now `Model/`, and the Process path no longer contains `processes/`.
+
+## [1.2.9] - 2026-09-20
+
+### Fixed
+- `platform-usage`: reference path updated to the projection-conventions page.
+
+## [1.2.8] - 2026-09-06
+
+### Changed
+- **`rules-frontend` sharpened (stack-agnostic, 2026-09-06).** Four sentences drawn from a large refactoring: shared mechanics have a measurable denominator (N users / 0 private copies); every derivation lives in a DOM-free module beside the component; URL/query parameters are an external contract read in one place; behaviour-preserving refactoring starts with characterisation tests and pre-change snapshots. No framework named, no new axis.
+
+## [1.2.7] - 2026-09-06
+
+### Fixed
+- Definition files are JSON: documentation caught up in six skills, plus `examples/Schema.json`.
+
+## [1.2.6] - 2026-09-05
+
+### Fixed
+- Hand-editing definition files is no longer documented as an entry path.
+
+## [1.2.5] - 2026-09-05
+
+### Changed
+- Skill history narratives removed; seven consistency defects fixed.
+
+## [1.2.4] - 2026-09-03
+
+### Changed
+- `platform-implementation`, `platform-cookbook`, `jardis-mcp-consumer`: every query is a paginated list now (`limit` mandatory, `form` retired with V-QDEF-24, `Lists.yaml` and the derived selector retired 2026-09-03). Rules read the list over the Kernel-Naht (`limit: 1`, decide on `total`); the AI path (`save_queries` → `save_rules reads:` → `build` → rule body) is documented with the "open invoices" example, plus the new drift category `dev_code_dangling_handler`.
+
+## [1.2.3] - 2026-09-02
+
+### Fixed
+- `jardis-mcp-consumer`: removed references to an inventory document; the catalog is the live surface.
+
+## [1.2.2] - 2026-08-27
+
+### Fixed
+- `platform-*` skills: key-bulk read `getBy{PluralKey}s` and the list-handle rule synced.
+
+## [1.2.1] - 2026-08-27
+
+### Fixed
+- `platform-implementation`: outer-door route convention R3 and a clarification of V12.
+
+## [1.2.0] - 2026-08-23
+
+### Added
+- `jardis-mcp-consumer`: MCP parity for `Queries.yaml` and the schema SQL export; `jardis-start-here`: the Query-Designer.
+
+## [1.1.0] - 2026-08-23
+
+### Added
+- **Five `do-*` Gitflow skills for project repositories** (bundle grown to 18, opt-in count to 15): `do-git-branch`, `do-git-commit`, `do-git-push` (the daily branch → commit → PR flow), `do-project-git-setup` (one-time Gitflow setup: develop branch, repo settings, branch protection ruleset, hooks — deliberately no version tag, no release, no Packagist), and `do-git-compliance` (10 project checks: hooks, uncommitted secrets, Gitflow branches, CI wiring, branch sync). Adapted for application projects from the internal package-release skills; the required status checks match the app template's `ci.yml` job names (`phpcs`, `phpstan`, `tests`). Opt in via `"bundled-skills": {"include": ["do-git-*", "do-project-git-setup", ...]}`.
+
+## [1.0.7] - 2026-08-23
+
+### Fixed
+- Catalog docs: removed two nonexistent packages from the excluded list.
+
+## [1.0.6] - 2026-08-22
+
+### Changed
+- Docs: the term "Koffer" renamed to "DomainKernel" in README, manifest and skills.
+
+## [1.0.5] - 2026-08-15
+
+### Changed
+- Skill bodies sharpened to their WHAT role (implementation-internal material removed).
+
+## [1.0.4] - 2026-08-13
+
+### Changed
+- **`auto-release.yml` deployed (fleet standard, byte-identical to the 14 sibling repos).** Releases of this repository are now driven by the `Auto Release` workflow: `fix/*` / `hotfix/*` merged into `develop` produces an automatic PATCH release; `feature/*` opens a release PR that waits for a `/release minor|major` comment. **Manual tagging is retired for this repository.**
+
+## [1.0.3] - 2026-08-13
+
+### Added
+- **`platform-cookbook` recipe 11 — "Invariante als Zustand".** Documents how a uniqueness invariant that spans an aggregate is upheld without check-then-act: a first-writing Torwächter node plus a CAS-UPDATE, shown on the Statusaggregat/Fakturierung case and the Nummernkreis/Reservierung-with-Retry case.
+- **`platform-workflow` — `responseStatus` derivation.** Describes how the routing status of the terminating node determines the status carried by the `DomainResponse`, so a Process author can predict the response shape from the graph.
+
+## [1.0.2] - 2026-08-09
+
+### Changed
+- Dependencies: `php_codesniffer` bumped 3.13.5 to 3.13.6 (security advisory blocked every install).
+- Docs: three outdated assurances in the generated-code contract corrected.
+- Catalog: `jardistools/dbschema` removed from the catalog and skills.
+
+## [1.0.1] - 2026-07-21
+
+### Fixed
+- Docs: `jardissupport/contract` renamed to `jardissupport/contracts`.
+
+## [1.0.0] - 2026-07-21
+
+### Added
+- **New bundled skill `platform-usage`** (zone `post-active`). Covers the thin layer between Designer-generated Domain entry points and transport code: the 4-hop Api-Registry call chain, `MyApp` bootstrap lifetime per transport (HTTP / CLI / queue / worker), `DomainResponse` → HTTP status / CLI exit code mapping, and the forbidden-patterns list for controllers. Pairs with `platform-implementation` when shipping a service. Brought the bundle total to **7 skills** (v3); v4 then dropped it to **6** after `tools-definition` was retired.
+- **Companion `examples/` directories for `schema-authoring` and `tools-definition`.** Full working MeterDevice artefacts (`schema-authoring/examples/Schema.yaml`; `tools-definition/examples/Counter/{Aggregate,Source,FieldMap,Lists}.yaml`) ship alongside the skill bodies. The skills reference them by relative path so the AI can consult a complete, Designer-accepted artefact instead of reconstructing one from the spec. Companion files are copied into consumer projects together with the `SKILL.md` (existing installer behaviour — it always recurses into each skill directory).
+- **`AGENTS.md` for the plugin repo itself.** The plugin aggregates `AGENTS.md` from Jardis vendor packages — now ships its own so consumer projects also get the dev-skills context.
+- **End-to-end Composer integration test** (`tests/Integration/E2E/PluginEndToEndTest.php`) that runs real `composer install` / `composer remove` against the plugin via path repository, with a fake vendor fixture for skill + AGENTS.md aggregation. Replaces mock-only assertions of the install/uninstall lifecycle.
+- **Skill format validator** (`bin/validate-skills.php`, `make validate-skills`, CI job) that checks every bundled `SKILL.md` against `docs/SKILL-FORMAT.md`: required frontmatter fields, kebab-case name matching directory, valid `zone`, single-line description within word cap, presence of at least one `##`/`###` section heading, and length budget per zone. CI fails the build on any violation.
+- **New bundled skill `rules-frontend` (bundle grown 9 → 10, 2026-06-28).** Stack-agnostic frontend review constitution covering five axes — component boundaries, state discipline, an e2e-heavy test pyramid, an accessibility minimum bar, and type-safety at the data boundary — the measuring stick a frontend architect or reviewer holds a UI plan or component against. The concrete UI framework arrives via the assignment, never from the constitution. Opt-in via `bundled-skills`; a `["rules-*"]` whitelist now selects all four rules skills. The `rules-*` prefix was already managed, so install / uninstall / sync needed no change.
+- **Three new `platform-*` bundled skills (bundle grown 6 → 9, 2026-06-01).** Added for Persona C / D working on Designer-generated code: `platform-versioning` (ClassVersion resolution chain via `LoadClassFromExtensions` + the five-Leitsatz Versionierungs-Modell), `platform-workflow` (the Workflow-Engine routing API — six statuses, `WorkflowBuilder`, `WorkflowContext` slots — consumed by FlowDesigner-generated Use-Case orchestrators), and `platform-cookbook` (Phase-3 recipes, the troubleshooting table, and event transport via `<Agg>EventRouter.php`). All three are opt-in via `bundled-skills`; a `["platform-*"]` whitelist now selects all five platform skills. The `platform-*` prefix was already managed, so install / uninstall / sync needed no change.
+- **Bundled skills configurable** via `composer.json` → `extra."jardis/dev-skills"."bundled-skills"`. Accepted values: `true` (all), `false`/absent (none), `["glob", ...]` whitelist shortcut, or `{"include": [...], "exclude": [...]}`. Patterns are shell globs via `fnmatch()`. Details in the [README](README.md#configuring-bundled-skills).
+- **Sync behavior:** When the config is narrowed, the next `composer install` removes the deselected bundled skills from `.claude/skills/`, even if they were modified locally. Vendor skills and custom prefixes are left untouched.
+- Invalid config values produce a console warning and fall back to the default; no abort.
+- `AGENTS.md` user content preservation during install/uninstall. The managed block is replaced or removed in place; user content outside the markers is left untouched. An existing `AGENTS.md` without markers is backed up to `AGENTS.md.backup` on first install.
+- Uninstall error paths throw `UninstallFailedException` instead of silent return values.
+- Initial release of `jardis/dev-skills` — Composer plugin for automatic installation of Jardis skills and aggregated `AGENTS.md` in consumer projects.
+- Discovery of `vendor/jardis*/*/.claude/skills/*/SKILL.md` and `vendor/jardis*/*/AGENTS.md`.
+- 9 cross-package skills bundled: `plan-requirements`, `plan-data-discovery`, `plan-ddd-modeling`, `platform-implementation`, `rules-architecture`, `rules-testing`, `rules-patterns`, `tools-definition`, `tools-builder`.
+- Uninstall handler: removes Jardis skills (prefix match `adapter-*`, `core-*`, `support-*`, `tools-*`, `plan-*`, `platform-*`, `rules-*`) and cleans up `AGENTS.md`; local skills without a Jardis prefix are kept.
+- Maintainer script `bin/migrate-skills.php` for the one-time rollout into the Jardis package repositories (removes `.claude/` blanket rules from `.gitignore` and replaces them with granular entries).
+
+### Changed
+- **Bundle X-1 consistency pass.** Three pre-X-1 examples that survived earlier iterations are gone: (a) `platform-usage` §3 JSON envelope replaced with the actual `{"data": {"identifier": "…"}}` (Command) and `{"data": {"counter": {...}}}` (Query) shapes the generator emits; (b) `rules-testing` §6 assertion key changed from stale `counterIdentifier` to `identifier`; (c) `platform-implementation` Recipe 6 cleaned of invalid PHP pseudo-syntax, "Pillar 7" → V1 reference, and renderer file:line citations.
+- **`platform-implementation` Werkzeugkasten index** (new §14) cross-references all 22 adapter-`*` / support-`*` / core-`*` / `tools-dbschema` skills. Persona C now has a single lookup for "I need cache / mail / HTTP / event-dispatcher etc." without guessing skill names. Plus eight Builder-wave refactors (X-2, X-3, F3.1, F3.6, Phase 5.1a, Phase 5.4) reflected as implementer-relevant consequences in §1 / §4 / §6 / §9 / Recipe 6, without leaking generator internals (M-1/M-2 and aggregateNS-removal stayed in the Builder repo only).
+- **Skill format spec relaxed (`docs/SKILL-FORMAT.md` v3).** Hands-on iteration on the bundle showed that the prescriptive five-heading body template (`## When this skill applies`, `## What the AI does`, `## Output / Artefact`, `## Handoff`, `## References`) was too narrow for reference-heavy skills like `tools-definition` and `platform-implementation`, and that denser descriptions with multiple trigger terms fire more reliably than minimal one-liners. v3 drops the fixed heading template (skills now pick a topical numbered structure `### 1. …`), raises the description word cap from 30 to 60, and raises the `post-active` line budget from 400 to 550 to fit `platform-implementation`. All remaining invariants (frontmatter shape, kebab-case, zone, single-line description, at least one section heading, per-zone budget) stay enforced by `bin/validate-skills.php`. See `docs/SKILL-FORMAT.md` §4 and §5 for the details, `docs/PRD-skill-overhaul.md` for the postscript.
+- **BREAKING — bundled skills reshaped (greenfield overhaul).** The plugin now ships **6 bundled skills** (down from 9 originally; 7 after v3 added `platform-usage`; 6 after v4 retired `tools-definition`). Redesigned around the four-persona axis (A / C / D in the bundle; E lives in the Builder repo) on a three-zone topology of Jardis development (Pre-Designer / Designer black box / Post-Designer). All six follow a unified format described in `docs/SKILL-FORMAT.md`. Background, scope, and acceptance criteria: `docs/PRD-skill-overhaul.md`. Phase plan: `docs/PLAN-skill-overhaul.md`.
+  - **Removed:** `plan-requirements`, `plan-ddd-modeling`, `plan-data-discovery` (Pre-Designer planning is generic AI work and not Jardis-specific; data discovery is replaced by the focused `schema-authoring`).
+  - **Removed (merged):** `tools-builder` — the non-trivial parts (per-aggregate directory layout, generated-vs-skeleton catalogue, Api-registry entry-point rule) are now §1 of `platform-implementation`. Reading generated PHP code is largely self-documenting; the reference skill was redundant.
+  - **Added:** `schema-authoring` — guides the developer from "only an idea" to a complete `Schema.yaml` import-ready for the Jardis Designer.
+  - **Rewritten:** `tools-definition` (now focused on the non-trivial vocabulary — `erm`/`depend`/`adopt`/`relates` hints, parameter binding — instead of restating the YAML format), `platform-implementation` (now: generated-baseline layout, ClassVersion v2/override mechanics, V1–V12 prohibitions, the seven implementation levels — pattern definitions and architecture rules moved to `rules-*`), `rules-architecture`, `rules-patterns`, `rules-testing` (rewritten in English, narrower triggers, no cross-skill duplication).
+  - **Total content reduction:** ~3050 → ~880 lines across the bundle (~71% smaller) while improving trigger reliability and removing duplications.
+- **Plugin recognises `schema-*` as a Jardis prefix** for install / uninstall / sync. The legacy `plan-*` prefix is still recognised by the uninstaller so old installations can be cleanly removed.
+- **Skill format spec v4 + persona purity enforcement (`docs/SKILL-FORMAT.md` v4, 2026-05-23).** New mandatory `persona: A | C | D` frontmatter field, two new validator checks: (1) persona value whitelist (B/E rejected — those personas live outside the bundle), (2) generator-internals token ban in the body (`Render(`, `Stage(`, `PHPRenderer`, `\bIR\b`, `Build{Entities,Aggregates,Flow,PlatformFacade,IntegrationAggregate,IntegrationBC,IntegrationDomain}`, `internal/builder/`, `tools/builder/internal/`) — with Anchors-section whitelist so cross-references to builder-side material stay legal. `post-active` length budget bumped from 550 → 700 lines (`platform-implementation` Werkzeugkasten + Builder-wave-refactor entries needed the room). Background: PRD V4.1 / V4.4 / V4.5.
+- **BREAKING:** Bundled skills are now opt-in. Before this version all 9 skills were always installed; now only with explicit config. Migration: `"extra": { "jardis/dev-skills": { "bundled-skills": true } }` restores the old behavior.
+
+### Fixed
+- **AGENTS.md aggregation now self-heals a duplicated managed block instead of bricking the install** (`AnalyzeAgentsMd::__invoke`). A consumer whose `AGENTS.md` had ended up with the managed block twice (nested `BEGIN BEGIN END END` or sequential `BEGIN END BEGIN END`, e.g. left behind by an earlier plugin version that appended instead of replacing) could never recover: `AnalyzeAgentsMd` threw `InstallFailedException` on anything but exactly one marker pair, so `composer install` aborted — and with it every CI job that runs `make install` first. The analyzer now treats the region from the **first** BEGIN to the **last** END as the managed region, and the orchestrator collapses it into a single fresh block on the next install; everything outside the markers is preserved. Only genuinely ambiguous corruption (BEGIN without END, END without BEGIN, or first BEGIN after last END) still throws. When a heal happens the plugin prints a notice (`io->write`, not an error) via a new `healedDuplicateBlock` flag carried through `AgentsMdAnalysis` → `AggregateAgentsResult` → `InstallReport` → `Plugin`. `AnalyzeAgentsMd` stays pure (no IO); `BuildManagedBlock` and `composePayload` are unchanged. The healing is idempotent (a second install leaves the file byte-identical). Regression tests in `AnalyzeAgentsMdTest` / `AggregateAgentsMdTest`; full requirement in `REQUIREMENT.md`.
+- **AGENTS.md aggregation marker parser was too naive** (`AnalyzeAgentsMd::__invoke`). It used `substr_count`, so any inline mention of the marker string inside a vendor's AGENTS.md (e.g. as documentation) was counted as a marker pair and the file was reported as having "corrupt markers" — blocking AGENTS.md cleanup on `composer remove`. The parser now matches markers only when they stand alone on their own line. Caught by the new E2E test. Two new regression tests in `AnalyzeAgentsMdTest`.
+
+### Removed
+- **Bundled skill `tools-definition` retired (bundle slimmed from 7 → 6).** Per PRD §V4 (Persona overhaul, 2026-05-23), the bundle now targets four explicit personas (A Greenfield-Schema-AI, C Implementer-AI, D Application-Layer-Dev — Persona B "Designer-Companion" struck because the Jardis Designer has no AI hooks; Persona E "Builder-Dev" lives outside this bundle). The Aggregate / Source / FieldMap / Lists / Flow YAML vocabulary moved to `tools-builder-engine` in the Builder repo (Persona E). Schema YAML coverage was already inside `schema-authoring`. Consumers with `"bundled-skills"` configs referencing `tools-definition` or a `tools-*` whitelist that depended on it should drop the entry; the `tools-*` prefix is still managed (still used by `tools-dbschema`).
+
+### Migration
+
+If you were on a previous version with bundled skills enabled, on next `composer install`:
+- The new 7 skills are installed (subject to your `bundled-skills` config).
+- Old `plan-requirements`, `plan-ddd-modeling`, `plan-data-discovery`, `tools-builder` directories under `.claude/skills/` are **not** automatically removed because they are no longer part of the plugin's bundled set. Delete them manually if you want a clean state.
+- A full `composer remove jardis/dev-skills` followed by reinstall removes all `plan-*`, `platform-*`, `rules-*`, `tools-*`, `schema-*` directories cleanly.
