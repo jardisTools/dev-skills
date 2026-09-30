@@ -93,15 +93,17 @@ final class ReadManifest
 
         $entries = [];
         foreach ($paths as $key => $entry) {
+            // PHP turns digit-only object keys and list indexes into int keys; neither names a skill folder.
             if (
-                !is_array($entry)
+                !is_string($key)
+                || !is_array($entry)
                 || !is_string($entry['source'] ?? null)
                 || !is_string($entry['sha256'] ?? null)
                 || preg_match('/^[0-9a-f]{64}$/', $entry['sha256']) !== 1
             ) {
                 return null;
             }
-            $entries[(string) $key] = ['source' => $entry['source'], 'sha256' => $entry['sha256']];
+            $entries[$key] = ['source' => $entry['source'], 'sha256' => $entry['sha256']];
         }
 
         return $entries;

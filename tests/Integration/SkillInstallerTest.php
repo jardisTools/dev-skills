@@ -562,6 +562,30 @@ final class SkillInstallerTest extends TestCase
         self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '0.0.0')->state);
     }
 
+    public function testManifestWithDigitOnlyKeyIsDefectiveAndInstallRunsThroughWithoutDeletingAnything(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $this->install('1.4.0');
+        $this->project->writeFile(
+            Manifest::FILE,
+            '{"schemaVersion":1,"pluginVersion":"1.4.0","paths":{"123":{"source":"package","sha256":"'
+            . str_repeat('c', 64) . '"}}}',
+        );
+        $before = $this->skillFiles();
+
+        // The config would deselect rules-architecture; with a defective manifest nothing may go.
+        $report = $this->installer(PluginConfig::onlyMandatory());
+
+        self::assertSame([], $report->removedBundledSkills());
+        self::assertSame($before, $this->skillFiles());
+        self::assertStringContainsString('defective manifest', implode("\n", $report->warnings()));
+        $read = (new ReadManifest())($this->project->path(Manifest::FILE), '0.0.0');
+        self::assertSame(ManifestState::Healthy, $read->state);
+        self::assertNotSame([], $read->manifest?->entries);
+        self::assertArrayNotHasKey(123, $read->manifest->entries);
+    }
+
     /**
      * @return array<string, array{string, bool}>
      */
@@ -805,6 +829,14 @@ final class SkillInstallerTest extends TestCase
         self::assertDoesNotMatchRegularExpression('/\s\?\s/', $source, 'ternary operator');
         self::assertStringNotContainsString('match (', $source);
         self::assertStringNotContainsString('switch (', $source);
+    }
+
+    /**
+     * @return array<string, string> like snapshot(), without the manifest file
+     */
+    private function skillFiles(): array
+    {
+        return array_diff_key($this->snapshot(), [Manifest::FILE => true]);
     }
 
     /**

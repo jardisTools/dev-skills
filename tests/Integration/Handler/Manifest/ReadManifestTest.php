@@ -77,6 +77,62 @@ final class ReadManifestTest extends TestCase
         ];
     }
 
+    public function testPathsAsAListIsDefectiveWithWarningAndNoThrow(): void
+    {
+        $entry = '{"source":"package","sha256":"' . str_repeat('a', 64) . '"}';
+        $path = $this->project->writeFile(
+            Manifest::FILE,
+            '{"schemaVersion":1,"pluginVersion":"1.0.0","paths":[' . $entry . ']}',
+        );
+
+        $result = (new ReadManifest())($path, '1.0.0');
+
+        self::assertSame(ManifestState::Defective, $result->state);
+        self::assertNull($result->manifest);
+        self::assertStringContainsString('defective manifest', $result->warning);
+    }
+
+    public function testDigitOnlyKeyIsDefectiveWithWarningAndNoThrow(): void
+    {
+        $entry = '{"source":"package","sha256":"' . str_repeat('b', 64) . '"}';
+        $path = $this->project->writeFile(
+            Manifest::FILE,
+            '{"schemaVersion":1,"pluginVersion":"1.0.0","paths":{"123":' . $entry . '}}',
+        );
+
+        $result = (new ReadManifest())($path, '1.0.0');
+
+        self::assertSame(ManifestState::Defective, $result->state);
+        self::assertNull($result->manifest);
+        self::assertStringContainsString('defective manifest', $result->warning);
+    }
+
+    #[DataProvider('emptyPathsProvider')]
+    public function testEmptyPathsInEveryFormIsHealthy(string $emptyPaths): void
+    {
+        $path = $this->project->writeFile(
+            Manifest::FILE,
+            '{"schemaVersion":1,"pluginVersion":"1.0.0","paths":' . $emptyPaths . '}',
+        );
+
+        $result = (new ReadManifest())($path, '1.0.0');
+
+        self::assertSame(ManifestState::Healthy, $result->state);
+        self::assertSame([], $result->manifest?->entries);
+        self::assertSame('', $result->warning);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function emptyPathsProvider(): array
+    {
+        return [
+            'empty object' => ['{}'],
+            'empty list' => ['[]'],
+        ];
+    }
+
     public function testNewerSchemaVersionIsTooNewWithBothVersions(): void
     {
         $path = $this->project->writeFile(Manifest::FILE, $this->json(7, '1.0.0', []));

@@ -69,6 +69,16 @@ final class ResolveManagedFolderTest extends TestCase
         self::assertNull($this->resolve('.agents/skills/..'));
     }
 
+    public function testLineBreakAtTheEndOfTheKeyIsRejected(): void
+    {
+        $this->project->writeFile('.claude/skills/alpha/SKILL.md', 'a');
+
+        self::assertNull($this->resolve(".claude/skills/alpha\n"));
+        self::assertNull($this->resolve(".claude/skills/alpha\r\n"));
+        self::assertNull($this->resolve(".claude/skills/..\n"));
+        self::assertNull($this->resolve(".agents/skills/gone\n"));
+    }
+
     public function testSubPathWithSlashIsRejected(): void
     {
         $this->project->writeFile('.claude/skills/alpha/sub/SKILL.md', 'a');

@@ -15,7 +15,7 @@ namespace JardisTools\DevSkills\Handler\Manifest;
  */
 final class ResolveManagedFolder
 {
-    private const MANAGED_KEY_PATTERN = '#^\.(?:claude|agents)/skills/(?!\.\.?$)[^/\0]+$#';
+    private const MANAGED_KEY_PATTERN = '#^\.(?:claude|agents)/skills/(?!\.\.?$)[^/\0\r\n]+$#D';
 
     /**
      * @param string $realRoot real path of the project root
