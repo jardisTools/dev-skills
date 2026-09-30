@@ -4,7 +4,7 @@ description: Use when a task arrives and you must decide how much process it nee
 zone: process
 persona: O
 prerequisites: [foundation-working-principles]
-next: [process-check-existing]
+next: [process-check-existing, process-concept]
 ---
 
 ## Scope

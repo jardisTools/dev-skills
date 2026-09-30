@@ -7,6 +7,8 @@ namespace JardisTools\DevSkills\Tests\Integration\Handler\Validate;
 use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
 use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
 use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
+use JardisTools\DevSkills\Tests\Support\RunScript;
+use JardisTools\DevSkills\Tests\Support\TempProject;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +20,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -292,7 +294,87 @@ final class BundleTest extends TestCase
 
         $document = (new ParseSkillFrontmatter())($content);
         self::assertNotNull($document);
-        self::assertSame(['process-check-existing'], $document['fields']['next'] ?? null);
+        self::assertSame(['process-check-existing', 'process-concept'], $document['fields']['next'] ?? null);
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+    }
+
+    public function testProgressTemplatePassesPoolCheck(): void
+    {
+        $root     = dirname(__DIR__, 4);
+        $template = $root . '/skills/process-concept/templates/PROGRESS.md';
+        self::assertFileExists($template);
+
+        $content = (string) file_get_contents($template);
+        self::assertLessThanOrEqual(60, substr_count($content, "\n"));
+        self::assertStringContainsString(
+            "## Kopf\n- **Phase:** concept\n- **Stage:** \u{2014}\n- **Next step:** ",
+            $content,
+        );
+        self::assertStringContainsString("\n- **Open decisions:** \u{2014}\n", $content);
+
+        $project = new TempProject();
+        try {
+            $project->writeFile('.claude/wissen/INDEX.md', "# Knowledge pool\n");
+            $project->writeFile('docs/vorhaben/demo/PROGRESS.md', $content);
+
+            $result = RunScript::run($root . '/scripts/pool-check.php', $project->root, ['--root=' . $project->root]);
+
+            self::assertSame(0, $result['exit'], $result['stdout'] . $result['stderr']);
+        } finally {
+            $project->cleanup();
+        }
+    }
+
+    public function testProjectProfileTemplateHasFourTopics(): void
+    {
+        $file = dirname(__DIR__, 4) . '/skills/process-concept/templates/PROJECT_PROFILE.md';
+        self::assertFileExists($file);
+
+        $content = (string) file_get_contents($file);
+        preg_match_all('/^## .+$/m', $content, $matches);
+        self::assertSame(['## QA entry', '## Ports', '## Build', '## Pitfalls'], $matches[0]);
+        self::assertStringContainsString('<make target or command>', $content);
+        self::assertStringContainsString('<host port>', $content);
+        self::assertStringContainsString('Test call', $content);
+    }
+
+    public function testConceptSkillCarriesBothSetUpRulesAndTheFolderRules(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-concept'));
+
+        $scaffold = strpos($content, '<!-- rule:pool-scaffold -->');
+        $profile  = strpos($content, '<!-- rule:project-profile -->');
+        self::assertIsInt($scaffold);
+        self::assertIsInt($profile);
+        self::assertLessThan($profile, $scaffold);
+        foreach (['.claude/wissen/', 'is missing'] as $keyword) {
+            self::assertStringContainsString($keyword, substr($content, $scaffold, $profile - $scaffold));
+        }
+        foreach (['.claude/PROJECT_PROFILE.md', 'is missing', 'never overwritten'] as $keyword) {
+            self::assertStringContainsString($keyword, substr($content, $profile));
+        }
+        foreach (['kebab-case', '`process-resume`', 'KONZEPT.html', 'KONZEPT.png', 'Never overwrite', 'not an undertaking'] as $keyword) {
+            self::assertStringContainsString($keyword, $content);
+        }
+        self::assertStringContainsString('`process-docs`', $content);
+
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['process-choose-tier'], $document['fields']['prerequisites'] ?? null);
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+    }
+
+    public function testResumeSkillFindsActiveFileRunsPreflightAndTakesOneStep(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-resume'));
+
+        foreach (['`close`', 'STOPP:', 'Working tree', 'Orphaned agent tasks', 'Artefact freshness', 'Containers and ports', 'PROJECT_PROFILE.md', 'exactly that one action', 'at most 60 lines'] as $keyword) {
+            self::assertStringContainsString($keyword, $content);
+        }
+
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['process-choose-tier'], $document['fields']['prerequisites'] ?? null);
         self::assertLessThanOrEqual(250, substr_count($content, "\n"));
     }
 
