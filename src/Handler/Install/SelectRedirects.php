@@ -14,20 +14,24 @@ use JardisTools\DevSkills\Handler\Discovery\ScanPluginSkills;
 /**
  * Decides which old bundle names get a redirect skill in this run: those whose
  * folder the plugin manages in `.claude/skills` (an entry of the previous
- * manifest, real or legacy) and still exists, whose new name is part of the
- * selection, and which the config still asks for under the old name (the
- * config filter is applied to the old names as if they were bundle skills:
- * everything for `true`/absent, nothing for `false`, the matching globs
- * otherwise). A fresh project has no such entry and so gets none; an old
- * folder that gets no redirect is removed as stale.
+ * manifest, real or legacy) and which still exists as a real skill folder of
+ * the project (`ResolveManagedFolder`: a symlink or a foreign path does not
+ * count and stays untouched), whose new name is part of the selection, and
+ * which the config still asks for under the old name (the config filter is
+ * applied to the old names as if they were bundle skills: everything for
+ * `true`/absent, nothing for `false`, the matching globs otherwise). A fresh
+ * project has no such entry and so gets none; an old folder that gets no
+ * redirect is removed as stale.
  */
 final class SelectRedirects
 {
     /**
      * @param Closure(list<SkillDescriptor>, PluginConfig): list<SkillDescriptor> $filterBundledSkills
+     * @param Closure(string, string): ?string $resolveManagedFolder
      */
     public function __construct(
         private readonly Closure $filterBundledSkills,
+        private readonly Closure $resolveManagedFolder,
     ) {
     }
 
@@ -37,7 +41,8 @@ final class SelectRedirects
      */
     public function __invoke(?Manifest $previous, array $selected, PluginConfig $config, string $projectRoot): array
     {
-        if ($previous === null) {
+        $realRoot = realpath($projectRoot);
+        if ($previous === null || $realRoot === false) {
             return [];
         }
 
@@ -61,12 +66,23 @@ final class SelectRedirects
                 && in_array($oldName, $requested, true)
                 && $entry['source'] === ScanPluginSkills::SOURCE_PACKAGE
                 && in_array($newName, $selectedNames, true)
-                && is_dir($projectRoot . '/' . $key)
+                && $this->isManagedFolder($realRoot, $key)
             ) {
                 $redirects[] = new SkillDescriptor($oldName, '', ScanPluginSkills::SOURCE_PACKAGE);
             }
         }
 
         return $redirects;
+    }
+
+    /**
+     * Only a real skill folder of the project counts: a symlink or a folder outside the
+     * skill folders is not managed, gets no redirect and stays untouched.
+     */
+    private function isManagedFolder(string $realRoot, string $key): bool
+    {
+        $folder = ($this->resolveManagedFolder)($realRoot, $key);
+
+        return $folder !== null && $folder !== '';
     }
 }

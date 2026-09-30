@@ -124,7 +124,7 @@ final class PluginUpdateEndToEndTest extends TestCase
         $expected = [...LegacyFixture::BUNDLE_NAMES, 'adapter-fakecache'];
         sort($expected);
         self::assertSame($expected, $names);
-                self::assertCount(count(LegacyFixture::BUNDLE_NAMES) + 1, $backups);
+        self::assertCount(count(LegacyFixture::BUNDLE_NAMES) + 1, $backups);
 
         self::assertSame([], $this->backupSiblings(), 'No `*.backup` may remain in either skill folder.');
     }

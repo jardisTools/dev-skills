@@ -142,7 +142,8 @@ final class InstallSkills
         $this->backupChangedSkill = (new BackupChangedSkill($backupFolder, $checksum))->__invoke(...);
         $resolveManagedFolder = (new ResolveManagedFolder())->__invoke(...);
         $this->buildLegacyManifest = (new BuildLegacyManifest($resolveManagedFolder))->__invoke(...);
-        $this->selectRedirects = (new SelectRedirects($this->filterBundledSkills))->__invoke(...);
+        $this->selectRedirects = (new SelectRedirects($this->filterBundledSkills, $resolveManagedFolder))
+            ->__invoke(...);
         $this->stageRedirects = (new StageSkills(
             $filesystem,
             (new BuildRedirectSkill($filesystem))->__invoke(...),

@@ -12,6 +12,7 @@ use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Exception\UninstallFailedException;
+use JardisTools\DevSkills\Handler\Install\ResolveTargets;
 
 /**
  * Removes exactly what the plugin manages, never anything by name pattern of
@@ -21,9 +22,11 @@ use JardisTools\DevSkills\Exception\UninstallFailedException;
  *   A key is honoured only as a relative `.claude/skills/<name>` or `.agents/skills/<name>` of the
  *   project whose real path is exactly that location; anything else (absolute, `..`, foreign folder,
  *   symlink) is ignored with a warning;
- * - no manifest (1.3.x install): the fixed list of the 18 old bundle names and the 18 names they
- *   carry now (both from RenamedSkills::MAPPING) plus vendor skills under the package prefixes,
- *   in `.claude/skills` only (1.3.x wrote nowhere else);
+ * - no manifest: the fixed list of the 18 old bundle names and the 18 names they carry now (both
+ *   from RenamedSkills::MAPPING) plus vendor skills under the package prefixes in `.claude/skills`
+ *   (1.3.x wrote nowhere else); in `.agents/skills` only the 18 current names, because that
+ *   folder never held an old name (no release writes one there) and the vendor-prefix rule stays
+ *   `.claude/skills`-only. Never a prefix match on the bundle areas;
  * - defective or too new manifest: nothing.
  *
  * `.claude/.jardis-backup/` and all folders of the user stay.
@@ -110,6 +113,15 @@ final class RemoveManagedPaths
         foreach ([...array_keys(RenamedSkills::MAPPING), ...array_values(RenamedSkills::MAPPING)] as $name) {
             if (is_dir($skillsDir . '/' . $name)) {
                 $this->remove($skillsDir . '/' . $name);
+                $removed[$name] = $name;
+            }
+        }
+
+        $agentsKey = ResolveTargets::AGENTS_SKILLS_DIR;
+        foreach (array_values(RenamedSkills::MAPPING) as $name) {
+            $folder = ($this->resolveManagedFolder)($realRoot, $agentsKey . '/' . $name);
+            if ($folder !== null && $folder !== '') {
+                $this->remove($folder);
                 $removed[$name] = $name;
             }
         }

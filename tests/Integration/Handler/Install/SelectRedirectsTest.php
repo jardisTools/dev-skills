@@ -12,8 +12,10 @@ use JardisTools\DevSkills\Handler\Install\ExpandLegacyGlobs;
 use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
 use JardisTools\DevSkills\Handler\Install\IsMandatorySkill;
 use JardisTools\DevSkills\Handler\Install\SelectRedirects;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 final class SelectRedirectsTest extends TestCase
@@ -81,6 +83,28 @@ final class SelectRedirectsTest extends TestCase
         self::assertSame([], $this->select($previous, $this->selected(['foundation-architecture'])));
     }
 
+    public function testOldFolderThatIsASymlinkGetsNoRedirectAndStaysUntouched(): void
+    {
+        $foreign = new TempProject('dev-skills-redirects-foreign-');
+        try {
+            $foreign->writeFile('victim/SKILL.md', 'victim');
+            $this->project->mkdir('.claude/skills');
+            $link = $this->project->path('.claude/skills/rules-architecture');
+            self::assertTrue(symlink($foreign->path('victim'), $link));
+            $before = TreeSnapshot::of($foreign->root);
+            $previous = $this->previous(['.claude/skills/rules-architecture']);
+
+            $redirects = $this->select($previous, $this->selected(['foundation-architecture']));
+
+            self::assertSame([], $redirects);
+            self::assertTrue(is_link($link));
+            self::assertSame($foreign->path('victim'), readlink($link));
+            self::assertSame($before, TreeSnapshot::of($foreign->root));
+        } finally {
+            $foreign->cleanup();
+        }
+    }
+
     public function testEveryOldNameCanBeRedirectedToItsNewName(): void
     {
         LegacyFixture::writeInstalledBundle($this->project);
@@ -137,7 +161,7 @@ final class SelectRedirectsTest extends TestCase
             (new ExpandLegacyGlobs())->__invoke(...),
         ))->__invoke(...);
 
-        return (new SelectRedirects($filter))($previous, $selected, $config ?? PluginConfig::all(), $this->project->root);
+        return (new SelectRedirects($filter, (new ResolveManagedFolder())->__invoke(...)))($previous, $selected, $config ?? PluginConfig::all(), $this->project->root);
     }
 
     /**

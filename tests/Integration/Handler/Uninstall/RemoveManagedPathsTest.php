@@ -213,6 +213,40 @@ final class RemoveManagedPathsTest extends TestCase
         }
     }
 
+    public function testWithoutManifestTheNewBundleNamesAreAlsoRemovedFromTheAgentsFolderAndUserFoldersStayByteIdentical(): void
+    {
+        $this->project->writeFile('.agents/skills/git-start-branch/SKILL.md', 'new bundle name');
+        $this->project->writeFile('.claude/skills/git-start-branch/SKILL.md', 'new bundle name');
+        $mine = ['git-foo', 'design-mine', 'do-mine', 'rules-mine', 'adapter-mine'];
+        $before = [];
+        foreach ($mine as $name) {
+            $this->project->writeFile('.agents/skills/' . $name . '/SKILL.md', 'mine: ' . $name);
+            $before[$name] = TreeSnapshot::of($this->project->path('.agents/skills/' . $name));
+        }
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame(['git-start-branch'], $removed);
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/git-start-branch'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/git-start-branch'));
+        foreach ($mine as $name) {
+            self::assertSame($before[$name], TreeSnapshot::of($this->project->path('.agents/skills/' . $name)), $name);
+        }
+    }
+
+    public function testWithoutManifestASymlinkedAgentsSkillsFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('skills/git-start-branch/SKILL.md', 'victim');
+        $this->project->mkdir('.agents');
+        self::assertTrue(symlink($this->foreign->path('skills'), $this->project->path('.agents/skills')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+    }
+
     public function testDefectiveOrTooNewManifestRemovesNothing(): void
     {
         LegacyFixture::writeInstalledBundle($this->project, ['rules-architecture']);

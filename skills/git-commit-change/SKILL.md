@@ -18,6 +18,8 @@ next: [git-push-and-open-pr]
 
 Analyze the changes and create a Conventional Commit.
 
+Branching follows Gitflow: commits land on a `feature/*` (or `fix/*`) branch cut from `develop` — see `git-start-branch` — and nothing is committed directly on `develop` or `main`. The branch then goes to a PR against `develop` — see `git-push-and-open-pr`.
+
 ### Flow
 
 1. Evaluate `git diff` and `git status`
