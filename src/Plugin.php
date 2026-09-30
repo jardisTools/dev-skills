@@ -107,6 +107,9 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
         );
 
         $this->io->write($this->summarizeInstall($report));
+        foreach ($report->notices() as $notice) {
+            $this->io->write(sprintf('jardis/dev-skills: %s', $notice));
+        }
         if ($report->agentsMdHealed()) {
             $this->io->write(
                 'jardis/dev-skills: korrupte AGENTS.md repariert (mehrfacher managed block zusammengeführt).',

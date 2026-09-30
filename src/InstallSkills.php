@@ -18,10 +18,14 @@ use JardisTools\DevSkills\Handler\Discovery\ScanPluginSkills;
 use JardisTools\DevSkills\Handler\Discovery\ScanVendor;
 use JardisTools\DevSkills\Handler\Install\BackupChangedSkill;
 use JardisTools\DevSkills\Handler\Install\BackupFolder;
+use JardisTools\DevSkills\Handler\Install\BuildLegacyManifest;
 use JardisTools\DevSkills\Handler\Install\BuildManifestEntries;
+use JardisTools\DevSkills\Handler\Install\BuildMigrationNotice;
+use JardisTools\DevSkills\Handler\Install\BuildRedirectSkill;
 use JardisTools\DevSkills\Handler\Install\CommitStagedSkills;
 use JardisTools\DevSkills\Handler\Install\ComputeStaleBundledSkills;
 use JardisTools\DevSkills\Handler\Install\CopySkill;
+use JardisTools\DevSkills\Handler\Install\ExpandLegacyGlobs;
 use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
 use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
 use JardisTools\DevSkills\Handler\Install\FindProtectedExcludes;
@@ -30,6 +34,7 @@ use JardisTools\DevSkills\Handler\Install\RelocateLegacyBackup;
 use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
 use JardisTools\DevSkills\Handler\Install\ResolveSkillCollisions;
 use JardisTools\DevSkills\Handler\Install\ResolveTargets;
+use JardisTools\DevSkills\Handler\Install\SelectRedirects;
 use JardisTools\DevSkills\Handler\Install\StageSkills;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
@@ -39,9 +44,11 @@ use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 
 /**
  * Sub-orchestrator for the skills part of an install run: chains discovery,
- * config filtering, collision resolution, staging, backup of
- * locally changed folders, the swap into every resolved target, removal of deselected
- * bundle skills (via manifest paths) and finally the manifest. Contains no logic of its own.
+ * config filtering (old globs act as aliases), collision resolution, staging, the redirect
+ * skills for renamed bundle skills of an update, backup of locally changed folders, the swap
+ * into the resolved targets, removal of deselected bundle skills (via manifest paths, or the
+ * fixed list of the old names when there is no manifest) and finally the manifest.
+ * Contains no logic of its own.
  */
 final class InstallSkills
 {
@@ -61,6 +68,18 @@ final class InstallSkills
 
     /** @var Closure(?Manifest, list<SkillDescriptor>): list<string> */
     private readonly Closure $computeStaleBundledSkills;
+
+    /** @var Closure(ManifestReadResult, string): ?Manifest */
+    private readonly Closure $buildLegacyManifest;
+
+    /** @var Closure(?Manifest, list<SkillDescriptor>, PluginConfig, string): list<SkillDescriptor> */
+    private readonly Closure $selectRedirects;
+
+    /** @var Closure(list<SkillDescriptor>, list<string>, string): list<StagedSkill> */
+    private readonly Closure $stageRedirects;
+
+    /** @var Closure(list<SkillDescriptor>): ?string */
+    private readonly Closure $buildMigrationNotice;
 
     /** @var Closure(list<string>, ?Manifest, string, string): StaleRemovalResult */
     private readonly Closure $removeStaleBundledSkills;
@@ -103,8 +122,10 @@ final class InstallSkills
         $this->scanVendor = (new ScanVendor())->__invoke(...);
         $this->scanPluginSkills = (new ScanPluginSkills())->__invoke(...);
         $isMandatorySkill = (new IsMandatorySkill())->__invoke(...);
-        $this->filterBundledSkills = (new FilterBundledSkills($isMandatorySkill))->__invoke(...);
-        $this->findProtectedExcludes = (new FindProtectedExcludes($isMandatorySkill))->__invoke(...);
+        $expandLegacyGlobs = (new ExpandLegacyGlobs())->__invoke(...);
+        $this->filterBundledSkills = (new FilterBundledSkills($isMandatorySkill, $expandLegacyGlobs))->__invoke(...);
+        $this->findProtectedExcludes = (new FindProtectedExcludes($isMandatorySkill, $expandLegacyGlobs))
+            ->__invoke(...);
         $this->computeStaleBundledSkills = (new ComputeStaleBundledSkills())->__invoke(...);
         $this->resolveSkillCollisions = (new ResolveSkillCollisions())->__invoke(...);
         $this->resolveTargets = (new ResolveTargets($filesystem))->__invoke(...);
@@ -120,6 +141,14 @@ final class InstallSkills
         $backupFolder = (new BackupFolder($copySkill, $findFreeBackupDir))->__invoke(...);
         $this->backupChangedSkill = (new BackupChangedSkill($backupFolder, $checksum))->__invoke(...);
         $resolveManagedFolder = (new ResolveManagedFolder())->__invoke(...);
+        $this->buildLegacyManifest = (new BuildLegacyManifest($resolveManagedFolder))->__invoke(...);
+        $this->selectRedirects = (new SelectRedirects($this->filterBundledSkills, $resolveManagedFolder))
+            ->__invoke(...);
+        $this->stageRedirects = (new StageSkills(
+            $filesystem,
+            (new BuildRedirectSkill($filesystem))->__invoke(...),
+        ))->__invoke(...);
+        $this->buildMigrationNotice = (new BuildMigrationNotice())->__invoke(...);
         $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills(
             $filesystem,
             $checksum,
@@ -154,11 +183,16 @@ final class InstallSkills
         $manifestPath = $projectRoot . '/' . Manifest::FILE;
         $read = ($this->readManifest)($manifestPath, $pluginVersion);
         $report->addWarningIfAny($read->warning);
-        $previous = ($this->selectPreviousManifest)($read);
-        $staleKeys = ($this->computeStaleBundledSkills)($previous, $selection->skills);
+        $previous = ($this->selectPreviousManifest)($read) ?? ($this->buildLegacyManifest)($read, $projectRoot);
+        $redirects = ($this->selectRedirects)($previous, $selection->skills, $this->config, $projectRoot);
+        $staleKeys = ($this->computeStaleBundledSkills)($previous, [...$selection->skills, ...$redirects]);
 
         $targets = ($this->resolveTargets)($projectRoot);
-        $staged = ($this->stageSkills)($selection->skills, $targets, $projectRoot);
+        // Redirects only go where the old names lived: the first target is `.claude/skills`.
+        $staged = [
+            ...($this->stageSkills)($selection->skills, $targets, $projectRoot),
+            ...($this->stageRedirects)($redirects, array_slice($targets, 0, 1), $projectRoot),
+        ];
 
         $backupRoot = $projectRoot . '/' . self::BACKUP_DIR;
         foreach ($staged as $item) {
@@ -188,6 +222,10 @@ final class InstallSkills
         foreach ($selection->skills as $skill) {
             $report->addInstalledSkill($skill->name);
         }
+        foreach ($redirects as $redirect) {
+            $report->addRedirectedSkill($redirect->name);
+        }
+        $report->addNoticeIfAny(($this->buildMigrationNotice)($redirects));
 
         return $keptBundled;
     }

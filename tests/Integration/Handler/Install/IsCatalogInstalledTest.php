@@ -12,7 +12,7 @@ final class IsCatalogInstalledTest extends TestCase
 {
     public function testTrueWhenCatalogSkillSelected(): void
     {
-        $skills = [new SkillDescriptor('jardis-catalog', '/b/jardis-catalog', 'jardis/dev-skills')];
+        $skills = [new SkillDescriptor('packages-find-existing', '/b/packages-find-existing', 'jardis/dev-skills')];
 
         self::assertTrue((new IsCatalogInstalled())($skills));
     }

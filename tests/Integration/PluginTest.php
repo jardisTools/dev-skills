@@ -58,7 +58,7 @@ final class PluginTest extends TestCase
         $plugin->onPackageUninstall($this->createPackageEvent('jardis/adapter/cache'));
 
         // Proof of activation: onComposerRun copied the plugin-own skills.
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
     }
 
     public function testOnComposerRunCopiesVendorSkillsAndAggregatesAgentsMd(): void
@@ -94,13 +94,13 @@ final class PluginTest extends TestCase
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
         $expected = [
-            'platform-implementation',
-            'platform-usage',
-            'rules-architecture',
-            'rules-frontend',
-            'rules-patterns',
-            'rules-testing',
-            'schema-authoring',
+            'generated-code-extend',
+            'generated-code-wire-transport',
+            'foundation-architecture',
+            'foundation-frontend-review',
+            'foundation-patterns',
+            'foundation-testing',
+            'design-draft-schema',
         ];
 
         foreach ($expected as $skill) {
@@ -113,6 +113,7 @@ final class PluginTest extends TestCase
 
     public function testOnPackageUninstallRemovesSelfManagedSkillsAndAgentsMd(): void
     {
+        // Manifest-less 1.3.x install: the folder still carries its former bundle name.
         $this->project->writeFile('.claude/skills/adapter-cache/SKILL.md', 'x');
         $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'y');
         $this->project->writeFile('.claude/skills/my-local/SKILL.md', 'local');
@@ -220,19 +221,19 @@ final class PluginTest extends TestCase
 
     public function testOnPackageUninstallDeletesNothingInTheGlobalContext(): void
     {
-        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'y');
+        $this->project->writeFile('.claude/skills/foundation-architecture/SKILL.md', 'y');
 
         $composer = $this->createComposer(home: $this->project->root);
         $plugin = new Plugin();
         $plugin->activate($composer, $this->createMock(IOInterface::class));
         $plugin->onPackageUninstall($this->createPackageEvent('jardis/dev-skills', $composer));
 
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
     }
 
     public function testOnPackageUninstallDeletesNothingWhileTheRootPackageStillRequiresThePlugin(): void
     {
-        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'y');
+        $this->project->writeFile('.claude/skills/foundation-architecture/SKILL.md', 'y');
         $this->project->writeFile('AGENTS.md', AnalyzeAgentsMd::HEADER . "\ncontent\n" . AnalyzeAgentsMd::FOOTER . "\n");
 
         $composer = $this->createComposer(requiresSelf: true);
@@ -240,7 +241,7 @@ final class PluginTest extends TestCase
         $plugin->activate($composer, $this->createMock(IOInterface::class));
         $plugin->onPackageUninstall($this->createPackageEvent('jardis/dev-skills', $composer));
 
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
         self::assertFileExists($this->project->path('AGENTS.md'));
     }
 
@@ -331,9 +332,9 @@ final class PluginTest extends TestCase
         $plugin->activate($this->createComposer(), $this->createMock(IOInterface::class));
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertFileExists($this->project->path('.claude/skills/schema-authoring/SKILL.md'));
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
-        self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/design-draft-schema/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.agents/skills/foundation-architecture/SKILL.md'));
     }
 
     public function testFalseWarnsAboutMandatoryGroupsAndInstallsNoOtherBundleSkill(): void
@@ -358,8 +359,9 @@ final class PluginTest extends TestCase
             . 'are always installed</warning>',
             $messages,
         );
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-architecture'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/schema-authoring'));
+        self::assertDirectoryExists($this->project->path('.claude/skills/foundation-architecture'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/generated-code-extend'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/design-draft-schema'));
     }
 
     public function testBundledSkillsWhitelistInstallsSubset(): void
@@ -367,16 +369,18 @@ final class PluginTest extends TestCase
         $plugin = new Plugin();
         $plugin->activate(
             $this->createComposer([
-                'jardis/dev-skills' => ['bundled-skills' => ['platform-*', 'schema-*']],
+                'jardis/dev-skills' => ['bundled-skills' => ['generated-code-*', 'design-*']],
             ]),
             $this->createMock(IOInterface::class),
         );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertFileExists($this->project->path('.claude/skills/platform-implementation/SKILL.md'));
-        self::assertFileExists($this->project->path('.claude/skills/schema-authoring/SKILL.md'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-architecture'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-testing'));
+        self::assertFileExists($this->project->path('.claude/skills/generated-code-extend/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/design-draft-schema/SKILL.md'));
+        // foundation-* is a mandatory group: installed although the whitelist does not name it.
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/git-commit-change'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/start-orientation'));
     }
 
     public function testBundledSkillsIncludeExcludeCombines(): void
@@ -386,8 +390,8 @@ final class PluginTest extends TestCase
             $this->createComposer([
                 'jardis/dev-skills' => [
                     'bundled-skills' => [
-                        'include' => ['rules-*'],
-                        'exclude' => ['rules-patterns'],
+                        'include' => ['generated-code-*'],
+                        'exclude' => ['generated-code-recipes'],
                     ],
                 ],
             ]),
@@ -395,20 +399,20 @@ final class PluginTest extends TestCase
         );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
-        self::assertFileExists($this->project->path('.claude/skills/rules-testing/SKILL.md'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-patterns'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/schema-authoring'));
+        self::assertFileExists($this->project->path('.claude/skills/generated-code-extend/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/generated-code-versioning/SKILL.md'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/generated-code-recipes'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/design-draft-schema'));
     }
 
     public function testStaleBundledSkillIsRemovedViaManifestWhenConfigNarrows(): void
     {
         // First run installs everything and writes the manifest; the user edits one skill;
-        // then config narrows to schema-*: rules-architecture goes (backed up first).
+        // then config narrows to design-*: generated-code-extend goes (backed up first).
         $first = new Plugin();
         $first->activate($this->createComposer($this->allBundledExtra()), $this->createMock(IOInterface::class));
         $first->onComposerRun($this->createMock(ScriptEvent::class));
-        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', '# edited by user');
+        $this->project->writeFile('.claude/skills/generated-code-extend/SKILL.md', '# edited by user');
 
         $messages = [];
         $io = $this->createMock(IOInterface::class);
@@ -420,22 +424,22 @@ final class PluginTest extends TestCase
 
         $plugin = new Plugin();
         $plugin->activate(
-            $this->createComposer(['jardis/dev-skills' => ['bundled-skills' => ['schema-*']]]),
+            $this->createComposer(['jardis/dev-skills' => ['bundled-skills' => ['design-*']]]),
             $io,
         );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-architecture'));
-        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/rules-architecture'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/generated-code-extend'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/generated-code-extend'));
         self::assertSame(
             '# edited by user',
-            file_get_contents($this->project->path('.claude/.jardis-backup/rules-architecture/SKILL.md')),
+            file_get_contents($this->project->path('.claude/.jardis-backup/generated-code-extend/SKILL.md')),
         );
         self::assertNotEmpty(array_filter(
             $messages,
-            static fn (string $m): bool => str_contains($m, 'bundled skill "rules-architecture" removed'),
+            static fn (string $m): bool => str_contains($m, 'bundled skill "generated-code-extend" removed'),
         ));
-        self::assertFileExists($this->project->path('.claude/skills/schema-authoring/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/design-draft-schema/SKILL.md'));
     }
 
     public function testUserPrefixSkillsStayWhenBundledDisabled(): void
@@ -470,7 +474,7 @@ final class PluginTest extends TestCase
         );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/schema-authoring'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/design-draft-schema'));
     }
 
     public function testVendorSkillsStayEvenWhenBundledDisabled(): void
@@ -488,7 +492,7 @@ final class PluginTest extends TestCase
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
         self::assertFileExists($this->project->path('.claude/skills/adapter-cache/SKILL.md'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/schema-authoring'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/design-draft-schema'));
     }
 
     /**

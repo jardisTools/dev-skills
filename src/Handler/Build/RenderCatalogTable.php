@@ -7,7 +7,7 @@ namespace JardisTools\DevSkills\Handler\Build;
 use JardisTools\DevSkills\Data\CatalogEntry;
 
 /**
- * Renders the Markdown body of the jardis-catalog SKILL.md: a short intro
+ * Renders the Markdown body of the packages-find-existing SKILL.md: a short intro
  * paragraph followed by a four-column table listing every catalog entry.
  * The Alternatives column is always present; entries without alternatives
  * show a consistent em-dash placeholder so the column is never absent.

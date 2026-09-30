@@ -12,8 +12,8 @@ final class ScanPluginSkills
 
     /**
      * Scans the plugin repo's own `skills/` directory for cross-package
-     * methodology skills (schema-authoring, platform-implementation,
-     * platform-usage, rules-*).
+     * methodology skills (design-draft-schema, generated-code-*,
+     * foundation-*).
      *
      * @return list<SkillDescriptor>
      */

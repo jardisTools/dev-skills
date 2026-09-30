@@ -6,14 +6,15 @@ namespace JardisTools\DevSkills\Handler\Validate;
 
 /**
  * Validates a single SKILL.md file against the authoring standard documented
- * in docs/SKILL-FORMAT.md (v5). Returns a list of human-readable violation
+ * in docs/SKILL-FORMAT.md (v6). Returns a list of human-readable violation
  * messages — empty list means the file is conformant.
  *
  * Invariants checked:
  *   - frontmatter exists, required fields present
  *   - name is kebab-case and matches the directory
- *   - zone is one of the five known zones (v5 adds 'discovery')
- *   - persona is one of A / C / D / X (v5 adds 'X' for Discovery-Agent)
+ *   - zone is one of the six known zones (v5 added 'discovery', v6 adds 'process')
+ *   - persona is one of A / C / D / X / O (v5 added 'X' for Discovery-Agent,
+ *     v6 adds 'O' for Process-Orchestrator)
  *   - description is a single line, ≤175 words
  *   - prerequisites / next are arrays
  *   - body contains at least one section heading (## or ###)
@@ -37,6 +38,7 @@ final class ValidateSkillMd
         'post-reference' => 250,
         'post-active'    => 700,
         'discovery'      => 150,
+        'process'        => 250,
     ];
 
     /** @var list<string> */
@@ -50,7 +52,7 @@ final class ValidateSkillMd
     ];
 
     /** @var list<string> */
-    private const ALLOWED_PERSONAS = ['A', 'C', 'D', 'X'];
+    private const ALLOWED_PERSONAS = ['A', 'C', 'D', 'X', 'O'];
 
     /**
      * Tokens that indicate Generator-Internas (renderer, IR, pipeline-stage
@@ -76,6 +78,13 @@ final class ValidateSkillMd
 
     private const MAX_DESCRIPTION_WORDS = 175;
 
+    private readonly ParseSkillFrontmatter $parseFrontmatter;
+
+    public function __construct(?ParseSkillFrontmatter $parseFrontmatter = null)
+    {
+        $this->parseFrontmatter = $parseFrontmatter ?? new ParseSkillFrontmatter();
+    }
+
     /**
      * @return list<string> List of violations. Empty = file is conformant.
      */
@@ -88,13 +97,13 @@ final class ValidateSkillMd
         $content = (string) file_get_contents($filePath);
         $errors  = [];
 
-        if (!preg_match('/\A---\R(.*?)\R---\R(.*)\z/s', $content, $match)) {
+        $document = ($this->parseFrontmatter)($content);
+        if ($document === null) {
             return ['frontmatter not found (file must start with --- and contain a closing ---)'];
         }
 
-        $frontmatterRaw = $match[1];
-        $body           = $match[2];
-        $fields         = $this->parseFrontmatter($frontmatterRaw);
+        $fields = $document['fields'];
+        $body   = $document['body'];
 
         foreach (self::REQUIRED_FRONTMATTER_FIELDS as $required) {
             if (!array_key_exists($required, $fields)) {
@@ -235,44 +244,5 @@ final class ValidateSkillMd
             );
         }
         return $errors;
-    }
-
-    /**
-     * Minimal YAML-subset parser for SKILL.md frontmatter. Supports:
-     *   key: value             → string
-     *   key: [a, b, c]         → list<string>
-     *   key: []                → list (empty)
-     *
-     * Multiline strings, nested objects, anchors etc. are not supported —
-     * they are not allowed by SKILL-FORMAT.md anyway.
-     *
-     * @return array<string, string|list<string>>
-     */
-    private function parseFrontmatter(string $raw): array
-    {
-        $fields = [];
-        foreach (explode("\n", $raw) as $line) {
-            if (preg_match('/^([a-z][a-z0-9_]*)\s*:\s*(.*)$/i', $line, $m) !== 1) {
-                continue;
-            }
-            $key   = $m[1];
-            $value = trim($m[2]);
-
-            if ($value === '[]') {
-                $fields[$key] = [];
-                continue;
-            }
-            if (preg_match('/^\[(.*)\]$/', $value, $am) === 1) {
-                $items = array_values(array_filter(
-                    array_map(static fn (string $s): string => trim($s, " \t\"'"), explode(',', $am[1])),
-                    static fn (string $s): bool => $s !== '',
-                ));
-                $fields[$key] = $items;
-                continue;
-            }
-
-            $fields[$key] = trim($value, " \t\"'");
-        }
-        return $fields;
     }
 }

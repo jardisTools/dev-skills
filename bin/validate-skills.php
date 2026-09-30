@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 /**
  * Validates every bundled SKILL.md against the format rules in
- * docs/SKILL-FORMAT.md.
+ * docs/SKILL-FORMAT.md. Chains three checks, each a closure:
+ *   format  ValidateSkillMd   frontmatter, zone/persona, budgets, body rules
+ *   links   CheckSkillLinks   prerequisites / next resolve to skill folders
+ *   rules   CheckRuleMarkers  rule markers and cap figures of the process skills
  *
  * Exits 0 when all skills are conformant; non-zero otherwise.
  *
@@ -16,6 +19,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
+use JardisTools\DevSkills\Handler\Validate\CheckRuleMarkers;
+use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
 use JardisTools\DevSkills\Handler\Validate\ValidateSkillMd;
 
 $repoRoot   = dirname(__DIR__);
@@ -42,13 +47,40 @@ if ($skillFiles === []) {
     exit(2);
 }
 
-$validator   = new ValidateSkillMd();
-$totalErrors = 0;
+$perFileChecks = [
+    'format' => new ValidateSkillMd(),
+    'links'  => new CheckSkillLinks(),
+];
+$rulesCheck = new CheckRuleMarkers();
+
+/** @var array<string, list<string>> $violations skill name => "[check] reason" */
+$violations = [];
+$skillNames = [];
+$roots      = [];
 
 foreach ($skillFiles as $file) {
-    $name   = basename(dirname($file));
-    $errors = $validator($file);
+    $name         = basename(dirname($file));
+    $skillNames[] = $name;
+    $roots[dirname($file, 2)] = true;
+    $violations[$name] = [];
 
+    foreach ($perFileChecks as $check => $run) {
+        foreach ($run($file) as $err) {
+            $violations[$name][] = "[{$check}] {$err}";
+        }
+    }
+}
+
+foreach (array_keys($roots) as $root) {
+    foreach ($rulesCheck($root, $argList === [] ? null : $skillNames) as $name => $errors) {
+        foreach ($errors as $err) {
+            $violations[$name][] = "[rules] {$err}";
+        }
+    }
+}
+
+$totalErrors = 0;
+foreach ($violations as $name => $errors) {
     if ($errors === []) {
         fwrite(STDOUT, "ok   {$name}\n");
         continue;

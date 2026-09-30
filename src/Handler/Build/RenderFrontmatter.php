@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Build;
 
 /**
- * Renders the fixed YAML frontmatter block for the jardis-catalog SKILL.md.
+ * Renders the fixed YAML frontmatter block for the packages-find-existing SKILL.md.
  * Returns a string that ends with exactly one newline character.
  */
 final class RenderFrontmatter
 {
     /**
-     * Canonical description for the jardis-catalog discovery skill.
+     * Canonical description for the packages-find-existing discovery skill.
      * Carries the E11 "reusable building block" trigger, ≥2 concrete
      * sub-triggers (infrastructure packages + DDD scaffolding), and the
      * L-D recommend-only semantics. Exactly ONE sentence (SKILL-FORMAT §2),
@@ -30,7 +30,7 @@ final class RenderFrontmatter
     {
         return implode("\n", [
             '---',
-            'name: jardis-catalog',
+            'name: packages-find-existing',
             'zone: discovery',
             'persona: X',
             'prerequisites: []',

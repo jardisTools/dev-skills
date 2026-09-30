@@ -10,15 +10,18 @@ use JardisTools\DevSkills\Data\SkillDescriptor;
 
 /**
  * Selects the bundle skills the config asks for. Mandatory groups are always
- * kept and cannot be excluded.
+ * kept and cannot be excluded. Globs that match an old bundle name (up to 1.3.x)
+ * also select the name the skill carries now.
  */
 final class FilterBundledSkills
 {
     /**
-     * @param Closure(string): bool $isMandatorySkill
+     * @param Closure(string): bool               $isMandatorySkill
+     * @param Closure(list<string>): list<string> $expandLegacyGlobs
      */
     public function __construct(
         private readonly Closure $isMandatorySkill,
+        private readonly Closure $expandLegacyGlobs,
     ) {
     }
 
@@ -32,6 +35,9 @@ final class FilterBundledSkills
             return $bundled;
         }
 
+        $includeGlobs = ($this->expandLegacyGlobs)($config->includeGlobs);
+        $excludeGlobs = ($this->expandLegacyGlobs)($config->excludeGlobs);
+
         $kept = [];
         foreach ($bundled as $skill) {
             if (($this->isMandatorySkill)($skill->name)) {
@@ -42,9 +48,8 @@ final class FilterBundledSkills
                 continue;
             }
 
-            $included = $config->includeGlobs === []
-                || $this->anyMatch($skill->name, $config->includeGlobs);
-            $excluded = $this->anyMatch($skill->name, $config->excludeGlobs);
+            $included = $includeGlobs === [] || $this->anyMatch($skill->name, $includeGlobs);
+            $excluded = $this->anyMatch($skill->name, $excludeGlobs);
 
             if ($included && !$excluded) {
                 $kept[] = $skill;

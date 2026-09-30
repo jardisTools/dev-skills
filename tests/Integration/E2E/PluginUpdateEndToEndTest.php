@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\E2E;
 
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Tests\Support\ComposerFixture;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -67,9 +68,15 @@ final class PluginUpdateEndToEndTest extends TestCase
         self::assertDirectoryDoesNotExist($this->project->path('.agents/skills'));
 
         // Run 2: `composer install` runs the candidate plugin.
-        ComposerFixture::runComposer($this->project, 'install');
+        $output = ComposerFixture::runComposer($this->project, 'install');
         self::assertFileExists($this->project->path(Manifest::FILE), 'Measured: migrated in run 2.');
         $this->assertMigrated();
+        $this->assertRedirects();
+        self::assertStringContainsString(
+            '18 bundle skills were renamed',
+            $output,
+            'The Composer output of the migrating run must carry the migration hint.',
+        );
 
         // Run 3: nothing changes any more.
         $before = $this->snapshot();
@@ -86,27 +93,28 @@ final class PluginUpdateEndToEndTest extends TestCase
             JSON_THROW_ON_ERROR,
         );
         self::assertSame(self::CANDIDATE, $manifest['pluginVersion']);
-        self::assertArrayHasKey('.claude/skills/rules-architecture', $manifest['paths']);
-        self::assertArrayHasKey('.agents/skills/rules-architecture', $manifest['paths']);
+        self::assertArrayHasKey('.claude/skills/foundation-architecture', $manifest['paths']);
+        self::assertArrayHasKey('.agents/skills/foundation-architecture', $manifest['paths']);
         self::assertArrayHasKey('.agents/skills/adapter-fakecache', $manifest['paths']);
 
         self::assertFileEquals(
-            $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
-            $this->project->path('.agents/skills/rules-architecture/SKILL.md'),
+            $this->project->path('.claude/skills/foundation-architecture/SKILL.md'),
+            $this->project->path('.agents/skills/foundation-architecture/SKILL.md'),
         );
         self::assertNotSame(
             "local edit\n",
-            file_get_contents($this->project->path('.claude/skills/rules-architecture/SKILL.md')),
+            file_get_contents($this->project->path('.claude/skills/foundation-architecture/SKILL.md')),
         );
 
-        // The 1.3.6 update run moved the edited folder to `rules-architecture.backup`; the
-        // migration relocates it, so the local edit is kept under the plain backup name.
+        // No manifest in 1.3.x: the folder with the local edit is saved once before the redirect
+        // skill takes its place, so the edit is kept under the plain backup name.
         self::assertSame(
             "local edit\n",
             file_get_contents($this->project->path('.claude/.jardis-backup/rules-architecture/SKILL.md')),
         );
-        // One-time backup of every legacy bundle folder on top of the relocated legacy backups
-        // (the vendor skill only has its relocated one: it is identical to the new content).
+        // One-time backup of every legacy bundle folder (no manifest, so no proof it is unchanged),
+        // plus the relocated `.backup` sibling of the vendor skill. The update run of 1.3.6 installs the
+        // renamed skills beside the old folders and leaves those untouched, so they carry no `.backup`.
         $backups = array_map('basename', glob($this->project->path('.claude/.jardis-backup/*')) ?: []);
         $names = array_unique(array_map(
             static fn (string $dir): string => preg_replace('/-\d{8}T\d{6}(-\d+)?$/', '', $dir) ?? $dir,
@@ -116,9 +124,27 @@ final class PluginUpdateEndToEndTest extends TestCase
         $expected = [...LegacyFixture::BUNDLE_NAMES, 'adapter-fakecache'];
         sort($expected);
         self::assertSame($expected, $names);
-        self::assertCount(2 * count(LegacyFixture::BUNDLE_NAMES) + 1, $backups);
+        self::assertCount(count(LegacyFixture::BUNDLE_NAMES) + 1, $backups);
 
         self::assertSame([], $this->backupSiblings(), 'No `*.backup` may remain in either skill folder.');
+    }
+
+    /**
+     * Every old name is now a redirect skill in `.claude/skills` only.
+     */
+    private function assertRedirects(): void
+    {
+        self::assertCount(18, RenamedSkills::MAPPING);
+        foreach (RenamedSkills::MAPPING as $old => $new) {
+            $skillMd = $this->project->path('.claude/skills/' . $old . '/SKILL.md');
+            self::assertFileExists($skillMd, 'Redirect skill missing: ' . $old);
+            self::assertStringContainsString(
+                sprintf("name: %s\ndescription: Renamed to %s. Load %s instead.\n", $old, $new, $new),
+                (string) file_get_contents($skillMd),
+            );
+            self::assertFileExists($this->project->path('.claude/skills/' . $new . '/SKILL.md'));
+            self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/' . $old));
+        }
     }
 
     /**

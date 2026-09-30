@@ -11,7 +11,7 @@ use JardisTools\DevSkills\Handler\Build\RenderCatalogTable;
 use JardisTools\DevSkills\Handler\Build\RenderFrontmatter;
 
 /**
- * Orchestrator: checks that the checked-in skills/jardis-catalog/SKILL.md
+ * Orchestrator: checks that the checked-in skills/packages-find-existing/SKILL.md
  * is byte-identical to what would be generated from catalog/manifest.json.
  *
  * Throws RuntimeException when drift is detected. Returns void on success.

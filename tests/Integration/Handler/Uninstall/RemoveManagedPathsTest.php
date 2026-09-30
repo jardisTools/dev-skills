@@ -46,7 +46,7 @@ final class RemoveManagedPathsTest extends TestCase
         }
         // Same prefix as a managed skill, but not in the manifest: the user's.
         $this->project->writeFile('.claude/skills/adapter-mine/SKILL.md', 'mine');
-        foreach (['do-mine', 'rules-mine', 'git-foo'] as $name) {
+        foreach (['do-mine', 'rules-mine', 'git-foo', 'design-mine'] as $name) {
             $this->project->writeFile('.claude/skills/' . $name . '/SKILL.md', $name);
             $this->project->writeFile('.agents/skills/' . $name . '/SKILL.md', $name);
         }
@@ -63,7 +63,7 @@ final class RemoveManagedPathsTest extends TestCase
         foreach (['.claude', '.agents'] as $root) {
             self::assertDirectoryDoesNotExist($this->project->path($root . '/skills/adapter-cache'));
             self::assertDirectoryDoesNotExist($this->project->path($root . '/skills/process-alpha'));
-            foreach (['do-mine', 'rules-mine', 'git-foo'] as $name) {
+            foreach (['do-mine', 'rules-mine', 'git-foo', 'design-mine'] as $name) {
                 self::assertFileExists($this->project->path($root . '/skills/' . $name . '/SKILL.md'));
             }
         }
@@ -168,7 +168,7 @@ final class RemoveManagedPathsTest extends TestCase
         foreach (['adapter-cache', 'core-kernel', 'support-data', 'tools-builder-engine'] as $vendorSkill) {
             $this->project->writeFile('.claude/skills/' . $vendorSkill . '/SKILL.md', 'vendor');
         }
-        $mine = ['do-mine', 'rules-mine', 'git-foo', 'platform-mine', 'plan-mine', 'schema-mine', 'my-local',
+        $mine = ['do-mine', 'rules-mine', 'git-foo', 'design-mine', 'platform-mine', 'plan-mine', 'schema-mine', 'my-local',
             'adapter-cache.backup'];
         foreach ($mine as $name) {
             $this->project->writeFile('.claude/skills/' . $name . '/SKILL.md', $name);
@@ -190,6 +190,91 @@ final class RemoveManagedPathsTest extends TestCase
         self::assertSame($mineSorted, $left);
         self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
         self::assertFileExists($this->project->path('.claude/.jardis-backup/x/SKILL.md'));
+    }
+
+    public function testWithoutManifestTheNewBundleNamesAreRemovedAndUserFoldersStayByteIdentical(): void
+    {
+        $this->project->writeFile('.claude/skills/git-start-branch/SKILL.md', 'new bundle name');
+        $mine = ['git-foo', 'design-mine', 'do-mine', 'rules-mine'];
+        foreach ($mine as $name) {
+            $this->project->writeFile('.claude/skills/' . $name . '/SKILL.md', 'mine: ' . $name);
+        }
+        $before = [];
+        foreach ($mine as $name) {
+            $before[$name] = TreeSnapshot::of($this->project->path('.claude/skills/' . $name));
+        }
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame(['git-start-branch'], $removed);
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/git-start-branch'));
+        foreach ($mine as $name) {
+            self::assertSame($before[$name], TreeSnapshot::of($this->project->path('.claude/skills/' . $name)), $name);
+        }
+    }
+
+    public function testWithoutManifestTheNewBundleNamesAreAlsoRemovedFromTheAgentsFolderAndUserFoldersStayByteIdentical(): void
+    {
+        $this->project->writeFile('.agents/skills/git-start-branch/SKILL.md', 'new bundle name');
+        $this->project->writeFile('.claude/skills/git-start-branch/SKILL.md', 'new bundle name');
+        $mine = ['git-foo', 'design-mine', 'do-mine', 'rules-mine', 'adapter-mine'];
+        $before = [];
+        foreach ($mine as $name) {
+            $this->project->writeFile('.agents/skills/' . $name . '/SKILL.md', 'mine: ' . $name);
+            $before[$name] = TreeSnapshot::of($this->project->path('.agents/skills/' . $name));
+        }
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame(['git-start-branch'], $removed);
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/git-start-branch'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/git-start-branch'));
+        foreach ($mine as $name) {
+            self::assertSame($before[$name], TreeSnapshot::of($this->project->path('.agents/skills/' . $name)), $name);
+        }
+    }
+
+    public function testWithoutManifestASymlinkedAgentsSkillsFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('skills/git-start-branch/SKILL.md', 'victim');
+        $this->project->mkdir('.agents');
+        self::assertTrue(symlink($this->foreign->path('skills'), $this->project->path('.agents/skills')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+    }
+
+    public function testWithoutManifestASymlinkedClaudeSkillsFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('skills/git-start-branch/SKILL.md', 'victim');
+        $this->foreign->writeFile('skills/adapter-cache/SKILL.md', 'victim');
+        $this->project->mkdir('.claude');
+        self::assertTrue(symlink($this->foreign->path('skills'), $this->project->path('.claude/skills')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertTrue(is_link($this->project->path('.claude/skills')));
+    }
+
+    public function testWithoutManifestASymlinkedVendorSkillFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('victim/SKILL.md', 'victim');
+        $this->project->writeFile('.claude/skills/adapter-http/SKILL.md', 'vendor');
+        self::assertTrue(symlink($this->foreign->path('victim'), $this->project->path('.claude/skills/adapter-cache')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame(['adapter-http'], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertTrue(is_link($this->project->path('.claude/skills/adapter-cache')));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/adapter-http'));
     }
 
     public function testDefectiveOrTooNewManifestRemovesNothing(): void

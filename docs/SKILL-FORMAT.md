@@ -1,8 +1,10 @@
 # Skill Format — Authoring Standard
 
-**Status:** v5 · 2026-06-28
+**Status:** v6 · 2026-09-30
 
 This document is the single source of truth for **how to write** a bundled skill in this repository. Every `SKILL.md` under `skills/<name>/` MUST follow this format.
+
+> **v6 vs. v5.** v6 adds the `process` zone (budget 250 lines) and the `O` persona for process-orchestrator skills, replaces the reserved-prefix list by the area prefixes of §2, adds the description-length convention for new skills (≤45 words, §2), and adds two validator checks: skill links (§11) and rule markers with cap figures (§12). `ValidateSkillMd` (v6) recognises the zone and persona; `CheckSkillLinks` and `CheckRuleMarkers` are chained by `bin/validate-skills.php`.
 
 > **v5 vs. v4.** v5 introduces the `discovery` zone (budget 150 lines) and the `X` persona for cross-phase capability discovery. Before building a reusable component, an agent with `persona: X` consults a Discovery skill (e.g. `jardis-catalog`) to find existing Jardis packages and recommend `composer require` instead of re-inventing the wheel. The new zone and persona are deliberate, documented extensions — not ad-hoc additions. The "Zones are stable categories" note in §3 is updated accordingly. `ValidateSkillMd` (v5) recognises both the new zone and the new persona value.
 
@@ -30,8 +32,8 @@ This format optimises for three things:
 ---
 name: <kebab-case-name>
 description: <One sentence in English. Names the situation + key trigger terms.>
-zone: pre | post-active | post-reference | crosscut | discovery
-persona: A | C | D | X
+zone: pre | post-active | post-reference | crosscut | discovery | process
+persona: A | C | D | X | O
 prerequisites: [<other-skill-name>, ...]   # may be empty []
 next: [<other-skill-name>, ...]            # may be empty []
 ---
@@ -41,12 +43,34 @@ next: [<other-skill-name>, ...]            # may be empty []
 
 | Field | Required | Rules |
 |---|---|---|
-| `name` | yes | Kebab-case. Matches the directory name. Reserved prefixes apply: `plan-*`, `platform-*`, `rules-*`, `tools-*`, `schema-*`. |
-| `description` | yes | **One sentence**, single line, English. ≤175 words. Starts with the situation or artefact (`"Use when …"`, `"Reference for …"`, `"Extending …"`, `"Wiring …"`). Dense comma- or em-dash-separated trigger terms are welcome — the sentence is both the trigger prompt for the loader and the first piece of context the AI sees. |
-| `zone` | yes | One of five values. See §3. |
-| `persona` | yes | One of `A`, `C`, `D`, `X`. See §3a — every skill must serve exactly one persona. Values `B` (Designer-Companion, retired) and `E` (Builder-Dev, lives in `tools-builder-engine`) are deliberately not part of the bundle. |
+| `name` | yes | Kebab-case. Matches the directory name. Starts with one of the area prefixes listed below. |
+| `description` | yes | **One sentence**, single line, English. ≤175 words (hard limit of the validator); **new skills ≤45 words** (convention, see below). Starts with the situation or artefact (`"Use when …"`, `"Reference for …"`, `"Extending …"`, `"Wiring …"`). Dense comma- or em-dash-separated trigger terms are welcome — the sentence is both the trigger prompt for the loader and the first piece of context the AI sees. |
+| `zone` | yes | One of six values. See §3. |
+| `persona` | yes | One of `A`, `C`, `D`, `X`, `O`. See §3a — every skill must serve exactly one persona. Values `B` (Designer-Companion, retired) and `E` (Builder-Dev, lives in `tools-builder-engine`) are deliberately not part of the bundle. |
 | `prerequisites` | yes | Array of skill names that should have run before this skill is useful. Use `[]` if independent. |
 | `next` | yes | Array of skill names that typically follow. Use `[]` if terminal. |
+
+### Area prefixes
+
+The name of a bundle skill starts with the prefix of its area. The prefix tells the agent and the reader what the skill is for; it is not a zone.
+
+| Prefix | Area |
+|---|---|
+| `start-` | Orientation: entry point and routing into the other areas. |
+| `packages-` | Finding an existing Jardis package before hand-building a component. |
+| `design-` | Designing a domain before code exists (schema drafting, headless design surface). |
+| `generated-code-` | Extending, wiring and versioning code the Designer generated. |
+| `foundation-` | Cross-cutting rules: architecture, patterns, testing, frontend review. |
+| `git-` | Git workflow: branch, commit, push and pull request, compliance, repository setup. |
+| `knowledge-` | Keeping project knowledge: the decision pool and its maintenance. |
+| `process-` | Running a development process: choosing the tier, concept, PRD, plan, stages, verification, closing. |
+| `code-review-` | Reviewing a change. |
+
+Do not introduce a new prefix without a deliberate, documented extension of this table. The prefixes `adapter-`, `core-`, `support-` and `tools-` belong to package skills shipped by the Jardis packages themselves, not to bundle skills.
+
+### Description length for new skills (≤45 words)
+
+The validator's hard limit stays at 175 words so existing skills remain valid. **New skills keep the description to ≤45 words.** Reason: every skill description is part of the skill listing the agent sees in every session. Claude Code truncates that listing at 1 % of the context window and cuts each single description at 1,536 characters; a listing with many long descriptions loses the tail of the trigger text or whole skills. A short description (situation plus the two or three strongest trigger terms) keeps every skill fully visible.
 
 ### `description` quality bar
 
@@ -60,7 +84,7 @@ Why the second works: one situation (transport-layer wiring), four discoverable 
 
 **Checklist:**
 
-- [ ] One sentence, single line, ≤175 words.
+- [ ] One sentence, single line, ≤175 words (new skills ≤45).
 - [ ] Names a concrete situation, not a topic.
 - [ ] Names ≥2 concrete sub-triggers (artefacts, methods, call-chain stages, file names).
 - [ ] No vague "for X-related tasks" filler.
@@ -73,19 +97,20 @@ Every skill belongs to exactly one zone. Zone determines when the skill should f
 
 | Zone | Meaning | Examples |
 |---|---|---|
-| `pre` | Before the developer enters the Jardis Designer. AI helps prepare Designer input. | `schema-authoring` |
-| `post-active` | After Designer-generated code exists. AI actively guides implementation or wiring. | `platform-implementation`, `platform-usage` |
+| `pre` | Before the developer enters the Jardis Designer. AI helps prepare Designer input. | `design-draft-schema` |
+| `post-active` | After Designer-generated code exists. AI actively guides implementation or wiring. | `generated-code-extend`, `generated-code-wire-transport` |
 | `post-reference` | After Designer-generated code exists. AI is consulted to interpret artefacts. | `tools-definition` |
-| `crosscut` | Universal rules that apply across phases. | `rules-architecture`, `rules-patterns`, `rules-testing` |
-| `discovery` | Cross-phase capability discovery *before* building a reusable component. AI consults this skill to learn which Jardis package already covers the need and can recommend `composer require`. | `jardis-catalog` |
+| `crosscut` | Universal rules that apply across phases. | `foundation-architecture`, `foundation-patterns`, `foundation-testing` |
+| `discovery` | Cross-phase capability discovery *before* building a reusable component. AI consults this skill to learn which Jardis package already covers the need and can recommend `composer require`. | `packages-find-existing` |
+| `process` | Orchestrating a development process: which tier a task needs, writing concept, PRD and plan, running and verifying stages, closing. The skill tells the agent what to do next and which role to hand off to. | `process-*` skills |
 
-Zones are stable categories — do not invent new ones without a deliberate, documented extension (v5 adds `discovery` as such an extension). If a new skill doesn't fit any zone, the skill scope is probably wrong.
+Zones are stable categories — do not invent new ones without a deliberate, documented extension (v5 added `discovery` and v6 added `process` as such extensions). If a new skill doesn't fit any zone, the skill scope is probably wrong.
 
 ---
 
 ## 3a. Personas
 
-Every bundle skill serves **exactly one** of four personas. The `persona:` frontmatter field declares which one. If a skill cannot decide, its scope is wrong — split or rescope before writing.
+Every bundle skill serves **exactly one** of five personas. The `persona:` frontmatter field declares which one. If a skill cannot decide, its scope is wrong — split or rescope before writing.
 
 | Persona | Who / When | What they need |
 |---|---|---|
@@ -93,13 +118,14 @@ Every bundle skill serves **exactly one** of four personas. The `persona:` front
 | **C — Implementer-AI (Phase 3.2)** | AI, *after* Flow build, with an Action stub + Requirement-Header in the DocBlock. **Primary bundle consumer.** | Platform-Dir layout, V1–V12, Aggregate / BC / Domain API, response shapes (X-1), ClassVersion, DomainResponse, patterns, tests, **Werkzeugkasten** (which package skill covers cache / mail / queue / repository / …). |
 | **D — Application-Layer-Dev** | Human + AI, *outside* Jardis, after Aggregate + Flow build. Writes the transport layer (HTTP / CLI / queue / worker) that calls the Domain API. | Call chain, bootstrap lifetime, `DomainResponse` → transport mapping, response envelope shape. |
 | **X — Discovery-Agent** | Any agent, *cross-phase*, before self-building a reusable component (infrastructure or DDD scaffold). Consults a `discovery` skill to learn which Jardis package already covers the need. | Package name, capability summary, "use when" trigger, `composer require` command. |
+| **O — Process-Orchestrator** | Human + AI running a development process (zone `process`): picks the tier, writes concept, PRD and plan, runs stages with fresh agent sessions, verifies, closes. | The order of steps, the hand-off between roles, the caps of §12 and the behaviour rules they carry. |
 
 **Retired / out-of-bundle:**
 
 - **B (Designer-Companion)** — struck. The Jardis Designer has no AI hooks; steps 1.1, 1.2, 2, 3.1 are pure click-work in the UI.
 - **E (Builder-Dev)** — lives in `tools-builder-engine` / `tools-builder-ui` (Builder repo, `tools/builder/.claude/skills/`). All Generator-Internas (renderer paths, IR structs, pipeline stages, `.go` file references, line numbers) belong there, never in the bundle.
 
-The validator enforces (a) the `persona:` field is one of `A`, `C`, `D`, `X` (v5); (b) skills with bundle personas (`A`, `C`, `D`) must not contain Generator-Internas tokens in the body (§10).
+The validator enforces (a) the `persona:` field is one of `A`, `C`, `D`, `X`, `O` (v6); (b) bundle skills must not contain Generator-Internas tokens in the body (§10).
 
 ---
 
@@ -127,6 +153,7 @@ Hard ceilings. If a skill needs more, content belongs elsewhere or in a companio
 | `pre` / `post-reference` | 250 | Format documentation + pointers to `examples/` |
 | `post-active` | 700 | Implementation / wiring guidance with realistic code samples |
 | `discovery` | 150 | Thin capability catalog; no API detail, no code samples |
+| `process` | 250 | Process steps, hand-off rules and caps; templates and long artefacts live in companion files |
 
 **Counting:** `wc -l skills/<name>/SKILL.md`. Code blocks count; `examples/` files do not count against the budget.
 
@@ -147,11 +174,11 @@ Full working artefacts (Schema.yaml, Aggregate.yaml, controller code, …) that 
 
 Skills link to each other by name. Format:
 
-> *See `rules-architecture` §3 (Closure-Orchestrator) for the orchestrator pattern.*
+> *See `foundation-architecture` §3 (Closure-Orchestrator) for the orchestrator pattern.*
 
 **Allowed:**
 
-- Reference other skills by name.
+- Reference other skills by name. `prerequisites` and `next` are checked against the skill folders (§11).
 - Reference files in this repo by relative path: `docs/PRD-skill-overhaul.md`, `examples/Counter/Aggregate.yaml`.
 - Reference Jardis package skills by name (`adapter-cache`, `support-repository`) — assume they are installed via the plugin.
 - Reference external repos by absolute path **only** in the final reference section: `<repo>/internal/definition/schema.go`.
@@ -159,7 +186,7 @@ Skills link to each other by name. Format:
 **Forbidden:**
 
 - Inline-duplicating content from another skill ("here are the patterns again …").
-- References to a skill that does not exist.
+- References to a skill that does not exist, or to a retired skill name (checked for `prerequisites` / `next`, §11).
 - Web URLs in the body (use them sparingly in the final reference section only).
 
 ---
@@ -173,7 +200,7 @@ description: Reference for <narrow-situation> — <trigger-1>, <trigger-2>, <tri
 zone: post-reference
 persona: C
 prerequisites: []
-next: [platform-implementation]
+next: [generated-code-extend]
 ---
 
 ## Scope
@@ -196,7 +223,7 @@ and how it sits relative to sibling skills.)
 - External file (final ref only): `/absolute/path/to/source.go`
 ```
 
-Every existing bundled skill follows this shape — consult `skills/platform-usage/SKILL.md` or `skills/schema-authoring/SKILL.md` for full examples.
+Every existing bundled skill follows this shape — consult `skills/generated-code-wire-transport/SKILL.md` or `skills/design-draft-schema/SKILL.md` for full examples.
 
 ---
 
@@ -221,7 +248,7 @@ Two enforced rules keep bundle skills lean and resilient to Builder churn.
 
 ### 10.1 No Generator-Internas in bundle bodies
 
-Bundle skills (`persona: A | C | D`) MUST NOT cite:
+Bundle skills (every persona) MUST NOT cite:
 
 - `.go` file paths or line numbers (`command_handler.go:550-555`, `internal/builder/...`, `tools/builder/internal/...`).
 - Renderer / pipeline / IR class or function names: `Render*`, `Stage*`, `PHPRenderer`, `IR`, `BuildEntities`, `BuildAggregates`, `BuildFlow`, `BuildPlatformFacade`, `BuildIntegrationAggregate`, `BuildIntegrationBC`, `BuildIntegrationDomain`.
@@ -249,8 +276,48 @@ the former Y" burns tokens on a delta the reader cannot use, and goes stale at t
 
 Where the delta matters to maintainers, it belongs in `CHANGELOG.md` or the PRD — not in the skill.
 
-### 10.2 Werkzeugkasten cross-references (`platform-implementation`)
+### 10.2 Werkzeugkasten cross-references (`generated-code-extend`)
 
-`platform-implementation` MUST carry a Werkzeugkasten section that maps each Jardis runtime concern (Cache, Mail, DB, Logger, Events, Filesystem, Auth, …) to the responsible package skill (`adapter-cache`, `adapter-mailer`, `adapter-dbconnection`, …). Without it, Persona C cannot discover which package skill answers "how do I cache / send mail / publish a message / …" — and re-derives APIs from memory, which is exactly the failure mode the bundle is designed to prevent.
+`generated-code-extend` MUST carry a Werkzeugkasten section that maps each Jardis runtime concern (Cache, Mail, DB, Logger, Events, Filesystem, Auth, …) to the responsible package skill (`adapter-cache`, `adapter-mailer`, `adapter-dbconnection`, …). Without it, Persona C cannot discover which package skill answers "how do I cache / send mail / publish a message / …" — and re-derives APIs from memory, which is exactly the failure mode the bundle is designed to prevent.
 
-Other skills MAY link to package skills when relevant, but only `platform-implementation` is required to keep the full table.
+Other skills MAY link to package skills when relevant, but only `generated-code-extend` is required to keep the full table.
+
+---
+
+## 11. Link check (v6)
+
+`CheckSkillLinks` reads `prerequisites` and `next` of a skill and requires every entry to name a skill folder (a directory containing a `SKILL.md`) in the same skills root as the checked skill. Two violations:
+
+- **Retired name** — the entry is an old skill name from an earlier release. The message names the current name to use. This holds even when a redirect skill of the old name sits in the same folder: redirects are for readers of old material, not for new links.
+- **Unknown name** — no skill folder of that name exists (this includes entries that are not plain kebab-case names).
+
+Redirect skills (description `Renamed to <new>. Load <new> instead.`) carry empty `prerequisites` / `next` and pass the complete validator.
+
+---
+
+## 12. Rule markers and cap figures (v6)
+
+Behaviour rules of the `process` skills are stated as literal text, not only as prose that could drift. A rule is written as the marker line `<!-- rule:<id> -->` with the rule text directly below it. `CheckRuleMarkers` greps each listed skill for the marker and for the mandatory keywords of the rule. It proves that the rule is **present** in the skill, not that an agent follows it.
+
+| Skill | Marker id | Mandatory keywords |
+|---|---|---|
+| `process-choose-tier` | `chat-end-offer` | `create a project folder?`, `docs/vorhaben/`, `carry knowledge into the pool?` |
+| `process-choose-tier` | `tier-escalate` | `only with a named reason`, `the lower tier`, `two or more subtasks are never` |
+| `process-run-stage` | `fresh-session-per-stage` | `fresh agent session` |
+| `process-run-stage` | `failure-path` | `fix run`, `follow-up run`, `STOPP:` |
+| `process-run-stage` | `question-points` | `at most 2 question points`, `STOPP:` |
+| `process-review-board` | `question-points` | `at most 2 roles` |
+| `process-concept` | `pool-scaffold` | `.claude/wissen/`, `is missing` |
+| `process-concept` | `project-profile` | `.claude/PROJECT_PROFILE.md`, `is missing` |
+
+Keywords are literal, case-sensitive substrings of the skill text (English); write the rule text so that it contains them verbatim.
+
+**Cap figures** are conventions of this format. Each figure must appear in the named skill; a figure that consists only of digits must appear as a whole number (`5` is not satisfied by `15`).
+
+| Skill | Cap | Figures |
+|---|---|---|
+| `process-write-plan` | stage plan length, referenced plan size | `150` (lines), `16 KB` |
+| `process-run-stage` | implementer brief size, commitments per brief, context per brief | `6 KB`, `8`, `30 KB` |
+| `process-verify` | verdict items, red evidence items | `5`, `3` |
+
+The two tables live as constants in `CheckRuleMarkers` (`RULES`, `CAPS`). While the process skills are still being added to the bundle, a skill from the tables whose `SKILL.md` does not exist is skipped; once the last one ships, a missing skill is a violation as well.

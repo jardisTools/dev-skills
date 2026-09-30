@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
+use JardisTools\DevSkills\Handler\Install\ExpandLegacyGlobs;
 use JardisTools\DevSkills\Handler\Install\FindProtectedExcludes;
 use JardisTools\DevSkills\Handler\Install\IsMandatorySkill;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +15,7 @@ final class FindProtectedExcludesTest extends TestCase
 {
     public function testExcludeHittingMandatorySkillsWarnsPerSkill(): void
     {
-        $warnings = $this->find(PluginConfig::filtered([], ['foundation-*', 'process-beta', 'rules-*']));
+        $warnings = $this->find(PluginConfig::filtered([], ['foundation-*', 'process-beta', 'lib-*']));
 
         self::assertCount(2, $warnings);
         self::assertStringContainsString('"foundation-*"', $warnings[0]);
@@ -25,7 +26,7 @@ final class FindProtectedExcludesTest extends TestCase
 
     public function testExcludeOfOrdinarySkillsDoesNotWarn(): void
     {
-        self::assertSame([], $this->find(PluginConfig::filtered([], ['rules-*'])));
+        self::assertSame([], $this->find(PluginConfig::filtered([], ['lib-*'])));
     }
 
     public function testNoExcludeDoesNotWarn(): void
@@ -40,9 +41,12 @@ final class FindProtectedExcludesTest extends TestCase
     {
         $bundled = array_map(
             static fn (string $name): SkillDescriptor => new SkillDescriptor($name, '/x/' . $name, 'jardis/dev-skills'),
-            ['foundation-alpha', 'process-beta', 'rules-testing'],
+            ['foundation-alpha', 'process-beta', 'lib-testing'],
         );
 
-        return (new FindProtectedExcludes((new IsMandatorySkill())->__invoke(...)))($bundled, $config);
+        return (new FindProtectedExcludes(
+            (new IsMandatorySkill())->__invoke(...),
+            (new ExpandLegacyGlobs())->__invoke(...),
+        ))($bundled, $config);
     }
 }
