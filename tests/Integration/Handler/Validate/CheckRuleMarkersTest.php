@@ -71,7 +71,7 @@ final class CheckRuleMarkersTest extends TestCase
     {
         $this->writeAllProcessSkills();
 
-        self::assertSame([], (new CheckRuleMarkers(false))($this->project->path('skills')));
+        self::assertSame([], (new CheckRuleMarkers())($this->project->path('skills')));
     }
 
     public function testMissingMarkerIsReported(): void
@@ -152,19 +152,16 @@ final class CheckRuleMarkersTest extends TestCase
         }
     }
 
-    public function testSkillNotYetPresentIsSkippedInTransition(): void
+    public function testTheShippedBundleCarriesEveryMarkerAndCapFigure(): void
     {
-        // empty skills root: no process skill exists yet
-        $this->project->mkdir('skills');
-
-        self::assertSame([], (new CheckRuleMarkers())($this->project->path('skills')));
+        self::assertSame([], (new CheckRuleMarkers())(dirname(__DIR__, 4) . '/skills'));
     }
 
-    public function testMissingSkillIsAViolationWithoutTransitionFlag(): void
+    public function testMissingSkillIsAViolation(): void
     {
         $this->project->mkdir('skills');
 
-        $result = (new CheckRuleMarkers(false))($this->project->path('skills'));
+        $result = (new CheckRuleMarkers())($this->project->path('skills'));
 
         self::assertEqualsCanonicalizing(
             ['process-choose-tier', 'process-concept', 'process-run-stage', 'process-review-board', 'process-write-plan', 'process-verify'],
@@ -188,7 +185,7 @@ final class CheckRuleMarkersTest extends TestCase
     {
         $this->writeSkillText('git-commit-change', "no markers here\n");
 
-        self::assertSame([], (new CheckRuleMarkers(false))($this->project->path('skills'), ['git-commit-change']));
+        self::assertSame([], (new CheckRuleMarkers())($this->project->path('skills'), ['git-commit-change']));
     }
 
     private function writeAllProcessSkills(?TempProject $project = null): void

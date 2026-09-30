@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Uninstall;
 
 use Composer\Util\Filesystem;
+use JardisTools\DevSkills\Data\BundleSkills;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
@@ -231,6 +232,47 @@ final class RemoveManagedPathsTest extends TestCase
         self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/git-start-branch'));
         foreach ($mine as $name) {
             self::assertSame($before[$name], TreeSnapshot::of($this->project->path('.agents/skills/' . $name)), $name);
+        }
+    }
+
+    public function testWithoutManifestAllThirtyThreeBundleNamesGoFromBothFoldersAndNothingByPrefix(): void
+    {
+        self::assertCount(33, BundleSkills::NAMES);
+        $mine = ['process-mine', 'knowledge-mine', 'foundation-mine', 'code-review-mine', 'start-mine', 'packages-mine',
+            'generated-code-mine', 'git-mine', 'design-mine'];
+        foreach (BundleSkills::NAMES as $name) {
+            $this->project->writeFile('.claude/skills/' . $name . '/SKILL.md', 'bundle');
+            $this->project->writeFile('.agents/skills/' . $name . '/SKILL.md', 'bundle');
+        }
+        $before = [];
+        foreach ($mine as $name) {
+            foreach (['.claude', '.agents'] as $root) {
+                $this->project->writeFile($root . '/skills/' . $name . '/SKILL.md', 'mine: ' . $name);
+                $before[$root . $name] = TreeSnapshot::of($this->project->path($root . '/skills/' . $name));
+            }
+        }
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+        sort($removed);
+        $expected = BundleSkills::NAMES;
+        sort($expected);
+
+        self::assertSame($expected, $removed);
+        foreach (['.claude', '.agents'] as $root) {
+            foreach (BundleSkills::NAMES as $name) {
+                self::assertDirectoryDoesNotExist($this->project->path($root . '/skills/' . $name), $root . ' ' . $name);
+            }
+            foreach ($mine as $name) {
+                self::assertSame($before[$root . $name], TreeSnapshot::of($this->project->path($root . '/skills/' . $name)), $root . ' ' . $name);
+            }
+        }
+    }
+
+    public function testBundleNamesContainTheEighteenCurrentNamesOfTheRenaming(): void
+    {
+        foreach (RenamedSkills::MAPPING as $old => $current) {
+            self::assertContains($current, BundleSkills::NAMES, $old);
+            self::assertNotContains($old, BundleSkills::NAMES, $old);
         }
     }
 

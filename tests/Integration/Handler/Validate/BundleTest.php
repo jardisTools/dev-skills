@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Validate;
 
+use JardisTools\DevSkills\Data\BundleSkills;
 use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
 use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
@@ -21,7 +22,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage', 'process-verify', 'process-close'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage', 'process-verify', 'process-close', 'code-review-change'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -684,6 +685,55 @@ final class BundleTest extends TestCase
         self::assertStringEndsWith("Return exactly ONE final report in this schema.\n", $content);
         self::assertStringNotContainsString('/Users/', $content);
         self::assertStringNotContainsString('/home/', $content);
+    }
+
+    public function testCodeReviewChangeHasPhpDeltaAndNoGoDelta(): void
+    {
+        $dir     = dirname(__DIR__, 4) . '/skills/code-review-change';
+        $content = (string) file_get_contents($dir . '/SKILL.md');
+
+        self::assertFileExists($dir . '/php-delta.md');
+        self::assertSame(['SKILL.md', 'php-delta.md'], array_map('basename', glob($dir . '/*') ?: []), 'No Go delta ships.');
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+        self::assertStringContainsString('`php-delta.md`', $content);
+        self::assertStringContainsString('never edits code', $content);
+        self::assertStringContainsString('a finding, not an intervention', $content);
+        foreach (['## Code review:', '### Blocker (must be fixed)', '### Major (should be fixed)', '### Minor (suggestion)', '### Positive (done well)'] as $keyword) {
+            self::assertStringContainsString($keyword, $content, $keyword);
+        }
+        foreach (['Typing', 'Security', 'Error handling', 'API design', 'Performance'] as $section) {
+            self::assertMatchesRegularExpression('/^### \d+\. ' . preg_quote($section, '/') . '/mi', $content, $section);
+        }
+        self::assertStringContainsString('declare(strict_types=1)', (string) file_get_contents($dir . '/php-delta.md'));
+        self::assertDoesNotMatchRegularExpression('/\bgo\.mod\b|\.go\b|goroutine/i', $content . (string) file_get_contents($dir . '/php-delta.md'));
+    }
+
+    public function testStartOrientationNamesEverySkillOfTheBundle(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('start-orientation'));
+
+        foreach (BundleSkills::NAMES as $name) {
+            if ($name === 'start-orientation') {
+                continue;
+            }
+            self::assertStringContainsString('`' . $name . '`', $content, $name);
+        }
+        foreach (['**0 Answer**', '**1 Single action**', '**2 Small assignment**', '**3 Undertaking**', 'packages → schema → design → code'] as $keyword) {
+            self::assertStringContainsString($keyword, $content, $keyword);
+        }
+        self::assertLessThanOrEqual(225, substr_count($content, "\n") + 1);
+    }
+
+    public function testUninstallNameListEqualsSkillFolders(): void
+    {
+        $folders = array_map('basename', glob(dirname(__DIR__, 4) . '/skills/*', GLOB_ONLYDIR) ?: []);
+        $names   = BundleSkills::NAMES;
+        sort($folders);
+        sort($names);
+
+        self::assertSame($folders, $names);
+        self::assertCount(33, $names);
+        self::assertSame($names, array_values(array_unique($names)));
     }
 
     public function testNoSkillBodyNamesARetiredSkill(): void
