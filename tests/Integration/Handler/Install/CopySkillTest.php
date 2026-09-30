@@ -38,7 +38,7 @@ final class CopySkillTest extends TestCase
 
         $fs = new Filesystem();
         $copy = new CopySkill($fs, (new HandleConflict($fs))->__invoke(...));
-        $backup = $copy($descriptor, $this->project->root);
+        $backup = $copy($descriptor, $this->project->path('.claude/skills'));
 
         self::assertNull($backup);
         self::assertSame(
@@ -64,7 +64,7 @@ final class CopySkillTest extends TestCase
 
         $fs = new Filesystem();
         $copy = new CopySkill($fs, (new HandleConflict($fs))->__invoke(...));
-        $backup = $copy($descriptor, $this->project->root);
+        $backup = $copy($descriptor, $this->project->path('.claude/skills'));
 
         self::assertNotNull($backup);
         self::assertSame(
@@ -74,6 +74,26 @@ final class CopySkillTest extends TestCase
         self::assertSame(
             'new',
             file_get_contents($this->project->path('.claude/skills/adapter-cache/SKILL.md')),
+        );
+    }
+
+    public function testCopiesIntoAnyGivenSkillsRoot(): void
+    {
+        $this->project->writeFile('source/adapter-cache/SKILL.md', 'cache-content');
+
+        $descriptor = new SkillDescriptor(
+            name: 'adapter-cache',
+            sourceDir: $this->project->path('source/adapter-cache'),
+            sourcePackage: 'jardisadapter/cache',
+        );
+
+        $fs = new Filesystem();
+        $copy = new CopySkill($fs, (new HandleConflict($fs))->__invoke(...));
+        $copy($descriptor, $this->project->path('.agents/skills'));
+
+        self::assertSame(
+            'cache-content',
+            file_get_contents($this->project->path('.agents/skills/adapter-cache/SKILL.md')),
         );
     }
 }

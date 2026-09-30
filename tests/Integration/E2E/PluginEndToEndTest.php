@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\E2E;
 
+use JardisTools\DevSkills\Tests\Support\ComposerFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
 use PHPUnit\Framework\TestCase;
 
@@ -51,6 +52,13 @@ final class PluginEndToEndTest extends TestCase
             'Vendor skill was not copied by the plugin during composer install.',
         );
 
+        // Second target: identical content under .agents/skills.
+        self::assertFileEquals(
+            $this->project->path('.claude/skills/adapter-fakecache/SKILL.md'),
+            $this->project->path('.agents/skills/adapter-fakecache/SKILL.md'),
+            'Vendor skill was not mirrored into .agents/skills.',
+        );
+
         // Plugin-own bundled skills were copied because bundled-skills: true.
         self::assertFileExists(
             $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
@@ -59,6 +67,11 @@ final class PluginEndToEndTest extends TestCase
         self::assertFileExists(
             $this->project->path('.claude/skills/platform-implementation/SKILL.md'),
             'Bundled skill platform-implementation was not copied.',
+        );
+        self::assertFileEquals(
+            $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
+            $this->project->path('.agents/skills/rules-architecture/SKILL.md'),
+            'Bundled skill was not mirrored into .agents/skills.',
         );
 
         // AGENTS.md aggregation contains the fake vendor's body marker.
@@ -135,71 +148,16 @@ final class PluginEndToEndTest extends TestCase
 
     private function writeConsumerComposerJson(bool $bundledSkills): void
     {
-        $extra = $bundledSkills
-            ? ['jardis/dev-skills' => ['bundled-skills' => true]]
-            : new \stdClass();
-
-        $json = [
-            'name'              => 'jardis-test/consumer',
-            'description'       => 'E2E test consumer project',
-            'type'              => 'project',
-            'minimum-stability' => 'dev',
-            'prefer-stable'     => true,
-            'repositories'      => [
-                [
-                    'type'    => 'path',
-                    'url'     => $this->pluginRoot,
-                    'options' => ['symlink' => false],
-                ],
-                [
-                    'type'    => 'path',
-                    'url'     => $this->fakeVendorRoot,
-                    'options' => ['symlink' => false],
-                ],
-            ],
-            'require' => [
-                'jardis/dev-skills'         => '*',
-                'jardisadapter/fakecache'   => '*',
-            ],
-            'config' => [
-                'allow-plugins' => [
-                    'jardis/dev-skills' => true,
-                ],
-            ],
-            'extra' => $extra,
-        ];
-
-        $encoded = json_encode($json, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        if ($encoded === false) {
-            throw new \RuntimeException('Could not encode consumer composer.json.');
-        }
-
-        $this->project->writeFile('composer.json', $encoded);
+        ComposerFixture::writeConsumerComposerJson(
+            $this->project,
+            $this->pluginRoot,
+            $this->fakeVendorRoot,
+            $bundledSkills,
+        );
     }
 
     private function runComposer(string $command): string
     {
-        $cmd = sprintf(
-            'cd %s && COMPOSER_HOME=%s composer %s --no-interaction --no-progress 2>&1',
-            escapeshellarg($this->project->root),
-            escapeshellarg($this->project->root . '/.composer-home'),
-            $command,
-        );
-
-        $output    = [];
-        $exitCode  = 0;
-        exec($cmd, $output, $exitCode);
-        $joined = implode("\n", $output);
-
-        if ($exitCode !== 0) {
-            self::fail(sprintf(
-                "Composer command failed (exit %d): composer %s\nOutput:\n%s",
-                $exitCode,
-                $command,
-                $joined,
-            ));
-        }
-
-        return $joined;
+        return ComposerFixture::runComposer($this->project, $command);
     }
 }

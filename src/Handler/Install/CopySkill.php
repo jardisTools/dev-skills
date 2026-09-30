@@ -21,14 +21,14 @@ final class CopySkill
     }
 
     /**
-     * Copies a skill directory into <projectRoot>/.claude/skills/<name>/.
+     * Copies a skill directory into <skillsRoot>/<name>/.
      *
      * Returns the backup path if a pre-existing directory was moved aside,
      * otherwise null.
      */
-    public function __invoke(SkillDescriptor $skill, string $projectRoot): ?string
+    public function __invoke(SkillDescriptor $skill, string $skillsRoot): ?string
     {
-        $target = $projectRoot . '/.claude/skills/' . $skill->name;
+        $target = $skillsRoot . '/' . $skill->name;
         $backupPath = null;
 
         if (is_dir($target)) {

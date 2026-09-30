@@ -93,6 +93,9 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
                 'jardis/dev-skills: korrupte AGENTS.md repariert (mehrfacher managed block zusammengeführt).',
             );
         }
+        foreach ($report->warnings() as $warning) {
+            $this->io->writeError(sprintf('<warning>jardis/dev-skills: %s</warning>', $warning));
+        }
         foreach ($report->removedBundledSkills() as $removed) {
             $this->io->writeError(sprintf(
                 '<warning>jardis/dev-skills: bundled skill "%s" removed (no longer selected by config)</warning>',

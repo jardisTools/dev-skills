@@ -87,6 +87,18 @@ final class ScanVendorTest extends TestCase
         self::assertSame(['adapter-cache'], $names);
     }
 
+    public function testReturnsSameNamedSkillsOfDifferentPackagesForCollisionResolution(): void
+    {
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/shared/SKILL.md', 'a');
+        $this->project->writeFile('vendor/jardissupport/data/.claude/skills/shared/SKILL.md', 'b');
+
+        $skills = (new ScanVendor())($this->project->path('vendor'));
+        $packages = array_map(static fn ($s) => $s->sourcePackage, $skills);
+        sort($packages);
+
+        self::assertSame(['jardisadapter/cache', 'jardissupport/data'], $packages);
+    }
+
     public function testReturnsEmptyForMissingVendorDir(): void
     {
         $skills = (new ScanVendor())($this->project->path('nonexistent-vendor'));
