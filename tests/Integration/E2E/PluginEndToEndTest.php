@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\E2E;
 
+use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Tests\Support\ComposerFixture;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -117,6 +118,18 @@ final class PluginEndToEndTest extends TestCase
         }
     }
 
+    public function testFreshInstallCreatesNoRedirectSkills(): void
+    {
+        $this->writeConsumerComposerJson(bundledSkills: true);
+        $output = $this->runComposer('install');
+
+        foreach (array_keys(RenamedSkills::MAPPING) as $oldName) {
+            self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/' . $oldName));
+            self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/' . $oldName));
+        }
+        self::assertStringNotContainsString('were renamed', $output);
+    }
+
     public function testComposerRemovePluginCleansUpJardisSkillsAndAgentsMd(): void
     {
         $this->writeConsumerComposerJson(bundledSkills: true);
@@ -151,7 +164,7 @@ final class PluginEndToEndTest extends TestCase
         $this->runComposer('install');
 
         $userFolders = ['.claude/skills/do-mine', '.claude/skills/rules-mine', '.claude/skills/git-foo',
-            '.agents/skills/do-mine', '.agents/skills/git-foo'];
+            '.claude/skills/design-mine', '.agents/skills/do-mine', '.agents/skills/git-foo'];
         foreach ($userFolders as $folder) {
             $this->project->writeFile($folder . '/SKILL.md', 'mine: ' . $folder);
         }
@@ -179,7 +192,7 @@ final class PluginEndToEndTest extends TestCase
             'User skill folders must stay byte-identical.',
         );
         self::assertSame(
-            ['do-mine', 'git-foo', 'rules-mine'],
+            ['design-mine', 'do-mine', 'git-foo', 'rules-mine'],
             array_map('basename', glob($this->project->path('.claude/skills') . '/*') ?: []),
         );
         self::assertSame(

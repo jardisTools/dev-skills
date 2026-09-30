@@ -9,8 +9,11 @@ use JardisTools\DevSkills\Exception\InstallFailedException;
 
 final class ResolveTargets
 {
+    /** The skill folder of Claude Code; the only one plugin versions up to 1.3.x wrote to. */
+    public const CLAUDE_SKILLS_DIR = '.claude/skills';
+
     /** @var list<string> */
-    public const TARGET_DIRS = ['.claude/skills', '.agents/skills'];
+    public const TARGET_DIRS = [self::CLAUDE_SKILLS_DIR, '.agents/skills'];
 
     public function __construct(
         private readonly Filesystem $filesystem,

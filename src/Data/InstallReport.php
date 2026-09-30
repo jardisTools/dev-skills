@@ -22,6 +22,12 @@ final class InstallReport
     private array $removedBundledSkills = [];
 
     /** @var list<string> */
+    private array $redirectedSkills = [];
+
+    /** @var list<string> */
+    private array $notices = [];
+
+    /** @var list<string> */
     private array $warnings = [];
 
     public function addWarning(string $warning): void
@@ -34,6 +40,18 @@ final class InstallReport
         if ($warning !== null && $warning !== '') {
             $this->warnings[] = $warning;
         }
+    }
+
+    public function addNoticeIfAny(?string $notice): void
+    {
+        if ($notice !== null && $notice !== '') {
+            $this->notices[] = $notice;
+        }
+    }
+
+    public function addRedirectedSkill(string $oldName): void
+    {
+        $this->redirectedSkills[] = $oldName;
     }
 
     public function addInstalledSkill(string $name): void
@@ -115,6 +133,26 @@ final class InstallReport
     public function removedBundledSkills(): array
     {
         return $this->removedBundledSkills;
+    }
+
+    /**
+     * Old skill names that were left behind as redirect skills (not counted as installed skills).
+     *
+     * @return list<string>
+     */
+    public function redirectedSkills(): array
+    {
+        return $this->redirectedSkills;
+    }
+
+    /**
+     * Informational messages for the user, e.g. the migration hint after an update.
+     *
+     * @return list<string>
+     */
+    public function notices(): array
+    {
+        return $this->notices;
     }
 
     /**

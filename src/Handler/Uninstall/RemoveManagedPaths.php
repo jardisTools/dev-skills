@@ -21,8 +21,9 @@ use JardisTools\DevSkills\Exception\UninstallFailedException;
  *   A key is honoured only as a relative `.claude/skills/<name>` or `.agents/skills/<name>` of the
  *   project whose real path is exactly that location; anything else (absolute, `..`, foreign folder,
  *   symlink) is ignored with a warning;
- * - no manifest (1.3.x install): the fixed list of the old bundle names plus vendor skills
- *   under the package prefixes, in `.claude/skills` only (1.3.x wrote nowhere else);
+ * - no manifest (1.3.x install): the fixed list of the 18 old bundle names and the 18 names they
+ *   carry now (both from RenamedSkills::MAPPING) plus vendor skills under the package prefixes,
+ *   in `.claude/skills` only (1.3.x wrote nowhere else);
  * - defective or too new manifest: nothing.
  *
  * `.claude/.jardis-backup/` and all folders of the user stay.
@@ -106,7 +107,7 @@ final class RemoveManagedPaths
         $skillsDir = $realRoot . '/' . self::SKILLS_DIR;
         $removed = [];
 
-        foreach (array_keys(RenamedSkills::MAPPING) as $name) {
+        foreach ([...array_keys(RenamedSkills::MAPPING), ...array_values(RenamedSkills::MAPPING)] as $name) {
             if (is_dir($skillsDir . '/' . $name)) {
                 $this->remove($skillsDir . '/' . $name);
                 $removed[$name] = $name;

@@ -49,4 +49,25 @@ final class InstallReportTest extends TestCase
         self::assertSame(['collision'], $report->warnings());
         self::assertSame([['skill' => 'b', 'backupPath' => '/tmp/b.backup']], $report->backedUpSkills());
     }
+
+    public function testRedirectedSkillsAreNotCountedAsInstalled(): void
+    {
+        $report = new InstallReport();
+        $report->addInstalledSkill('foundation-architecture');
+        $report->addRedirectedSkill('rules-architecture');
+
+        self::assertSame(1, $report->installedSkillCount());
+        self::assertSame(['rules-architecture'], $report->redirectedSkills());
+    }
+
+    public function testCollectsNoticesAndIgnoresEmptyOnes(): void
+    {
+        $report = new InstallReport();
+        $report->addNoticeIfAny(null);
+        $report->addNoticeIfAny('');
+        $report->addNoticeIfAny('2 bundle skills were renamed.');
+
+        self::assertSame(['2 bundle skills were renamed.'], $report->notices());
+        self::assertSame([], $report->warnings());
+    }
 }
