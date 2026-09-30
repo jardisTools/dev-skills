@@ -14,5 +14,6 @@ final class RecordAgentsAggregation
         $report->setAgentsFilesAggregated($result->aggregatedCount);
         $report->setAgentsMdBackupPath($result->backupPath);
         $report->setAgentsMdHealed($result->healedDuplicateBlock);
+        $report->addWarningIfAny($result->sizeWarning);
     }
 }

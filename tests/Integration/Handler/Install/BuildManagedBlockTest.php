@@ -61,4 +61,50 @@ final class BuildManagedBlockTest extends TestCase
         self::assertSame(1, substr_count($block, BuildManagedBlock::CATALOG_POINTER));
         self::assertStringContainsString('Cache rules.', $block);
     }
+
+    public function testRouterTextStandsBetweenBeginMarkerAndPackagesHeading(): void
+    {
+        $block = (new BuildManagedBlock())(
+            [new AgentsDescriptor('jardisadapter/cache', 'Cache rules.')],
+            false,
+            "# Router\nRoute here.",
+        );
+
+        $begin = strpos($block, AnalyzeAgentsMd::HEADER);
+        $router = strpos($block, "# Router\nRoute here.");
+        $heading = strpos($block, '# Jardis packages');
+        $aggregated = strpos($block, 'Aggregated by `jardis/dev-skills`');
+
+        self::assertSame(0, $begin);
+        self::assertNotFalse($router);
+        self::assertNotFalse($heading);
+        self::assertGreaterThan($begin, $router);
+        self::assertGreaterThan($router, $heading);
+        self::assertGreaterThan($heading, $aggregated);
+        self::assertLessThan(strpos($block, 'Cache rules.'), $aggregated);
+    }
+
+    public function testEmptyRouterTextLeavesBlockUnchanged(): void
+    {
+        $descriptors = [new AgentsDescriptor('jardisadapter/cache', 'Cache rules.')];
+
+        self::assertSame(
+            (new BuildManagedBlock())($descriptors, true),
+            (new BuildManagedBlock())($descriptors, true, ''),
+        );
+    }
+
+    public function testPoolPointerFromRouterTextAppearsExactlyOnce(): void
+    {
+        $pointer = 'Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht';
+
+        $block = (new BuildManagedBlock())(
+            [new AgentsDescriptor('jardisadapter/cache', 'Cache rules.')],
+            true,
+            "# Router\n" . $pointer,
+        );
+
+        self::assertSame(1, substr_count($block, $pointer));
+        self::assertSame(1, substr_count($block, 'Wissenspool'));
+    }
 }

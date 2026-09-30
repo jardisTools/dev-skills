@@ -14,6 +14,7 @@ use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Handler\Discovery\ScanAgentsFiles;
 use JardisTools\DevSkills\Handler\Install\AggregateAgentsMd;
 use JardisTools\DevSkills\Handler\Install\IsCatalogInstalled;
+use JardisTools\DevSkills\Handler\Install\LoadRouterText;
 use JardisTools\DevSkills\Handler\Install\RecordAgentsAggregation;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
@@ -24,6 +25,8 @@ final class SkillInstaller
 
     private readonly InstallAddons $installAddons;
 
+    private readonly string $pluginRoot;
+
     /** @var Closure(string, string, Closure(): void): ?string */
     private readonly Closure $guardManifestVersion;
 
@@ -33,7 +36,10 @@ final class SkillInstaller
     /** @var Closure(list<SkillDescriptor>): bool */
     private readonly Closure $isCatalogInstalled;
 
-    /** @var Closure(list<AgentsDescriptor>, string, bool): AggregateAgentsResult */
+    /** @var Closure(string): string */
+    private readonly Closure $loadRouterText;
+
+    /** @var Closure(list<AgentsDescriptor>, string, bool, string): AggregateAgentsResult */
     private readonly Closure $aggregateAgentsMd;
 
     /** @var Closure(InstallReport, AggregateAgentsResult): void */
@@ -46,10 +52,11 @@ final class SkillInstaller
         ?InstallAddons $installAddons = null,
     ) {
         $fs = $filesystem ?? new Filesystem();
+        $this->pluginRoot = $pluginRoot ?? dirname(__DIR__);
 
         $this->installSkills = new InstallSkills(
             $config ?? PluginConfig::all(),
-            $pluginRoot ?? dirname(__DIR__),
+            $this->pluginRoot,
             $fs,
         );
         $this->installAddons = $installAddons ?? new InstallAddons();
@@ -57,6 +64,7 @@ final class SkillInstaller
             ->__invoke(...);
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
         $this->isCatalogInstalled = (new IsCatalogInstalled())->__invoke(...);
+        $this->loadRouterText = (new LoadRouterText())->__invoke(...);
         $this->aggregateAgentsMd = (new AggregateAgentsMd($fs))->__invoke(...);
         $this->recordAgentsAggregation = (new RecordAgentsAggregation())->__invoke(...);
     }
@@ -84,6 +92,7 @@ final class SkillInstaller
             ($this->scanAgentsFiles)($vendorDir),
             $projectRoot,
             ($this->isCatalogInstalled)($keptBundled),
+            ($this->loadRouterText)($this->pluginRoot),
         );
         ($this->recordAgentsAggregation)($report, $result);
 

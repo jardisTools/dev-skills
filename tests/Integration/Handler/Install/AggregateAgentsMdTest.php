@@ -194,4 +194,129 @@ final class AggregateAgentsMdTest extends TestCase
         self::assertSame($afterFirst, $afterSecond);
         self::assertSame(1, substr_count($afterSecond, BuildManagedBlock::CATALOG_POINTER));
     }
+
+    public function testTextOutsideMarkersIsByteEqualWithCrlf(): void
+    {
+        $pre = "# User top\r\n\r\nRules.\r\n\r\n";
+        $post = "\r\n\r\n# User bottom\r\nEnd.\r\n";
+        $existing = $pre
+            . AnalyzeAgentsMd::HEADER . "\r\nold managed body\r\n" . AnalyzeAgentsMd::FOOTER
+            . $post;
+        $this->project->writeFile('AGENTS.md', $existing);
+
+        $descriptors = [new AgentsDescriptor('jardisadapter/cache', 'fresh content')];
+        $result = (new AggregateAgentsMd(new Filesystem()))($descriptors, $this->project->root, false, '# Router');
+
+        self::assertNull($result->backupPath);
+        self::assertFileDoesNotExist($this->project->path('AGENTS.md.backup'));
+
+        $written = file_get_contents($this->project->path('AGENTS.md'));
+        self::assertStringStartsWith($pre . AnalyzeAgentsMd::HEADER, $written);
+        self::assertStringEndsWith(AnalyzeAgentsMd::FOOTER . $post, $written);
+        self::assertSame(1, substr_count($written, AnalyzeAgentsMd::HEADER));
+        self::assertStringContainsString('fresh content', $written);
+        self::assertStringNotContainsString('old managed body', $written);
+    }
+
+    public function testUserFileWithoutMarkersKeepsCrlfAboveTheBlock(): void
+    {
+        $this->project->writeFile('AGENTS.md', "# User\r\nRules.\r\n");
+
+        (new AggregateAgentsMd(new Filesystem()))(
+            [new AgentsDescriptor('jardisadapter/cache', 'x')],
+            $this->project->root,
+        );
+
+        $written = file_get_contents($this->project->path('AGENTS.md'));
+        self::assertStringStartsWith("# User\r\nRules.\r\n\r\n" . AnalyzeAgentsMd::HEADER, $written);
+        self::assertSame("# User\r\nRules.\r\n", file_get_contents($this->project->path('AGENTS.md.backup')));
+    }
+
+    public function testWarnsWithSizeAndLimitAboveCodexLimit(): void
+    {
+        $descriptors = [new AgentsDescriptor('jardisadapter/cache', str_repeat("Cache rules line.\n", 2500))];
+
+        $result = (new AggregateAgentsMd(new Filesystem()))($descriptors, $this->project->root, false, '# Router');
+
+        $size = filesize($this->project->path('AGENTS.md'));
+        self::assertGreaterThan(32768, $size);
+        self::assertNotNull($result->sizeWarning);
+        self::assertStringContainsString((string) $size . ' bytes', $result->sizeWarning);
+        self::assertStringContainsString('32768', $result->sizeWarning);
+        self::assertStringContainsString('project_doc_max_bytes', $result->sizeWarning);
+    }
+
+    public function testNoWarningBelowCodexLimit(): void
+    {
+        $result = (new AggregateAgentsMd(new Filesystem()))(
+            [new AgentsDescriptor('jardisadapter/cache', 'small')],
+            $this->project->root,
+            false,
+            '# Router',
+        );
+
+        self::assertNull($result->sizeWarning);
+    }
+
+    public function testRouterLiesWithinFirst32KiBWithLargeVendorAgentsMd(): void
+    {
+        $descriptors = [
+            new AgentsDescriptor('jardisadapter/cache', str_repeat("Cache rules line.\n", 2500)),
+            new AgentsDescriptor('jardissupport/data', str_repeat("Data rules line.\n", 2500)),
+        ];
+
+        (new AggregateAgentsMd(new Filesystem()))(
+            $descriptors,
+            $this->project->root,
+            true,
+            "# Router\nROUTER-END-MARK",
+        );
+
+        $written = file_get_contents($this->project->path('AGENTS.md'));
+        $routerEnd = strpos($written, 'ROUTER-END-MARK');
+        self::assertNotFalse($routerEnd);
+        self::assertLessThan(32768, $routerEnd + strlen('ROUTER-END-MARK'));
+        self::assertLessThan(strpos($written, '# Jardis packages'), $routerEnd);
+        self::assertLessThan(strpos($written, 'source: jardisadapter/cache'), $routerEnd);
+    }
+
+    public function testSecondRunWithRouterIsByteIdentical(): void
+    {
+        $this->project->writeFile('AGENTS.md', "# User top\n");
+        $descriptors = [new AgentsDescriptor('jardisadapter/cache', 'Cache rules.')];
+        $aggregate = new AggregateAgentsMd(new Filesystem());
+
+        $aggregate($descriptors, $this->project->root, true, "# Router\nRoute here.");
+        $afterFirst = file_get_contents($this->project->path('AGENTS.md'));
+
+        $second = $aggregate($descriptors, $this->project->root, true, "# Router\nRoute here.");
+        $afterSecond = file_get_contents($this->project->path('AGENTS.md'));
+
+        self::assertSame($afterFirst, $afterSecond);
+        self::assertNull($second->backupPath);
+        self::assertSame(1, substr_count($afterSecond, 'Route here.'));
+    }
+
+    public function testWritesBlockWithRouterOnlyWhenNoDescriptorsAndNoCatalog(): void
+    {
+        $result = (new AggregateAgentsMd(new Filesystem()))([], $this->project->root, false, '# Router');
+
+        self::assertSame(0, $result->aggregatedCount);
+        $content = file_get_contents($this->project->path('AGENTS.md'));
+        self::assertStringContainsString('# Router', $content);
+        self::assertStringContainsString(AnalyzeAgentsMd::FOOTER, $content);
+    }
+
+    public function testDirectoryAtAgentsMdTargetFailsAsCoreError(): void
+    {
+        $this->project->mkdir('AGENTS.md');
+
+        $this->expectException(InstallFailedException::class);
+        (new AggregateAgentsMd(new Filesystem()))(
+            [new AgentsDescriptor('jardisadapter/cache', 'x')],
+            $this->project->root,
+            false,
+            '# Router',
+        );
+    }
 }

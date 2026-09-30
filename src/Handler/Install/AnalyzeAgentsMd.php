@@ -27,7 +27,8 @@ final class AnalyzeAgentsMd
      * Markers are recognised only when they stand alone on their own line —
      * an inline mention of the marker string inside a Markdown bullet or
      * code fence is treated as content, not as a marker. The plugin always
-     * writes markers on their own line.
+     * writes markers on their own line; a trailing CR (CRLF file) does not
+     * disqualify a marker line.
      */
     public function __invoke(string $filePath): AgentsMdAnalysis
     {
@@ -85,7 +86,7 @@ final class AnalyzeAgentsMd
      */
     private function matchLine(string $content, string $marker): array
     {
-        $pattern = '/^' . preg_quote($marker, '/') . '$/m';
+        $pattern = '/^' . preg_quote($marker, '/') . '\r?$/m';
         $matched = preg_match_all($pattern, $content, $matches, PREG_OFFSET_CAPTURE);
         if ($matched === false || $matched === 0) {
             return [];

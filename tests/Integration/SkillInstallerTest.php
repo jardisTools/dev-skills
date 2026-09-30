@@ -399,6 +399,39 @@ final class SkillInstallerTest extends TestCase
         self::assertSame([], $this->backupSiblings());
     }
 
+    public function testRouterFileOfThePluginOpensTheManagedBlock(): void
+    {
+        $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', "# Router\nRoute here.\n");
+
+        $report = $this->install();
+
+        $agents = file_get_contents($this->project->path('AGENTS.md'));
+        self::assertGreaterThan(strlen(AnalyzeAgentsMd::HEADER), strpos($agents, 'Route here.'));
+        self::assertLessThan(strpos($agents, '# Jardis packages'), strpos($agents, 'Route here.'));
+        self::assertLessThan(strpos($agents, 'Cache rules.'), strpos($agents, '# Jardis packages'));
+        self::assertSame([], $report->warnings());
+    }
+
+    public function testOversizedAgentsMdWarnsInReport(): void
+    {
+        $this->project->writeFile(
+            'vendor/jardisadapter/cache/AGENTS.md',
+            str_repeat("Cache rules line.\n", 2500),
+        );
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', "# Router\nRoute here.\n");
+
+        $report = $this->install();
+
+        $size = filesize($this->project->path('AGENTS.md'));
+        self::assertGreaterThan(32768, $size);
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString($size . ' bytes', $report->warnings()[0]);
+        self::assertStringContainsString('32768 bytes', $report->warnings()[0]);
+        self::assertStringContainsString('project_doc_max_bytes', $report->warnings()[0]);
+        self::assertLessThan(32768, strpos(file_get_contents($this->project->path('AGENTS.md')), 'Route here.'));
+    }
+
     public function testAggregatesToSingleManagedBlockWhenSourceHasOwnBlock(): void
     {
         // foundation aggregates kernel, whose committed AGENTS.md already carries
