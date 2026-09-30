@@ -847,6 +847,67 @@ final class SkillInstallerTest extends TestCase
         }
     }
 
+    public function testSelfSetEntriesSurviveSecondRun(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->project->writeFile('CLAUDE.md', "# Mine\n");
+        $this->project->writeFile('.gemini/settings.json', "{\n  \"theme\": \"dark\"\n}\n");
+        $installer = new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root);
+
+        $installer($this->project->root, $this->project->path('vendor'), '1.4.0');
+        $first = (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->manifest?->selfSet;
+        $claudeMd = (string) file_get_contents($this->project->path('CLAUDE.md'));
+        $gemini = (string) file_get_contents($this->project->path('.gemini/settings.json'));
+        $report = $installer($this->project->root, $this->project->path('vendor'), '1.4.0');
+        $second = (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->manifest?->selfSet;
+
+        self::assertSame(['.gemini/settings.json', 'CLAUDE.md'], array_keys($first ?? []));
+        self::assertEquals($first, $second);
+        self::assertFalse($second['CLAUDE.md']->fileCreated);
+        self::assertSame($claudeMd, file_get_contents($this->project->path('CLAUDE.md')));
+        self::assertSame($gemini, file_get_contents($this->project->path('.gemini/settings.json')));
+        self::assertSame([], $report->warnings());
+    }
+
+    public function testClaudeMdDirectoryInsteadOfFileWarnsAndRunContinues(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->project->mkdir('CLAUDE.md');
+        $this->project->writeFile('CLAUDE.md/keep.txt', 'kept');
+
+        $report = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root))(
+            $this->project->root,
+            $this->project->path('vendor'),
+            '1.4.0',
+        );
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('add-on "claude-md-import" failed and was skipped', $report->warnings()[0]);
+        self::assertSame(['foundation-alpha'], $report->installedSkills());
+        self::assertSame('kept', file_get_contents($this->project->path('CLAUDE.md/keep.txt')));
+        self::assertFileExists($this->project->path('.gemini/settings.json'), 'the next add-on still ran');
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->state);
+    }
+
+    public function testGeminiSettingsDirectoryInsteadOfFileWarnsAndRunContinues(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->project->writeFile('.gemini/settings.json/keep.txt', 'kept');
+
+        $report = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root))(
+            $this->project->root,
+            $this->project->path('vendor'),
+            '1.4.0',
+        );
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('add-on "gemini-context" failed and was skipped', $report->warnings()[0]);
+        self::assertSame(['foundation-alpha'], $report->installedSkills());
+        self::assertSame('kept', file_get_contents($this->project->path('.gemini/settings.json/keep.txt')));
+        self::assertFileExists($this->project->path('CLAUDE.md'), 'the other add-on still ran');
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->state);
+    }
+
     public function testInstallerHoldsNoBranching(): void
     {
         $source = (string) file_get_contents(dirname(__DIR__, 2) . '/src/SkillInstaller.php');

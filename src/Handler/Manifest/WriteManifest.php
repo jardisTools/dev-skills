@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Manifest;
 
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\SelfSetEntry;
 
 /**
  * Writes the manifest atomically: temp file in the target directory, then
- * rename. A failure leaves an existing manifest untouched and no temp file behind.
+ * rename. The optional `selfSet` field is written only when it holds something.
+ * A failure leaves an existing manifest untouched and no temp file behind.
  */
 final class WriteManifest
 {
@@ -17,12 +19,26 @@ final class WriteManifest
         $paths = $manifest->entries;
         ksort($paths, SORT_STRING);
 
+        $document = [
+            'schemaVersion' => $manifest->schemaVersion,
+            'pluginVersion' => $manifest->pluginVersion,
+            'paths' => (object) $paths,
+        ];
+        if ($manifest->selfSet !== []) {
+            $selfSet = $manifest->selfSet;
+            ksort($selfSet, SORT_STRING);
+            $document['selfSet'] = array_map(
+                static fn (SelfSetEntry $entry): array => [
+                    'fileCreated' => $entry->fileCreated,
+                    'before' => $entry->before,
+                    'after' => $entry->after,
+                ],
+                $selfSet,
+            );
+        }
+
         $json = json_encode(
-            [
-                'schemaVersion' => $manifest->schemaVersion,
-                'pluginVersion' => $manifest->pluginVersion,
-                'paths' => (object) $paths,
-            ],
+            $document,
             JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
         ) . "\n";
 

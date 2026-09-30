@@ -9,8 +9,8 @@ use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Handler\Support\WarnOnFailure;
 
 /**
- * Sub-orchestrator for the optional add-ons of an install run (nothing shipped
- * yet). Every add-on runs under WarnOnFailure: a failing add-on ends up as a
+ * Sub-orchestrator for the optional add-ons of an install run (the standard list is
+ * built in SkillInstaller). Every add-on runs under WarnOnFailure: a failing add-on ends up as a
  * warning in the report and never stops the run or the add-ons after it.
  */
 final class InstallAddons

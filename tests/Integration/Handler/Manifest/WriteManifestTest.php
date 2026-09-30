@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Tests\Integration\Handler\Manifest;
 
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestState;
+use JardisTools\DevSkills\Data\SelfSetEntry;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -40,6 +41,42 @@ final class WriteManifestTest extends TestCase
         self::assertSame(['.claude/skills/alpha', '.claude/skills/zeta'], array_keys($result->manifest->entries ?? []));
         self::assertSame($entries['.claude/skills/alpha'], $result->manifest->entries['.claude/skills/alpha']);
         self::assertSame([basename($path)], $this->siblings($path));
+    }
+
+    public function testSelfSetEntriesRoundTrip(): void
+    {
+        $path = $this->project->path(Manifest::FILE);
+        $selfSet = [
+            '.gemini/settings.json' => new SelfSetEntry(true, '', "\r\n  \"context\": {\"fileName\": [\"AGENTS.md\"]},"),
+            'CLAUDE.md' => new SelfSetEntry(false),
+        ];
+
+        (new WriteManifest())($path, new Manifest(1, '2.0.0', [], $selfSet));
+        $result = (new ReadManifest())($path, '2.0.0');
+
+        self::assertSame(ManifestState::Healthy, $result->state);
+        self::assertEquals($selfSet, $result->manifest?->selfSet);
+        self::assertSame(1, $result->manifest?->schemaVersion);
+    }
+
+    public function testManifestWithoutSelfSetWritesNoSuchField(): void
+    {
+        $path = $this->project->path(Manifest::FILE);
+
+        (new WriteManifest())($path, new Manifest(1, '2.0.0'));
+
+        self::assertStringNotContainsString('selfSet', (string) file_get_contents($path));
+        self::assertSame([], (new ReadManifest())($path, '2.0.0')->manifest?->selfSet);
+    }
+
+    public function testMalformedSelfSetMakesTheManifestDefective(): void
+    {
+        $path = $this->project->writeFile(
+            Manifest::FILE,
+            '{"schemaVersion":1,"pluginVersion":"2.0.0","paths":{},"selfSet":{"CLAUDE.md":{"fileCreated":"yes"}}}',
+        );
+
+        self::assertSame(ManifestState::Defective, (new ReadManifest())($path, '2.0.0')->state);
     }
 
     public function testFailedWriteKeepsOldManifestIntactAndLeavesNoTempFile(): void

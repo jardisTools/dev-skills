@@ -6,8 +6,11 @@ namespace JardisTools\DevSkills\Tests\Integration;
 
 use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\SkillInstaller;
 use JardisTools\DevSkills\SkillUninstaller;
+use JardisTools\DevSkills\UninstallAddons;
 use JardisTools\DevSkills\Tests\Support\TempProject;
 use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
@@ -106,5 +109,73 @@ final class SkillUninstallerTest extends TestCase
         self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
         self::assertFileExists($this->project->path(Manifest::FILE));
         self::assertStringContainsString('defective manifest', $report->warnings()[0]);
+    }
+
+    public function testUninstallRemovesBlockAndGeminiEntryBeforeManifestIsDeleted(): void
+    {
+        $pluginRepo = new TempProject('dev-skills-plugin-');
+        try {
+            $pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+            $claudeMd = "# Mine\n\nMy rules.\n";
+            $gemini = "{\n  \"theme\": \"dark\"\n}\n";
+            $this->project->writeFile('CLAUDE.md', $claudeMd);
+            $this->project->writeFile('.gemini/settings.json', $gemini);
+            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+                $this->project->root,
+                $this->project->path('vendor'),
+                '1.0.0',
+            );
+            self::assertNotSame($claudeMd, file_get_contents($this->project->path('CLAUDE.md')));
+            self::assertNotSame($gemini, file_get_contents($this->project->path('.gemini/settings.json')));
+
+            $report = (new SkillUninstaller())($this->project->root, '1.0.0');
+
+            self::assertSame([], $report->warnings());
+            self::assertSame($claudeMd, file_get_contents($this->project->path('CLAUDE.md')));
+            self::assertSame($gemini, file_get_contents($this->project->path('.gemini/settings.json')));
+            self::assertFileDoesNotExist($this->project->path(Manifest::FILE));
+            self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/foundation-alpha'));
+        } finally {
+            $pluginRepo->cleanup();
+        }
+    }
+
+    public function testUninstallDeletesWhatTheInstallCreated(): void
+    {
+        $pluginRepo = new TempProject('dev-skills-plugin-');
+        try {
+            $pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+                $this->project->root,
+                $this->project->path('vendor'),
+                '1.0.0',
+            );
+            self::assertFileExists($this->project->path('CLAUDE.md'));
+            self::assertFileExists($this->project->path('.gemini/settings.json'));
+
+            (new SkillUninstaller())($this->project->root, '1.0.0');
+
+            self::assertFileDoesNotExist($this->project->path('CLAUDE.md'));
+            self::assertFileDoesNotExist($this->project->path('.gemini/settings.json'));
+            self::assertDirectoryDoesNotExist($this->project->path('.gemini'));
+        } finally {
+            $pluginRepo->cleanup();
+        }
+    }
+
+    public function testFailingUninstallAddonOnlyWarnsAndTheRestOfTheUninstallRuns(): void
+    {
+        $this->project->writeFile('.claude/skills/adapter-cache/SKILL.md', 'x');
+        $addons = new UninstallAddons([
+            'demo' => static function (): void {
+                throw new \RuntimeException('cannot remove');
+            },
+        ]);
+
+        $report = (new SkillUninstaller(null, $addons))($this->project->root);
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('add-on "demo" failed and was skipped: cannot remove', $report->warnings()[0]);
+        self::assertSame(1, $report->removedSkillCount());
     }
 }
