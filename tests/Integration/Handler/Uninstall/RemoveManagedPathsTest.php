@@ -247,6 +247,36 @@ final class RemoveManagedPathsTest extends TestCase
         self::assertSame($before, TreeSnapshot::of($this->foreign->root));
     }
 
+    public function testWithoutManifestASymlinkedClaudeSkillsFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('skills/git-start-branch/SKILL.md', 'victim');
+        $this->foreign->writeFile('skills/adapter-cache/SKILL.md', 'victim');
+        $this->project->mkdir('.claude');
+        self::assertTrue(symlink($this->foreign->path('skills'), $this->project->path('.claude/skills')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertTrue(is_link($this->project->path('.claude/skills')));
+    }
+
+    public function testWithoutManifestASymlinkedVendorSkillFolderIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('victim/SKILL.md', 'victim');
+        $this->project->writeFile('.claude/skills/adapter-http/SKILL.md', 'vendor');
+        self::assertTrue(symlink($this->foreign->path('victim'), $this->project->path('.claude/skills/adapter-cache')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove(new ManifestReadResult(ManifestState::Missing));
+
+        self::assertSame(['adapter-http'], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertTrue(is_link($this->project->path('.claude/skills/adapter-cache')));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/adapter-http'));
+    }
+
     public function testDefectiveOrTooNewManifestRemovesNothing(): void
     {
         LegacyFixture::writeInstalledBundle($this->project, ['rules-architecture']);

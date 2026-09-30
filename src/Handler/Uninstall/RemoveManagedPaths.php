@@ -26,7 +26,10 @@ use JardisTools\DevSkills\Handler\Install\ResolveTargets;
  *   from RenamedSkills::MAPPING) plus vendor skills under the package prefixes in `.claude/skills`
  *   (1.3.x wrote nowhere else); in `.agents/skills` only the 18 current names, because that
  *   folder never held an old name (no release writes one there) and the vendor-prefix rule stays
- *   `.claude/skills`-only. Never a prefix match on the bundle areas;
+ *   `.claude/skills`-only. Never a prefix match on the bundle areas.
+ *   Every name, in both folders, passes the same ResolveManagedFolder rule as a manifest key:
+ *   a symlinked `.claude/skills` or `.agents/skills` folder, or a symlinked skill folder in
+ *   them, is never followed;
  * - defective or too new manifest: nothing.
  *
  * `.claude/.jardis-backup/` and all folders of the user stay.
@@ -111,30 +114,49 @@ final class RemoveManagedPaths
         $removed = [];
 
         foreach ([...array_keys(RenamedSkills::MAPPING), ...array_values(RenamedSkills::MAPPING)] as $name) {
-            if (is_dir($skillsDir . '/' . $name)) {
-                $this->remove($skillsDir . '/' . $name);
+            if ($this->removeIfManaged($realRoot, self::SKILLS_DIR . '/' . $name)) {
                 $removed[$name] = $name;
             }
         }
 
         $agentsKey = ResolveTargets::AGENTS_SKILLS_DIR;
         foreach (array_values(RenamedSkills::MAPPING) as $name) {
-            $folder = ($this->resolveManagedFolder)($realRoot, $agentsKey . '/' . $name);
-            if ($folder !== null && $folder !== '') {
-                $this->remove($folder);
+            if ($this->removeIfManaged($realRoot, $agentsKey . '/' . $name)) {
                 $removed[$name] = $name;
             }
         }
 
-        foreach (glob($skillsDir . '/*', GLOB_ONLYDIR) ?: [] as $entry) {
+        // Only a real `.claude/skills` folder is scanned; a symlinked one is never listed.
+        $entries = realpath($skillsDir) === $skillsDir && is_dir($skillsDir)
+            ? (glob($skillsDir . '/*', GLOB_ONLYDIR) ?: [])
+            : [];
+        foreach ($entries as $entry) {
             $name = basename($entry);
-            if ($this->hasVendorPrefix($name) && !str_ends_with($name, '.backup')) {
-                $this->remove($entry);
+            if (!$this->hasVendorPrefix($name) || str_ends_with($name, '.backup')) {
+                continue;
+            }
+            if ($this->removeIfManaged($realRoot, self::SKILLS_DIR . '/' . $name)) {
                 $removed[$name] = $name;
             }
         }
 
         return array_values($removed);
+    }
+
+    /**
+     * The only way a skill name becomes a file system path without a manifest: via the managed-folder rule.
+     *
+     * @return bool true when a folder was removed
+     */
+    private function removeIfManaged(string $realRoot, string $key): bool
+    {
+        $folder = ($this->resolveManagedFolder)($realRoot, $key);
+        if ($folder === null || $folder === '') {
+            return false;
+        }
+        $this->remove($folder);
+
+        return true;
     }
 
     private function hasVendorPrefix(string $name): bool
