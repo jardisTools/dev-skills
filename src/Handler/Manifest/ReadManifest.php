@@ -7,6 +7,7 @@ namespace JardisTools\DevSkills\Handler\Manifest;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
+use JardisTools\DevSkills\Data\SelfSetEntry;
 
 /**
  * Reads the manifest file and classifies it. Never throws on a broken file:
@@ -76,9 +77,14 @@ final class ReadManifest
             return $this->defective('manifest paths are malformed');
         }
 
+        $selfSet = $this->parseSelfSet($data['selfSet'] ?? []);
+        if ($selfSet === null) {
+            return $this->defective('manifest selfSet is malformed');
+        }
+
         return new ManifestReadResult(
             ManifestState::Healthy,
-            new Manifest($schemaVersion, $pluginVersion, $entries),
+            new Manifest($schemaVersion, $pluginVersion, $entries, $selfSet),
         );
     }
 
@@ -107,6 +113,32 @@ final class ReadManifest
         }
 
         return $entries;
+    }
+
+    /**
+     * @return array<string, SelfSetEntry>|null
+     */
+    private function parseSelfSet(mixed $selfSet): ?array
+    {
+        if (!is_array($selfSet)) {
+            return null;
+        }
+
+        $parsed = [];
+        foreach ($selfSet as $key => $entry) {
+            if (
+                !is_string($key)
+                || !is_array($entry)
+                || !is_bool($entry['fileCreated'] ?? null)
+                || !is_string($entry['before'] ?? null)
+                || !is_string($entry['after'] ?? null)
+            ) {
+                return null;
+            }
+            $parsed[$key] = new SelfSetEntry($entry['fileCreated'], $entry['before'], $entry['after']);
+        }
+
+        return $parsed;
     }
 
     private function defective(string $reason): ManifestReadResult

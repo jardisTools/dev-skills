@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\SelfSetEntry;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\StagedSkill;
 use JardisTools\DevSkills\Handler\Install\BuildManifestEntries;
@@ -98,6 +99,17 @@ final class BuildManifestEntriesTest extends TestCase
             $manifest->entries['.claude/skills/beta']['sha256'],
         );
         self::assertSame('jardis/dev-skills', $manifest->entries['.claude/skills/beta']['source']);
+    }
+
+    public function testCarriesSelfSetEntriesOverUnchanged(): void
+    {
+        $selfSet = ['CLAUDE.md' => new SelfSetEntry(true)];
+        $previous = new Manifest(Manifest::SCHEMA_VERSION, '1.4.0', [], $selfSet);
+
+        $manifest = $this->build($previous, []);
+
+        self::assertSame($selfSet, $manifest->selfSet);
+        self::assertSame([], $this->build(null, [])->selfSet);
     }
 
     /**

@@ -63,6 +63,22 @@ final class AnalyzeAgentsMdTest extends TestCase
         self::assertSame("\n\n# Footer\nAnother line.\n", $analysis->postBlock);
     }
 
+    public function testRecognisesMarkerLinesWithCrlf(): void
+    {
+        $path = $this->project->writeFile('AGENTS.md', sprintf(
+            "# Header\r\n\r\n%s\r\nmanaged\r\n%s\r\n\r\n# Footer\r\n",
+            AnalyzeAgentsMd::HEADER,
+            AnalyzeAgentsMd::FOOTER,
+        ));
+
+        $analysis = (new AnalyzeAgentsMd())($path);
+
+        self::assertTrue($analysis->hasManagedBlock);
+        self::assertFalse($analysis->healedDuplicateBlock);
+        self::assertSame("# Header\r\n\r\n", $analysis->preBlock);
+        self::assertSame("\r\n\r\n# Footer\r\n", $analysis->postBlock);
+    }
+
     public function testHealsNestedDuplicateBlock(): void
     {
         // The exact foundation regression: BEGIN BEGIN END END. The whole region

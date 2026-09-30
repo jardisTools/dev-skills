@@ -19,6 +19,7 @@ use Composer\Script\Event as ScriptEvent;
 use Composer\Script\ScriptEvents;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\Plugin;
+use JardisTools\DevSkills\Tests\Support\GitRepo;
 use JardisTools\DevSkills\Tests\Support\TempProject;
 use PHPUnit\Framework\TestCase;
 
@@ -36,6 +37,8 @@ final class PluginTest extends TestCase
 
         $this->originalCwd = $cwd;
         $this->project = new TempProject('dev-skills-plugin-');
+        // A real repository: the exclude block (P4.3) warns when the project has none.
+        GitRepo::init($this->project->root);
         chdir($this->project->root);
     }
 

@@ -20,18 +20,25 @@ final class BuildManagedBlock
         . 'For the full workflow from schema to implementation, start with the `start-orientation` skill.';
 
     /**
-     * Builds the managed-block string (header + intro + optional catalog pointer
-     * + sources + footer) that the plugin owns inside AGENTS.md. The returned
+     * Builds the managed-block string (header + optional router text + intro
+     * + optional catalog pointer + sources + footer) that the plugin owns inside
+     * AGENTS.md. The router text (including the pool pointer sentence) comes
+     * from the caller and stands between the BEGIN marker and the
+     * "Jardis packages" heading; this class adds nothing to it. The returned
      * string does NOT end with a trailing newline — the caller decides how to
      * splice it into the file.
      *
      * @param list<AgentsDescriptor> $descriptors
      */
-    public function __invoke(array $descriptors, bool $catalogInstalled = false): string
-    {
+    public function __invoke(
+        array $descriptors,
+        bool $catalogInstalled = false,
+        string $routerText = '',
+    ): string {
         $sections = [
             AnalyzeAgentsMd::HEADER,
             '',
+            ...($routerText !== '' ? [rtrim($routerText), ''] : []),
             '# Jardis packages — AI agent context',
             '',
             'Aggregated by `jardis/dev-skills`. Run `composer install` to refresh.',

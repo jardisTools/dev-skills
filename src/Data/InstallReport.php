@@ -18,6 +18,8 @@ final class InstallReport
 
     private bool $agentsMdHealed = false;
 
+    private bool $agentsMdCreated = false;
+
     /** @var list<string> */
     private array $removedBundledSkills = [];
 
@@ -91,6 +93,11 @@ final class InstallReport
         $this->agentsMdHealed = $healed;
     }
 
+    public function setAgentsMdCreated(bool $created): void
+    {
+        $this->agentsMdCreated = $created;
+    }
+
     public function installedSkillCount(): int
     {
         return count($this->installedSkills);
@@ -125,6 +132,14 @@ final class InstallReport
     public function agentsMdHealed(): bool
     {
         return $this->agentsMdHealed;
+    }
+
+    /**
+     * True when this run wrote AGENTS.md although no such file was there before.
+     */
+    public function agentsMdCreated(): bool
+    {
+        return $this->agentsMdCreated;
     }
 
     /**

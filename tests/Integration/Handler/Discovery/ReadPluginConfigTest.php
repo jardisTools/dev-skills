@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\PluginConfig;
+use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
 use PHPUnit\Framework\TestCase;
 
@@ -174,5 +175,56 @@ final class ReadPluginConfigTest extends TestCase
 
         self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('bundled-skills.exclude[0]', (string) $config->warning);
+    }
+
+    public function testProcessDocsDefaultsToCommitted(): void
+    {
+        foreach ([[], ['jardis/dev-skills' => []], ['jardis/dev-skills' => ['bundled-skills' => false]]] as $extra) {
+            $config = (new ReadPluginConfig())($extra);
+
+            self::assertSame(ProcessDocsMode::Committed, $config->processDocs);
+            self::assertNull($config->processDocsWarning);
+        }
+    }
+
+    public function testProcessDocsLocalIsRead(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['process-docs' => 'local']]);
+
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNull($config->processDocsWarning);
+        self::assertTrue($config->installAll, 'independent of bundled-skills');
+    }
+
+    public function testProcessDocsIsIndependentOfBundledSkills(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => ['plan-*'], 'process-docs' => 'committed'],
+        ]);
+
+        self::assertSame(ProcessDocsMode::Committed, $config->processDocs);
+        self::assertSame(['plan-*'], $config->includeGlobs);
+    }
+
+    public function testInvalidProcessDocsWarnsAndFallsBackToLocal(): void
+    {
+        foreach (['public', 42, true, ['local'], null] as $raw) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['process-docs' => $raw]]);
+
+            self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+            self::assertStringContainsString('process-docs', (string) $config->processDocsWarning);
+            self::assertStringContainsString('local', (string) $config->processDocsWarning);
+        }
+    }
+
+    public function testInvalidProcessDocsDoesNotDisturbBundledSkills(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => false, 'process-docs' => 'nonsense'],
+        ]);
+
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(self::MANDATORY_WARNING, $config->warning);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
     }
 }
