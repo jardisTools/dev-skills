@@ -83,6 +83,27 @@ final class PackagingTest extends TestCase
     }
 
     /**
+     * The pool check is delivered from `scripts/` (and linked as a Composer bin): it must ship, while the
+     * dev-only `bin/` folder stays out of the dist archive, and the Composer bin entry points at the shipped path.
+     */
+    public function testScriptsFolderIsShippedAndBinStaysExcluded(): void
+    {
+        foreach (['scripts', 'scripts/pool-check.php'] as $path) {
+            self::assertSame(
+                'unspecified',
+                $this->exportIgnore($path),
+                sprintf('"%s" must ship in the dist archive but is export-ignored.', $path),
+            );
+        }
+        self::assertSame('set', $this->exportIgnore('bin'), '"bin" is dev-only and must be export-ignored.');
+
+        $composer = json_decode((string) file_get_contents($this->pluginRoot . '/composer.json'), true);
+        self::assertIsArray($composer);
+        self::assertSame(['scripts/pool-check.php'], $composer['bin'] ?? null);
+        self::assertFileExists($this->pluginRoot . '/scripts/pool-check.php');
+    }
+
+    /**
      * Returns git's export-ignore verdict for $path: "set" or "unspecified".
      */
     private function exportIgnore(string $path): string

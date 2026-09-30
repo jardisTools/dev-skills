@@ -20,6 +20,16 @@ final class PoolViolation
     public const RULE_PAGE_BYTES      = 'page-bytes';
     public const RULE_PAGE_LINES      = 'page-lines';
     public const RULE_INDEX_BYTES     = 'index-bytes';
+    public const RULE_HEAD_MISSING    = 'head-missing';
+    public const RULE_HEAD_POSITION   = 'head-position';
+    public const RULE_HEAD_KEY        = 'head-key';
+    public const RULE_HEAD_PHASE      = 'head-phase';
+    public const RULE_HEAD_STAGE      = 'head-stage';
+    public const RULE_HEAD_DECISIONS  = 'head-decisions';
+    public const RULE_PROGRESS_LINES  = 'progress-lines';
+    public const RULE_PLAN_LINES      = 'plan-lines';
+    public const RULE_PLAN_SECTION    = 'plan-section-lines';
+    public const RULE_PLAN_BYTES      = 'plan-bytes';
 
     public function __construct(
         public readonly string $file,

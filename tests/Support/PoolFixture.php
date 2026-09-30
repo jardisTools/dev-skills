@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Support;
 
 use JardisTools\DevSkills\Data\PoolPage;
+use JardisTools\DevSkills\Data\VorhabenFile;
 use JardisTools\DevSkills\Handler\Pool\LoadPool;
+use JardisTools\DevSkills\Handler\Pool\LoadVorhaben;
 
 /**
  * Puts a fixture case of tests/Fixture/Pool/<case>/ into a temp project: `pool/` becomes
@@ -30,6 +32,22 @@ final class PoolFixture
         self::install($project, $case);
 
         return (new LoadPool())($project->root);
+    }
+
+    /**
+     * Installs a case and loads the files of its work folders, only those of one folder when one is named.
+     *
+     * @return list<VorhabenFile>
+     */
+    public static function loadVorhaben(TempProject $project, string $case, ?string $folder = null): array
+    {
+        self::install($project, $case);
+
+        return array_values(array_filter(
+            (new LoadVorhaben())($project->root),
+            static fn (VorhabenFile $file): bool => $folder === null
+                || str_starts_with($file->file, 'docs/vorhaben/' . $folder . '/'),
+        ));
     }
 
     /**

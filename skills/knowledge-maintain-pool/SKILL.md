@@ -41,7 +41,7 @@ Exactly five sections, in this order, with these literal German headings. The co
 | `## Ersetzt` | One line per replaced page id: what moved here, and where the rest went. |
 | `## Verweise` | Links to non-pool sources and `[[page]]` links to related pages. |
 
-An empty section is left out (no empty heading). Any other `##` heading is a violation.
+All five sections are mandatory, in this fixed order. An empty section carries a one-line placeholder (for example "Nothing yet."); the check script reports a missing heading. Any other `##` heading is a violation.
 
 ### 4. Caps
 
@@ -64,7 +64,7 @@ The pool is condensed, not appended to.
 
 ### 6. Check
 
-`php vendor/jardis/dev-skills/scripts/pool-check.php` checks the layout, the section order, the frontmatter and the caps; run it after every pool change and fix what it reports.
+`php vendor/jardis/dev-skills/scripts/pool-check.php` checks the sections and their order, the links and redirects, the path references and the size caps, and the head and size caps of the progress and plan files under `docs/vorhaben/`; it also runs as `vendor/bin/pool-check.php`, `--root=<dir>` names the project root and `--help` lists the options. Run it after every pool change and fix what it reports.
 
 ### 7. Reference
 

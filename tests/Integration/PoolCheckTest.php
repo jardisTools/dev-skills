@@ -78,6 +78,100 @@ final class PoolCheckTest extends TestCase
         }
     }
 
+    public function testChecksEveryVorhabenFolder(): void
+    {
+        $expected = [
+            'vorhaben-green'    => [],
+            'vorhaben-red-head' => [
+                'docs/vorhaben/decisions-form/PROGRESS.md' => ['head-decisions'],
+                'docs/vorhaben/decisions/PROGRESS.md'      => ['head-decisions'],
+                'docs/vorhaben/key-order/PROGRESS.md'      => ['head-key', 'head-key'],
+                'docs/vorhaben/long/PROGRESS.md'           => ['progress-lines'],
+                'docs/vorhaben/missing/PROGRESS.md'        => ['head-missing'],
+                'docs/vorhaben/phase/PROGRESS.md'          => ['head-phase'],
+                'docs/vorhaben/position/PROGRESS.md'       => ['head-position'],
+                'docs/vorhaben/stage-before/PROGRESS.md'   => ['head-stage'],
+                'docs/vorhaben/stage-from/PROGRESS.md'     => ['head-stage'],
+            ],
+            'vorhaben-red-plan' => [
+                'docs/vorhaben/plan-bytes/PLAN.md'               => ['plan-bytes'],
+                'docs/vorhaben/section-long/PLAN.md'             => ['plan-section-lines'],
+                'docs/vorhaben/stage-plan-bytes/PLAN-E1.md'      => ['plan-bytes'],
+                'docs/vorhaben/stage-plan-long/PLAN-E1.md'       => ['plan-lines'],
+            ],
+        ];
+
+        foreach ($expected as $case => $byFile) {
+            $project = new TempProject();
+            try {
+                PoolFixture::install($project, $case);
+                $found = [];
+                foreach ((new PoolCheck())($project->root, true)->violations as $violation) {
+                    $found[$violation->file][] = $violation->rule;
+                }
+                ksort($found);
+                ksort($byFile);
+
+                self::assertSame($byFile, $found, $case);
+            } finally {
+                $project->cleanup();
+            }
+        }
+    }
+
+    public function testPageTemplateKeepsTheFiveSectionsAndTheCaps(): void
+    {
+        $this->project->writeFile(
+            '.claude/wissen/example-topic.md',
+            (string) file_get_contents(__DIR__ . '/../../skills/knowledge-maintain-pool/templates/themenseite.md'),
+        );
+        $this->project->writeFile(
+            '.claude/wissen/INDEX.md',
+            (string) file_get_contents(__DIR__ . '/../../skills/knowledge-maintain-pool/templates/INDEX.md'),
+        );
+
+        $rules = array_map(
+            static fn ($v): string => $v->rule . ':' . $v->message,
+            (new PoolCheck())($this->project->root, true)->violations,
+        );
+
+        // the template names placeholders (`[[related-page]]`) on purpose; structure and caps must hold
+        self::assertSame([], array_values(array_filter(
+            $rules,
+            static fn (string $r): bool => !str_starts_with($r, 'link-dead:') && !str_starts_with($r, 'edge-dead:'),
+        )), implode("\n", $rules));
+    }
+
+    public function testNoVorhabenFolderIsNoViolation(): void
+    {
+        PoolFixture::install($this->project, 'green');
+        self::assertDirectoryDoesNotExist($this->project->path('docs/vorhaben'));
+
+        $result = (new PoolCheck())($this->project->root, true);
+
+        self::assertSame([], $result->violations);
+
+        $this->project->mkdir('docs/vorhaben');
+        $this->project->writeFile('docs/vorhaben/no-files/notes.txt', "not a work file\n");
+
+        self::assertSame([], (new PoolCheck())($this->project->root, true)->violations);
+    }
+
+    public function testVorhabenFolderBehindLinkIsNotFollowed(): void
+    {
+        $outside = new TempProject();
+        try {
+            $outside->writeFile('demo/PROGRESS.md', "# Progress\n\n## Notes\n");
+            PoolFixture::install($this->project, 'green');
+            $this->project->mkdir('docs');
+            symlink($outside->root, $this->project->path('docs/vorhaben'));
+
+            self::assertSame([], (new PoolCheck())($this->project->root, true)->violations);
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
     public function testExitNonZeroOnViolationAndZeroOnGreen(): void
     {
         PoolFixture::install($this->project, 'green');

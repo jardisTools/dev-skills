@@ -51,6 +51,27 @@ final class PoolCheckScriptTest extends TestCase
         }
     }
 
+    public function testHelpExitsZeroWithoutProjectAutoload(): void
+    {
+        PoolFixture::copyTree($this->pluginRoot . '/scripts', $this->project->path('plugin/scripts'));
+        PoolFixture::copyTree($this->pluginRoot . '/src', $this->project->path('plugin/src'));
+        self::assertDirectoryDoesNotExist($this->project->path('vendor'));
+        self::assertFileDoesNotExist($this->project->path('.claude/wissen/INDEX.md'));
+
+        $help = RunScript::run($this->project->path('plugin/scripts/pool-check.php'), $this->project->root, ['--help']);
+        $late = RunScript::run(
+            $this->project->path('plugin/scripts/pool-check.php'),
+            $this->project->root,
+            ['--root=' . $this->project->root, '--help'],
+        );
+
+        self::assertSame(0, $help['exit']);
+        self::assertStringContainsString('usage: php pool-check.php [--root=<dir>] [--help]', $help['stdout']);
+        self::assertStringContainsString('--root=<dir>', $help['stdout']);
+        self::assertSame('', $help['stderr']);
+        self::assertSame($help, $late);
+    }
+
     public function testScriptRunsInTempProjectWithoutVendorWithSameExitAndLines(): void
     {
         PoolFixture::install($this->project, 'red-links');
