@@ -17,11 +17,8 @@ namespace JardisTools\DevSkills\Handler\Validate;
  * agent follows it. A number keyword (digits only) must appear as a whole
  * number; any other keyword is a literal, case-sensitive substring.
  *
- * Transition behaviour: the process skills are added in later steps of the
- * 1.4.0 release. While `$skipMissingSkills` is true (default), a skill from
- * the tables whose SKILL.md does not exist in the checked skills root is
- * skipped. Dropping this parameter (missing skill becomes a violation) is
- * part of the step that ships the last process skill.
+ * A skill from the tables whose SKILL.md does not exist in the checked skills
+ * root is a violation: every marker and cap figure is mandatory.
  */
 final class CheckRuleMarkers
 {
@@ -60,10 +57,6 @@ final class CheckRuleMarkers
         'process-verify' => ['5', '3'],
     ];
 
-    public function __construct(private readonly bool $skipMissingSkills = true)
-    {
-    }
-
     /**
      * @param list<string>|null $only restrict the check to these skill names (null = all skills of the tables)
      * @return array<string, list<string>> skill name => violations; skills without violations are absent
@@ -80,9 +73,7 @@ final class CheckRuleMarkers
 
             $file = $skillsRoot . '/' . $skill . '/SKILL.md';
             if (!is_file($file)) {
-                if (!$this->skipMissingSkills) {
-                    $result[$skill] = ['skill is missing, it must carry its rule markers and caps'];
-                }
+                $result[$skill] = ['skill is missing, it must carry its rule markers and caps'];
                 continue;
             }
 

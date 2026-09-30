@@ -18,6 +18,9 @@ that) would only fragment the routing table this skill exists to provide.
 
 ### 1. The four phases
 
+The lifecycle of a Jardis project runs **packages → schema → design → code**:
+
+
 1. **Discover** — before hand-building any infrastructure piece (cache, queue, HTTP client,
    validation, …), check whether a Jardis package already covers it. → `packages-find-existing`.
 2. **Schema** — model the domain's tables from a plain-text idea, or introspect an existing
@@ -72,8 +75,46 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `design-headless-mcp` |
 | Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `design-headless-mcp` |
 | Guard a Command with a business Rule, declare a BC's `Closures.json` catalog+bindings, or drive Closure rename/delete/duplicate — headless | `design-headless-mcp` |
+| Learn the working principles of every task: skill first, then source, then ask; verify instead of guessing | `foundation-working-principles` |
+| Write or review PHP 8.3 code: strict types, PSR-4, Closure-Orchestrator form, test naming | `foundation-php` |
+| Review a change for typing, security, error handling, API, performance before it is committed | `code-review-change` |
+| Start a branch, commit, push and open a pull request, check repository compliance, or set up a new repository | `git-start-branch`, `git-commit-change`, `git-push-and-open-pr`, `git-check-compliance`, `git-setup-repository` |
+| Keep decisions, pitfalls and current facts in a knowledge pool under `.claude/wissen/` | `knowledge-maintain-pool`, `knowledge-record-decision` |
+| Decide how much process a task needs, or what to offer at the end of a chat | `process-choose-tier` |
+| Learn what the environment already does before proposing something new | `process-check-existing` |
+| Run an undertaking: concept, PRD, plan, stage runs, verification, close, or continue one | see section 5 |
 
-### 4. Reference
+### 4. Tiers — how much process a task needs
+
+Pick the lowest tier that fits and name it in one line. Process is a means against size and risk, not a default. The rules and the escalation rule are in `process-choose-tier`.
+
+| Tier | Task | How |
+|---|---|---|
+| **0 Answer** | A question, an explanation, a comment, a typo | Answer directly |
+| **1 Single action** | One thing in one place, no open decision | Do it yourself, without apparatus |
+| **2 Small assignment** | One big or isolated thing, or several subtasks | One sub-agent per subtask; you supervise and verify |
+| **3 Undertaking** | Open decision, dependent steps, new architecture, public API, data, security | The full process in stages 0 to 4 (section 5) |
+
+Before proposing anything new at tier 2 or 3, run `process-check-existing`.
+
+### 5. The process phases and their skill
+
+An undertaking (tier 3) runs in five stages. Every stage has one skill; each names the next.
+
+| Stage | What happens | Skill |
+|---|---|---|
+| 0 Concept | Interview, target picture, human approval, project folder with progress file | `process-concept` |
+| 1 PRD | Requirements on top of the picture, one review board, human confirmation | `process-write-prd` |
+| 2 Plan | Stages and phases with acceptance criteria, one review board, human release | `process-write-plan` |
+| 3 Build | One brief per phase, implementers in fresh sessions, QA gates, merge | `process-run-stage` |
+| 3 Check | One blind verifier per stage, one acceptance gate at the end | `process-verify` |
+| 4 Close | Triage, lessons into the pool, digest, delete the project folder | `process-close` |
+
+Supporting skills: `process-review-board` (the review roles and their sources), `process-resume` (continue a running undertaking in a fresh session), `knowledge-record-decision` (record a decision in the pool).
+
+The reviewer roles of the process — requirements, design, frontend, stage verifier, acceptance gate, open-question gate, failure diagnosis, existing-capability check — are sources in `process-review-board`; the role list is given there.
+
+### 6. Reference
 
 - Full Tool/Resource surface for headless driving: `design-headless-mcp`.
 - Werkzeugkasten (which package skill answers "how do I cache / send mail / …"):

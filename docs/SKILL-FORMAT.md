@@ -320,4 +320,4 @@ Keywords are literal, case-sensitive substrings of the skill text (English); wri
 | `process-run-stage` | implementer brief size, commitments per brief, context per brief | `6 KB`, `8`, `30 KB` |
 | `process-verify` | verdict items, red evidence items | `5`, `3` |
 
-The two tables live as constants in `CheckRuleMarkers` (`RULES`, `CAPS`). While the process skills are still being added to the bundle, a skill from the tables whose `SKILL.md` does not exist is skipped; once the last one ships, a missing skill is a violation as well.
+The two tables live as constants in `CheckRuleMarkers` (`RULES`, `CAPS`). Every marker and every cap figure is mandatory: a skill from the tables whose `SKILL.md` does not exist in the checked skills root is a violation, not skipped.

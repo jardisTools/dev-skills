@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Handler\Uninstall;
 
 use Closure;
 use Composer\Util\Filesystem;
+use JardisTools\DevSkills\Data\BundleSkills;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
@@ -22,11 +23,11 @@ use JardisTools\DevSkills\Handler\Install\ResolveTargets;
  *   A key is honoured only as a relative `.claude/skills/<name>` or `.agents/skills/<name>` of the
  *   project whose real path is exactly that location; anything else (absolute, `..`, foreign folder,
  *   symlink) is ignored with a warning;
- * - no manifest: the fixed list of the 18 old bundle names and the 18 names they carry now (both
- *   from RenamedSkills::MAPPING) plus vendor skills under the package prefixes in `.claude/skills`
- *   (1.3.x wrote nowhere else); in `.agents/skills` only the 18 current names, because that
- *   folder never held an old name (no release writes one there) and the vendor-prefix rule stays
- *   `.claude/skills`-only. Never a prefix match on the bundle areas.
+ * - no manifest: the fixed list of the 18 old bundle names (RenamedSkills::MAPPING keys) and all
+ *   33 current bundle names (BundleSkills::NAMES) plus vendor skills under the package prefixes
+ *   in `.claude/skills` (1.3.x wrote nowhere else); in `.agents/skills` only the 33 current names,
+ *   because that folder never held an old name (no release writes one there) and the
+ *   vendor-prefix rule stays `.claude/skills`-only. Never a prefix match on the bundle areas.
  *   Every name, in both folders, passes the same ResolveManagedFolder rule as a manifest key:
  *   a symlinked `.claude/skills` or `.agents/skills` folder, or a symlinked skill folder in
  *   them, is never followed;
@@ -113,14 +114,14 @@ final class RemoveManagedPaths
         $skillsDir = $realRoot . '/' . self::SKILLS_DIR;
         $removed = [];
 
-        foreach ([...array_keys(RenamedSkills::MAPPING), ...array_values(RenamedSkills::MAPPING)] as $name) {
+        foreach ([...array_keys(RenamedSkills::MAPPING), ...BundleSkills::NAMES] as $name) {
             if ($this->removeIfManaged($realRoot, self::SKILLS_DIR . '/' . $name)) {
                 $removed[$name] = $name;
             }
         }
 
         $agentsKey = ResolveTargets::AGENTS_SKILLS_DIR;
-        foreach (array_values(RenamedSkills::MAPPING) as $name) {
+        foreach (BundleSkills::NAMES as $name) {
             if ($this->removeIfManaged($realRoot, $agentsKey . '/' . $name)) {
                 $removed[$name] = $name;
             }
