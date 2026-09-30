@@ -70,7 +70,7 @@ final class ValidateSkillMdTest extends TestCase
         $errors = (new ValidateSkillMd())($path);
 
         self::assertContains(
-            "frontmatter: invalid zone 'invalid-zone-name', must be one of: crosscut, pre, post-reference, post-active, discovery",
+            "frontmatter: invalid zone 'invalid-zone-name', must be one of: crosscut, pre, post-reference, post-active, discovery, process",
             $errors,
         );
     }
@@ -163,6 +163,27 @@ final class ValidateSkillMdTest extends TestCase
         self::assertSame([], $errors);
     }
 
+    public function testAcceptsProcessZoneWithPersonaO(): void
+    {
+        $path = $this->writeSkill('process-demo', $this->validSkill('process-demo', 'process', 'O'));
+
+        $errors = (new ValidateSkillMd())($path);
+
+        self::assertSame([], $errors);
+    }
+
+    public function testProcessZoneAllows250LinesAndRejects251(): void
+    {
+        $atBudget = $this->skillWithLineCount('process-at-budget', 'process', 250);
+        $overBudget = $this->skillWithLineCount('process-over-budget', 'process', 251);
+
+        self::assertSame([], (new ValidateSkillMd())($this->writeSkill('process-at-budget', $atBudget)));
+        $this->assertSomeErrorMatches(
+            (new ValidateSkillMd())($this->writeSkill('process-over-budget', $overBudget)),
+            '/length: 251 lines exceeds budget of 250 for zone \'process\'/',
+        );
+    }
+
     public function testReportsArrayFieldsNotBeingArrays(): void
     {
         $content = "---\nname: arrays\ndescription: A short description.\nzone: crosscut\npersona: C\nprerequisites: not-an-array\nnext: also-not\n---\n\n### 1. Topic\n\nBody.\n";
@@ -181,7 +202,7 @@ final class ValidateSkillMdTest extends TestCase
         $errors = (new ValidateSkillMd())($path);
 
         self::assertContains(
-            "frontmatter: invalid persona 'E', must be one of: A, C, D, X",
+            "frontmatter: invalid persona 'E', must be one of: A, C, D, X, O",
             $errors,
         );
     }
@@ -191,7 +212,7 @@ final class ValidateSkillMdTest extends TestCase
      */
     public static function allowedPersonasProvider(): array
     {
-        return [['A'], ['C'], ['D'], ['X']];
+        return [['A'], ['C'], ['D'], ['X'], ['O']];
     }
 
     #[DataProvider('allowedPersonasProvider')]
@@ -296,6 +317,17 @@ final class ValidateSkillMdTest extends TestCase
     {
         return $this->validFrontmatter($name, $zone, $persona)
             . "### 1. Topic\n\nBody.\n\n### 2. Reference\n\n- ref.\n";
+    }
+
+    /**
+     * Builds a skill whose line count (substr_count + 1) is exactly $lines.
+     */
+    private function skillWithLineCount(string $name, string $zone, int $lines): string
+    {
+        $base = $this->validFrontmatter($name, $zone, 'O') . "### 1. Topic\n";
+        $pad  = $lines - (substr_count($base, "\n") + 1);
+
+        return $base . str_repeat("a body line\n", $pad);
     }
 
     private function skillWithDescription(string $name, string $zone, string $description): string
