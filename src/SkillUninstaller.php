@@ -17,7 +17,7 @@ use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
 
 final class SkillUninstaller
 {
-    /** @var Closure(string, ManifestReadResult): list<string> */
+    /** @var Closure(string, ManifestReadResult, UninstallReport): list<string> */
     private readonly Closure $removeManagedPaths;
 
     /** @var Closure(string, string): ManifestReadResult */
@@ -59,7 +59,7 @@ final class SkillUninstaller
         $read = ($this->readManifest)($projectRoot . '/' . Manifest::FILE, $pluginVersion);
         $report->addWarningIfAny($read->warning);
 
-        foreach (($this->removeManagedPaths)($projectRoot, $read) as $name) {
+        foreach (($this->removeManagedPaths)($projectRoot, $read, $report) as $name) {
             $report->addRemovedSkill($name);
         }
 

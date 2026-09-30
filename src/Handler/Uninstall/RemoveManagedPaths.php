@@ -9,13 +9,17 @@ use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\RenamedSkills;
+use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Exception\UninstallFailedException;
 
 /**
  * Removes exactly what the plugin manages, never anything by name pattern of
  * the bundle areas:
  *
- * - healthy manifest: the skill folders it lists (in every target folder), then the manifest;
+ * - healthy manifest: the skill folders it lists (in every target folder), then the manifest.
+ *   A key is honoured only as a relative `.claude/skills/<name>` or `.agents/skills/<name>` of the
+ *   project whose real path is exactly that location; anything else (absolute, `..`, foreign folder,
+ *   symlink) is ignored with a warning;
  * - no manifest (1.3.x install): the fixed list of the old bundle names plus vendor skills
  *   under the package prefixes, in `.claude/skills` only (1.3.x wrote nowhere else);
  * - defective or too new manifest: nothing.
@@ -25,7 +29,7 @@ use JardisTools\DevSkills\Exception\UninstallFailedException;
 final class RemoveManagedPaths
 {
     private const SKILLS_DIR = '.claude/skills';
-    private const SKILLS_FOLDER_NAME = 'skills';
+    private const MANAGED_KEY_PATTERN = '#^\.(?:claude|agents)/skills/(?!\.\.?$)[^/\0]+$#';
 
     /** @var list<string> */
     private const VENDOR_PREFIXES = ['adapter-', 'core-', 'support-', 'tools-'];
@@ -37,7 +41,7 @@ final class RemoveManagedPaths
     /**
      * @return list<string> names of the removed skills, each once
      */
-    public function __invoke(string $projectRoot, ManifestReadResult $manifest): array
+    public function __invoke(string $projectRoot, ManifestReadResult $manifest, UninstallReport $report): array
     {
         $realRoot = realpath($projectRoot);
         if ($realRoot === false) {
@@ -45,7 +49,11 @@ final class RemoveManagedPaths
         }
 
         return match ($manifest->state) {
-            ManifestState::Healthy => $this->removeManifestPaths($realRoot, $manifest->manifest->entries ?? []),
+            ManifestState::Healthy => $this->removeManifestPaths(
+                $realRoot,
+                $manifest->manifest->entries ?? [],
+                $report,
+            ),
             ManifestState::Missing => $this->removeByFixedList($realRoot),
             ManifestState::Defective, ManifestState::TooNew => [],
         };
@@ -55,16 +63,21 @@ final class RemoveManagedPaths
      * @param array<string, array{source: string, sha256: string}> $entries
      * @return list<string>
      */
-    private function removeManifestPaths(string $realRoot, array $entries): array
+    private function removeManifestPaths(string $realRoot, array $entries, UninstallReport $report): array
     {
         $removed = [];
 
         foreach (array_keys($entries) as $key) {
-            if (!$this->isSkillFolderKey($key)) {
+            $key = (string) $key;
+            $path = $this->resolveManagedFolder($realRoot, $key);
+            if ($path === null) {
+                $report->addWarningIfAny(sprintf(
+                    'Ignored manifest entry "%s": not a skill folder inside the project.',
+                    $key,
+                ));
                 continue;
             }
-            $path = str_starts_with($key, '/') ? $key : $realRoot . '/' . $key;
-            if (!is_dir($path)) {
+            if ($path === '') {
                 continue;
             }
 
@@ -107,12 +120,21 @@ final class RemoveManagedPaths
     }
 
     /**
-     * A manifest key must point at a folder directly inside a `skills` folder
-     * and must not climb out of the project (a tampered manifest deletes nothing else).
+     * @return string|null the folder to delete, '' when it does not exist (nothing to do),
+     *                     null when the key is not a safe skill folder of this project
      */
-    private function isSkillFolderKey(string $key): bool
+    private function resolveManagedFolder(string $realRoot, string $key): ?string
     {
-        return !in_array('..', explode('/', $key), true) && basename(dirname($key)) === self::SKILLS_FOLDER_NAME;
+        if (preg_match(self::MANAGED_KEY_PATTERN, $key) !== 1) {
+            return null;
+        }
+
+        $path = $realRoot . '/' . $key;
+        if (!file_exists($path) && !is_link($path)) {
+            return '';
+        }
+
+        return realpath($path) === $path && is_dir($path) ? $path : null;
     }
 
     private function hasVendorPrefix(string $name): bool

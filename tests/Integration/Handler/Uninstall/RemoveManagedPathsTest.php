@@ -9,6 +9,7 @@ use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\RenamedSkills;
+use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -20,15 +21,20 @@ final class RemoveManagedPathsTest extends TestCase
     private const SUM = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     private TempProject $project;
+    private TempProject $foreign;
+    private UninstallReport $report;
 
     protected function setUp(): void
     {
         $this->project = new TempProject();
+        $this->foreign = new TempProject('dev-skills-foreign-');
+        $this->report = new UninstallReport();
     }
 
     protected function tearDown(): void
     {
         $this->project->cleanup();
+        $this->foreign->cleanup();
     }
 
     public function testHealthyManifestRemovesExactlyItsPathsInBothFoldersAndTheManifest(): void
@@ -63,6 +69,79 @@ final class RemoveManagedPathsTest extends TestCase
         self::assertSame($userBefore, TreeSnapshot::of($this->project->path('.claude/skills/adapter-mine')));
         self::assertFileDoesNotExist($this->project->path(Manifest::FILE));
         self::assertFileExists($this->project->path('.claude/.jardis-backup/adapter-cache/SKILL.md'));
+    }
+
+    public function testAbsoluteKeyIsNeverDeletedEvenInsideASkillsFolder(): void
+    {
+        $victim = $this->foreign->writeFile('elsewhere/skills/victim/SKILL.md', 'victim');
+        $this->project->writeFile('.claude/skills/adapter-cache/SKILL.md', 'managed');
+        $victimBefore = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove($this->healthy([
+            dirname($victim),
+            $this->project->path('.claude/skills/adapter-cache'),
+            '/' . ltrim($this->project->root, '/') . '/.agents/skills/none',
+        ]));
+
+        self::assertSame([], $removed);
+        self::assertSame($victimBefore, TreeSnapshot::of($this->foreign->root));
+        self::assertFileExists($this->project->path('.claude/skills/adapter-cache/SKILL.md'));
+        self::assertCount(3, $this->report->warnings());
+    }
+
+    public function testSymlinkedSkillFolderPointingOutsideIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('victim/SKILL.md', 'victim');
+        $this->project->mkdir('.claude/skills');
+        self::assertTrue(symlink($this->foreign->path('victim'), $this->project->path('.claude/skills/adapter-cache')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove($this->healthy(['.claude/skills/adapter-cache']));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertTrue(is_link($this->project->path('.claude/skills/adapter-cache')));
+        self::assertCount(1, $this->report->warnings());
+    }
+
+    public function testSymlinkedSkillsFolderPointingOutsideIsNotFollowed(): void
+    {
+        $this->foreign->writeFile('skills/adapter-cache/SKILL.md', 'victim');
+        $this->project->mkdir('.claude');
+        self::assertTrue(symlink($this->foreign->path('skills'), $this->project->path('.claude/skills')));
+        $before = TreeSnapshot::of($this->foreign->root);
+
+        $removed = $this->remove($this->healthy(['.claude/skills/adapter-cache']));
+
+        self::assertSame([], $removed);
+        self::assertSame($before, TreeSnapshot::of($this->foreign->root));
+        self::assertCount(1, $this->report->warnings());
+    }
+
+    public function testKeysWithParentSegmentsOrForeignFoldersDeleteNothing(): void
+    {
+        foreach (['docs/keep', 'outside/skills/victim', '.claude/other/adapter-cache', '.claude/skills/nested/deep',
+            '.claude/skills/adapter-cache/sub'] as $folder) {
+            $this->project->writeFile($folder . '/SKILL.md', $folder);
+        }
+        $before = TreeSnapshot::of($this->project->root);
+
+        $removed = $this->remove($this->healthy([
+            '.claude/skills/../../docs/keep',
+            '.claude/skills/..',
+            '.claude/skills/.',
+            'outside/skills/victim',
+            '.claude/other/adapter-cache',
+            '.claude/skills/nested/deep',
+            '.claude/skills/adapter-cache/sub',
+            '.claude/skills/',
+            'skills/x',
+        ]));
+
+        self::assertSame([], $removed);
+        self::assertCount(9, $this->report->warnings());
+        // Only the manifest-less tree is compared: the (absent) manifest file is deleted by design.
+        self::assertSame($before, TreeSnapshot::of($this->project->root));
     }
 
     public function testManifestKeysOutsideSkillFoldersOrClimbingOutAreIgnored(): void
@@ -159,6 +238,6 @@ final class RemoveManagedPathsTest extends TestCase
      */
     private function remove(ManifestReadResult $manifest): array
     {
-        return (new RemoveManagedPaths(new Filesystem()))($this->project->root, $manifest);
+        return (new RemoveManagedPaths(new Filesystem()))($this->project->root, $manifest, $this->report);
     }
 }

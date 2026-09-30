@@ -9,7 +9,6 @@ use Composer\Util\Filesystem;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
-use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\SkillSelection;
@@ -34,6 +33,7 @@ use JardisTools\DevSkills\Handler\Install\ResolveTargets;
 use JardisTools\DevSkills\Handler\Install\StageSkills;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
+use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 
 /**
@@ -73,6 +73,9 @@ final class InstallSkills
     /** @var Closure(string, string): ManifestReadResult */
     private readonly Closure $readManifest;
 
+    /** @var Closure(ManifestReadResult): ?Manifest */
+    private readonly Closure $selectPreviousManifest;
+
     /** @var Closure(list<SkillDescriptor>, list<string>, string): list<StagedSkill> */
     private readonly Closure $stageSkills;
 
@@ -107,6 +110,7 @@ final class InstallSkills
         $copySkill = (new CopySkill($filesystem))->__invoke(...);
         $checksum = (new ChecksumDirectory())->__invoke(...);
         $this->readManifest = (new ReadManifest())->__invoke(...);
+        $this->selectPreviousManifest = (new SelectPreviousManifest())->__invoke(...);
         $this->stageSkills = (new StageSkills($filesystem, $copySkill))->__invoke(...);
         $findFreeBackupDir = (new FindFreeBackupDir(
             static fn (): \DateTimeImmutable => new \DateTimeImmutable(),
@@ -143,10 +147,8 @@ final class InstallSkills
 
         $manifestPath = $projectRoot . '/' . Manifest::FILE;
         $read = ($this->readManifest)($manifestPath, $pluginVersion);
-        if ($read->warning !== '') {
-            $report->addWarning($read->warning);
-        }
-        $previous = $read->state === ManifestState::Healthy ? $read->manifest : null;
+        $report->addWarningIfAny($read->warning);
+        $previous = ($this->selectPreviousManifest)($read);
         $staleKeys = ($this->computeStaleBundledSkills)($previous, $selection->skills);
 
         $targets = ($this->resolveTargets)($projectRoot);

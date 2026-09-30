@@ -758,6 +758,16 @@ final class SkillInstallerTest extends TestCase
         self::assertStringNotContainsString('if (', $source);
     }
 
+    public function testInstallSkillsOrchestratorHoldsNoBranching(): void
+    {
+        $source = (string) file_get_contents(dirname(__DIR__, 2) . '/src/InstallSkills.php');
+
+        self::assertStringNotContainsString('if (', $source);
+        self::assertDoesNotMatchRegularExpression('/\s\?\s/', $source, 'ternary operator');
+        self::assertStringNotContainsString('match (', $source);
+        self::assertStringNotContainsString('switch (', $source);
+    }
+
     /**
      * @return array<string, string> relative path => sha1 of content, for both skill roots
      */
