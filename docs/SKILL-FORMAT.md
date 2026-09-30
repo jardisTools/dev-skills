@@ -303,6 +303,7 @@ Behaviour rules of the `process` skills are stated as literal text, not only as 
 |---|---|---|
 | `process-choose-tier` | `chat-end-offer` | `create a project folder?`, `docs/vorhaben/`, `carry knowledge into the pool?` |
 | `process-choose-tier` | `tier-escalate` | `only with a named reason`, `the lower tier`, `two or more subtasks are never` |
+| `process-choose-tier` | `decide-yourself-no-tier-drop` | `lowers no tier`, `waives no gate` |
 | `process-run-stage` | `fresh-session-per-stage` | `fresh agent session` |
 | `process-run-stage` | `failure-path` | `fix run`, `follow-up run`, `STOPP:` |
 | `process-run-stage` | `question-points` | `at most 2 question points`, `STOPP:` |

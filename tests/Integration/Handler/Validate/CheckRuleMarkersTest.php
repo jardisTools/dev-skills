@@ -22,7 +22,7 @@ final class CheckRuleMarkersTest extends TestCase
         $this->project->cleanup();
     }
 
-    public function testTableCoversTheSevenMarkersOfTheProcessRules(): void
+    public function testTableCoversTheMarkersOfTheProcessRules(): void
     {
         $markers = [];
         foreach (CheckRuleMarkers::RULES as $skill => $rules) {
@@ -34,6 +34,7 @@ final class CheckRuleMarkersTest extends TestCase
 
         self::assertSame([
             'process-choose-tier:chat-end-offer',
+            'process-choose-tier:decide-yourself-no-tier-drop',
             'process-choose-tier:tier-escalate',
             'process-concept:pool-scaffold',
             'process-concept:project-profile',
@@ -41,7 +42,7 @@ final class CheckRuleMarkersTest extends TestCase
             'process-run-stage:failure-path',
             'process-run-stage:fresh-session-per-stage',
             'process-run-stage:question-points',
-        ], $markers); // seven rules, question-points lives in two skills
+        ], $markers); // eight rules (E7 P7.3 added decide-yourself-no-tier-drop), question-points lives in two skills
     }
 
     public function testKeywordsAreTheEnglishPhrasesOfTheFormatDoc(): void
@@ -51,6 +52,7 @@ final class CheckRuleMarkersTest extends TestCase
             'process-choose-tier' => [
                 'chat-end-offer' => ['create a project folder?', 'docs/vorhaben/', 'carry knowledge into the pool?'],
                 'tier-escalate' => ['only with a named reason', 'the lower tier', 'two or more subtasks are never'],
+                'decide-yourself-no-tier-drop' => ['lowers no tier', 'waives no gate'],
             ],
             'process-run-stage' => [
                 'fresh-session-per-stage' => ['fresh agent session'],

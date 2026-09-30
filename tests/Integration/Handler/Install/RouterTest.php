@@ -20,6 +20,18 @@ final class RouterTest extends TestCase
 {
     private const POOL_SENTENCE = 'Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht';
     private const MAX_BYTES = 4096;
+    /**
+     * Keywords of the three tier sentences (E7 P7.3, smoke run 1): tier-3 precedence,
+     * load duty for `process-choose-tier`, delegation at tier 2. They must stand in the
+     * paragraph before "## Tiers", which every session reads.
+     */
+    public const TIER_RULE_KEYWORDS = [
+        'tier 3' => 'Tier 3 is not a judgement call',
+        'process-concept' => '`process-concept`',
+        'process-choose-tier' => 'only after loading `process-choose-tier`',
+        'sub-agent' => 'delegates every subtask to a sub-agent',
+        'never implements' => 'never implements itself',
+    ];
     private const FIRST_32_KIB = 32768;
     private const AREA_PREFIXES = [
         'start-', 'packages-', 'design-', 'generated-code-', 'foundation-', 'git-', 'knowledge-', 'process-', 'code-review-',
@@ -55,6 +67,18 @@ final class RouterTest extends TestCase
     {
         self::assertSame(1, substr_count($this->router(), self::POOL_SENTENCE));
         self::assertSame(1, substr_count($this->router(), 'Wissenspool'));
+    }
+
+    public function testRouterStatesTierThreePrecedenceLoadDutyAndDelegationBeforeTheTierTable(): void
+    {
+        $router = $this->router();
+        $cut = strpos($router, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($router, 0, $cut);
+
+        foreach (self::TIER_RULE_KEYWORDS as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('Router preface lacks the %s rule.', $label));
+        }
     }
 
     public function testRouterIsAtMostFourKib(): void

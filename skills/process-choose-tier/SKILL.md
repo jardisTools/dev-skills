@@ -23,9 +23,12 @@ Process is a means against size and risk, not a default. Before any work, pick t
 ### 2. Escalation
 
 <!-- rule:tier-escalate -->
-Pick the lower tier when in doubt. Apparatus (sub-agent, task list, review board, full QA run) is a means against size and risk, not a default: escalate a tier only with a named reason, and state that reason in one sentence. This holds for the apparatus, not for the hand: two or more subtasks are never a single action, they are a small assignment at least. The hygiene of section 3 applies at every tier.
+Pick the lower tier when in doubt. Apparatus (sub-agent, task list, review board, full QA run) is a means against size and risk, not a default: escalate a tier only with a named reason, and state that reason in one sentence. This holds for the apparatus, not for the hand: two or more subtasks are never a single action, they are a small assignment at least. The hygiene of section 3 applies at every tier. Doubt concerns size and risk, never a criterion that is present: a tier-3 criterion in the task decides for tier 3, whatever the size.
 
 Escalate from tier 1 or 2 to tier 3 as soon as one tier-3 criterion shows up during the work: stop, say which criterion, and open stage 0 instead of continuing.
+
+<!-- rule:decide-yourself-no-tier-drop -->
+A human's "decide open points yourself" or "proceed autonomously" lowers no tier and waives no gate: an open question still passes the open-question gate (tier 3) and is recorded with its reason; at tier 1 or 2 it is answered from skill, source and pool in that order and recorded the same way.
 
 Before proposing anything at tier 2 or 3, run `process-check-existing`: a proposal without the answer to "what does the target environment already do?" is a guess with a blueprint.
 

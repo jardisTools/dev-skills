@@ -267,6 +267,22 @@ final class BundleTest extends TestCase
         }
     }
 
+    public function testChooseTierCarriesThePresentCriterionAndDecideYourselfRules(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-choose-tier'));
+
+        // Doubt concerns size and risk, never a criterion that is present.
+        self::assertStringContainsString('never a criterion that is present', $content);
+        self::assertStringContainsString('decides for tier 3, whatever the size', $content);
+
+        $marker = strpos($content, '<!-- rule:decide-yourself-no-tier-drop -->');
+        self::assertIsInt($marker, 'Marker rule:decide-yourself-no-tier-drop is missing.');
+        $rule = substr($content, $marker, 700);
+        foreach (['decide open points yourself', 'proceed autonomously', 'lowers no tier', 'waives no gate', 'open-question gate'] as $keyword) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+    }
+
     public function testChooseTierNamesFourTiersAndBothMarkers(): void
     {
         $content = (string) file_get_contents($this->skillFile('process-choose-tier'));

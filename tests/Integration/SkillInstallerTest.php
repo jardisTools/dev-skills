@@ -15,6 +15,7 @@ use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\InstallAddons;
 use JardisTools\DevSkills\SkillInstaller;
+use JardisTools\DevSkills\Tests\Integration\Handler\Install\RouterTest;
 use JardisTools\DevSkills\Tests\Support\GitRepo;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -414,6 +415,26 @@ final class SkillInstallerTest extends TestCase
         self::assertLessThan(strpos($agents, '# Jardis packages'), strpos($agents, 'Route here.'));
         self::assertLessThan(strpos($agents, 'Cache rules.'), strpos($agents, '# Jardis packages'));
         self::assertSame([], $report->warnings());
+    }
+
+    public function testInstalledBlockCarriesTheTierRulesOfTheShippedRouter(): void
+    {
+        // The real router of this plugin, not a stand-in: the three tier sentences
+        // (tier-3 precedence, load duty, delegation) must reach the project's AGENTS.md.
+        $this->pluginRepo->writeFile(
+            'router/AGENTS-router.md',
+            (string) file_get_contents(dirname(__DIR__, 2) . '/router/AGENTS-router.md'),
+        );
+
+        $this->install();
+
+        $agents = (string) file_get_contents($this->project->path('AGENTS.md'));
+        $cut = strpos($agents, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($agents, 0, $cut);
+        foreach (RouterTest::TIER_RULE_KEYWORDS as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('Installed AGENTS.md lacks the %s rule.', $label));
+        }
     }
 
     public function testOversizedAgentsMdWarnsInReport(): void

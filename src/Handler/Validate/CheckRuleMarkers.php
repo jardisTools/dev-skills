@@ -33,6 +33,7 @@ final class CheckRuleMarkers
                 'the lower tier',
                 'two or more subtasks are never',
             ],
+            'decide-yourself-no-tier-drop' => ['lowers no tier', 'waives no gate'],
         ],
         'process-run-stage' => [
             'fresh-session-per-stage' => ['fresh agent session'],
