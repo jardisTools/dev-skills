@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Handler\Uninstall;
 
+use Closure;
 use Composer\Util\Filesystem;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
@@ -29,13 +30,17 @@ use JardisTools\DevSkills\Exception\UninstallFailedException;
 final class RemoveManagedPaths
 {
     private const SKILLS_DIR = '.claude/skills';
-    private const MANAGED_KEY_PATTERN = '#^\.(?:claude|agents)/skills/(?!\.\.?$)[^/\0]+$#';
 
     /** @var list<string> */
     private const VENDOR_PREFIXES = ['adapter-', 'core-', 'support-', 'tools-'];
 
-    public function __construct(private readonly Filesystem $filesystem)
-    {
+    /**
+     * @param Closure(string, string): ?string $resolveManagedFolder
+     */
+    public function __construct(
+        private readonly Filesystem $filesystem,
+        private readonly Closure $resolveManagedFolder,
+    ) {
     }
 
     /**
@@ -69,7 +74,7 @@ final class RemoveManagedPaths
 
         foreach (array_keys($entries) as $key) {
             $key = (string) $key;
-            $path = $this->resolveManagedFolder($realRoot, $key);
+            $path = ($this->resolveManagedFolder)($realRoot, $key);
             if ($path === null) {
                 $report->addWarningIfAny(sprintf(
                     'Ignored manifest entry "%s": not a skill folder inside the project.',
@@ -117,24 +122,6 @@ final class RemoveManagedPaths
         }
 
         return array_values($removed);
-    }
-
-    /**
-     * @return string|null the folder to delete, '' when it does not exist (nothing to do),
-     *                     null when the key is not a safe skill folder of this project
-     */
-    private function resolveManagedFolder(string $realRoot, string $key): ?string
-    {
-        if (preg_match(self::MANAGED_KEY_PATTERN, $key) !== 1) {
-            return null;
-        }
-
-        $path = $realRoot . '/' . $key;
-        if (!file_exists($path) && !is_link($path)) {
-            return '';
-        }
-
-        return realpath($path) === $path && is_dir($path) ? $path : null;
     }
 
     private function hasVendorPrefix(string $name): bool

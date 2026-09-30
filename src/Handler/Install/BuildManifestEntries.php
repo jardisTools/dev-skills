@@ -16,10 +16,12 @@ use JardisTools\DevSkills\Data\StagedSkill;
 final class BuildManifestEntries
 {
     /**
-     * @param Closure(string): string $checksumDirectory
+     * @param Closure(string): string          $checksumDirectory
+     * @param Closure(string, string): ?string $resolveManagedFolder
      */
     public function __construct(
         private readonly Closure $checksumDirectory,
+        private readonly Closure $resolveManagedFolder,
     ) {
     }
 
@@ -36,8 +38,8 @@ final class BuildManifestEntries
         $entries = [];
 
         foreach ($previous->entries ?? [] as $key => $entry) {
-            $absolute = str_starts_with($key, '/') ? $key : $realRoot . '/' . $key;
-            if (is_dir($absolute)) {
+            $folder = ($this->resolveManagedFolder)($realRoot, (string) $key);
+            if ($folder !== null && $folder !== '') {
                 $entries[$key] = $entry;
             }
         }

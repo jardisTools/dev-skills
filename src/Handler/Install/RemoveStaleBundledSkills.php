@@ -13,19 +13,23 @@ use JardisTools\DevSkills\Exception\InstallFailedException;
 /**
  * Removes deselected bundle skills at the paths the manifest lists (one per
  * target folder). A folder whose checksum differs from its manifest entry is
- * copied to the backup root first, so local edits are never lost. Keys with a
- * `..` segment are ignored (a tampered manifest must not reach outside the project).
+ * copied to the backup root first, so local edits are never lost. Every key is resolved
+ * through the managed-folder rule; a key that is not a skill folder of the project
+ * (absolute, `..`, foreign folder, symlink) is neither backed up nor removed and
+ * ends up as a warning.
  */
 final class RemoveStaleBundledSkills
 {
     /**
-     * @param Closure(string): string         $checksumDirectory
+     * @param Closure(string): string                 $checksumDirectory
      * @param Closure(string, string, string): string $backupFolder
+     * @param Closure(string, string): ?string        $resolveManagedFolder
      */
     public function __construct(
         private readonly Filesystem $filesystem,
         private readonly Closure $checksumDirectory,
         private readonly Closure $backupFolder,
+        private readonly Closure $resolveManagedFolder,
     ) {
     }
 
@@ -42,14 +46,27 @@ final class RemoveStaleBundledSkills
             return new StaleRemovalResult([], []);
         }
 
-        $realRoot = (string) realpath($projectRoot);
+        $realRoot = realpath($projectRoot);
+        if ($realRoot === false) {
+            return new StaleRemovalResult([], []);
+        }
+
         $removed = [];
         $backups = [];
+        $warnings = [];
 
         foreach ($manifestKeys as $key) {
             $entry = $manifest->entries[$key] ?? null;
-            $path = str_starts_with($key, '/') ? $key : $realRoot . '/' . $key;
-            if ($entry === null || in_array('..', explode('/', $key), true) || !is_dir($path)) {
+            if ($entry === null) {
+                continue;
+            }
+
+            $path = ($this->resolveManagedFolder)($realRoot, $key);
+            if ($path === null) {
+                $warnings[] = sprintf('Ignored manifest entry "%s": not a skill folder inside the project.', $key);
+                continue;
+            }
+            if ($path === '') {
                 continue;
             }
 
@@ -64,6 +81,6 @@ final class RemoveStaleBundledSkills
             $removed[$name] = $name;
         }
 
-        return new StaleRemovalResult(array_values($removed), $backups);
+        return new StaleRemovalResult(array_values($removed), $backups, $warnings);
     }
 }

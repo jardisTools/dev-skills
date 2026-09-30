@@ -12,7 +12,9 @@ use JardisTools\DevSkills\Handler\Install\CopySkill;
 use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
 use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 final class RemoveStaleBundledSkillsTest extends TestCase
@@ -88,7 +90,55 @@ final class RemoveStaleBundledSkillsTest extends TestCase
         $result = $this->remove([$key], $manifest);
 
         self::assertSame([], $result->removed);
+        self::assertCount(1, $result->warnings);
         self::assertFileExists($outside->path('victim/SKILL.md'));
+        $outside->cleanup();
+    }
+
+    public function testAbsoluteKeysOutsideTheSkillFoldersAreNeitherBackedUpNorRemoved(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        $outside->writeFile('victim/SKILL.md', 'keep');
+        $this->project->writeFile('docs/keep/SKILL.md', 'docs');
+        $this->project->writeFile('.claude/skills/alpha/SKILL.md', 'alpha');
+        $keys = [
+            $outside->path('victim'),
+            $this->project->path('docs/keep'),
+            // absolute, even though it is a real skill folder of the project
+            $this->project->path('.claude/skills/alpha'),
+        ];
+        $manifest = $this->manifestWithChangedChecksums($keys);
+        $outsideBefore = TreeSnapshot::of($outside->root);
+        $projectBefore = TreeSnapshot::of($this->project->root);
+
+        $result = $this->remove($keys, $manifest);
+
+        self::assertSame([], $result->removed);
+        self::assertSame([], $result->backups);
+        self::assertCount(3, $result->warnings);
+        self::assertSame($outsideBefore, TreeSnapshot::of($outside->root));
+        self::assertSame($projectBefore, TreeSnapshot::of($this->project->root));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
+        $outside->cleanup();
+    }
+
+    public function testKeyPointingAtASymlinkIsNeitherBackedUpNorRemoved(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        $outside->writeFile('victim/SKILL.md', 'keep');
+        $this->project->mkdir('.claude/skills');
+        self::assertTrue(symlink($outside->path('victim'), $this->project->path('.claude/skills/alpha')));
+        $manifest = $this->manifestWithChangedChecksums(['.claude/skills/alpha']);
+        $outsideBefore = TreeSnapshot::of($outside->root);
+
+        $result = $this->remove(['.claude/skills/alpha'], $manifest);
+
+        self::assertSame([], $result->removed);
+        self::assertSame([], $result->backups);
+        self::assertCount(1, $result->warnings);
+        self::assertTrue(is_link($this->project->path('.claude/skills/alpha')));
+        self::assertSame($outsideBefore, TreeSnapshot::of($outside->root));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
         $outside->cleanup();
     }
 
@@ -100,6 +150,19 @@ final class RemoveStaleBundledSkillsTest extends TestCase
 
         self::assertSame([], $result->removed);
         self::assertDirectoryExists($this->project->path('.claude/skills/alpha'));
+    }
+
+    /**
+     * @param list<string> $keys
+     */
+    private function manifestWithChangedChecksums(array $keys): Manifest
+    {
+        $entries = [];
+        foreach ($keys as $key) {
+            $entries[$key] = ['source' => 'jardis/dev-skills', 'sha256' => 'does-not-match'];
+        }
+
+        return new Manifest(Manifest::SCHEMA_VERSION, '1.4.0', $entries);
     }
 
     private function installAlpha(): Manifest
@@ -126,7 +189,12 @@ final class RemoveStaleBundledSkillsTest extends TestCase
             (new FindFreeBackupDir(static fn (): \DateTimeImmutable => new \DateTimeImmutable()))->__invoke(...),
         );
 
-        return (new RemoveStaleBundledSkills($fs, (new ChecksumDirectory())->__invoke(...), $backupFolder->__invoke(...)))(
+        return (new RemoveStaleBundledSkills(
+            $fs,
+            (new ChecksumDirectory())->__invoke(...),
+            $backupFolder->__invoke(...),
+            (new ResolveManagedFolder())->__invoke(...),
+        ))(
             $keys,
             $manifest,
             $this->project->root,

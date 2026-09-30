@@ -10,6 +10,7 @@ use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Data\UninstallReport;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -238,6 +239,6 @@ final class RemoveManagedPathsTest extends TestCase
      */
     private function remove(ManifestReadResult $manifest): array
     {
-        return (new RemoveManagedPaths(new Filesystem()))($this->project->root, $manifest, $this->report);
+        return (new RemoveManagedPaths(new Filesystem(), (new ResolveManagedFolder())->__invoke(...)))($this->project->root, $manifest, $this->report);
     }
 }

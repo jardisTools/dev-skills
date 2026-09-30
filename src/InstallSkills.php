@@ -33,6 +33,7 @@ use JardisTools\DevSkills\Handler\Install\ResolveTargets;
 use JardisTools\DevSkills\Handler\Install\StageSkills;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 
@@ -118,10 +119,15 @@ final class InstallSkills
         $this->relocateLegacyBackup = (new RelocateLegacyBackup($findFreeBackupDir))->__invoke(...);
         $backupFolder = (new BackupFolder($copySkill, $findFreeBackupDir))->__invoke(...);
         $this->backupChangedSkill = (new BackupChangedSkill($backupFolder, $checksum))->__invoke(...);
-        $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills($filesystem, $checksum, $backupFolder))
-            ->__invoke(...);
+        $resolveManagedFolder = (new ResolveManagedFolder())->__invoke(...);
+        $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills(
+            $filesystem,
+            $checksum,
+            $backupFolder,
+            $resolveManagedFolder,
+        ))->__invoke(...);
         $this->commitStagedSkills = (new CommitStagedSkills($filesystem))->__invoke(...);
-        $this->buildManifestEntries = (new BuildManifestEntries($checksum))->__invoke(...);
+        $this->buildManifestEntries = (new BuildManifestEntries($checksum, $resolveManagedFolder))->__invoke(...);
         $this->writeManifest = (new WriteManifest())->__invoke(...);
     }
 
@@ -169,6 +175,9 @@ final class InstallSkills
         }
         foreach ($removal->backups as $backup) {
             $report->addBackedUpSkill($backup['skill'], $backup['backupPath']);
+        }
+        foreach ($removal->warnings as $warning) {
+            $report->addWarning($warning);
         }
 
         ($this->writeManifest)(

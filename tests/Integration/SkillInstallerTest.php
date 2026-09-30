@@ -637,6 +637,45 @@ final class SkillInstallerTest extends TestCase
         self::assertStringContainsString('Cache rules.', (string) file_get_contents($this->project->path('AGENTS.md')));
     }
 
+    public function testTamperedManifestKeysOutsideTheSkillFoldersAreIgnoredWithWarningsAndDroppedFromTheManifest(): void
+    {
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $this->pluginRepo->writeFile('skills/rules-testing/SKILL.md', 't');
+        $this->installer(PluginConfig::all());
+        $foreign = new TempProject('dev-skills-foreign-');
+        $foreign->writeFile('victim/SKILL.md', 'victim');
+        $this->project->writeFile('docs/keep/SKILL.md', 'docs');
+        $manifestFile = $this->project->path(Manifest::FILE);
+        $data = json_decode((string) file_get_contents($manifestFile), true, 512, JSON_THROW_ON_ERROR);
+        foreach ([$foreign->path('victim'), '.claude/skills/../../docs/keep'] as $key) {
+            $data['paths'][$key] = ['source' => 'jardis/dev-skills', 'sha256' => str_repeat('a', 64)];
+        }
+        file_put_contents($manifestFile, json_encode($data, JSON_THROW_ON_ERROR));
+        $foreignBefore = TreeSnapshot::of($foreign->root);
+        $docsBefore = TreeSnapshot::of($this->project->path('docs'));
+
+        $report = $this->installer(PluginConfig::filtered(['rules-testing'], []));
+
+        self::assertSame(['rules-architecture'], $report->removedBundledSkills());
+        self::assertSame($foreignBefore, TreeSnapshot::of($foreign->root));
+        self::assertSame($docsBefore, TreeSnapshot::of($this->project->path('docs')));
+        self::assertSame([], $report->backedUpSkills());
+        self::assertSame(
+            2,
+            count(array_filter(
+                $report->warnings(),
+                static fn (string $w): bool => str_starts_with($w, 'Ignored manifest entry'),
+            )),
+        );
+        $manifest = (new ReadManifest())($manifestFile, '0.0.0')->manifest;
+        self::assertNotNull($manifest);
+        self::assertSame(
+            ['.agents/skills/rules-testing', '.claude/skills/rules-testing'],
+            array_keys($manifest->entries),
+        );
+        $foreign->cleanup();
+    }
+
     /**
      * @return list<string> `*.backup*` entries in either skill folder
      */

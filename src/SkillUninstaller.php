@@ -12,6 +12,7 @@ use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveAggregatedAgentsMd;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
 
@@ -33,7 +34,8 @@ final class SkillUninstaller
     {
         $fs = $filesystem ?? new Filesystem();
 
-        $this->removeManagedPaths = (new RemoveManagedPaths($fs))->__invoke(...);
+        $resolveManagedFolder = (new ResolveManagedFolder())->__invoke(...);
+        $this->removeManagedPaths = (new RemoveManagedPaths($fs, $resolveManagedFolder))->__invoke(...);
         $this->readManifest = (new ReadManifest())->__invoke(...);
         $this->guardManifestVersion = (new GuardManifestVersion($this->readManifest))->__invoke(...);
         $this->removeAggregatedAgentsMd = (new RemoveAggregatedAgentsMd())->__invoke(...);
