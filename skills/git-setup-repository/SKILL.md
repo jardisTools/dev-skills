@@ -48,6 +48,7 @@ The following will be executed:
 - Repo settings (delete-branch-on-merge, no wiki/projects)
 - Branch protection ruleset for main + develop (PRs only, required checks)
 - Git hooks installed (make install-hooks)
+- commit-msg hook wired in (knowledge note for feat/fix commits; a foreign hook is never overwritten)
 
 Project: <name> (<path>)
 GitHub:  <org/repo>
@@ -155,13 +156,49 @@ EOF
 make install-hooks
 ```
 
-### Phase 6: Verify
+### Phase 6: commit-msg hook
+
+`make install-hooks` (Phase 5) does not touch `commit-msg`; this phase adds it.
+The hook rejects a `feat:`/`fix:` commit without a `Wissen:` note. It is never
+installed by the Composer plugin, only here.
+
+```bash
+sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook
+```
+
+Run it in the project root. It prints `manager: <name>` and `result: <state>`:
+
+| Detected | What happens |
+|---|---|
+| Husky (`.husky`) | writes `.husky/commit-msg` |
+| `core.hooksPath` | writes `<hooksPath>/commit-msg` |
+| no manager | writes `.git/hooks/commit-msg` |
+| CaptainHook, GrumPHP, Lefthook | prints the exact snippet, writes nothing |
+
+Detection order: Husky, CaptainHook, GrumPHP, Lefthook, plain `core.hooksPath`,
+none (Husky sets `core.hooksPath` itself, so it is checked first).
+
+- A file is written only when no `commit-msg` exists. A hook of another tool stays
+  byte-for-byte as it is: the script prints the lines to add (`result: foreign`).
+- Symlinked target folders or files, a missing Git repository and a call outside
+  the project root end in a warning and no write (`result: skipped`).
+- For a `snippet` result, show the snippet to the user and let them add it to the
+  manager's configuration; do not edit that file yourself.
+- The installed hook is guarded: when `vendor/jardis/dev-skills/scripts/commit-msg`
+  is gone (package removed), it passes every commit.
+- If `vendor/jardis/dev-skills/` does not exist yet, run `composer install` first.
+
+### Phase 7: Verify
 
 ```bash
 git ls-remote --heads origin | grep -E 'main|develop'   # both exist
 gh api repos/{org}/{repo}/rulesets --jq '.[].name'       # ruleset present
 test -x .git/hooks/pre-commit && test -x .git/hooks/pre-push && echo "hooks OK"
+sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook | grep '^result:'
 ```
+
+For the commit-msg hook, `result: unchanged`, `foreign` or `snippet` is fine: the hook is
+already wired or belongs to another tool. Re-running never overwrites anything.
 
 Then run `/git-check-compliance` for the full check list.
 

@@ -1,0 +1,204 @@
+#!/bin/sh
+# Wires the commit-msg hook of this package into the current project.
+#
+# Usage: install-commit-msg-hook        (run in the project root, the Git work tree top)
+#
+# The installed hook calls vendor/jardis/dev-skills/scripts/commit-msg and does nothing when that file
+# is gone, so a commit never fails after the package is removed.
+#
+# Detection, first match wins (the order matters: Husky sets core.hooksPath itself):
+#   1. husky        a .husky folder, or core.hooksPath below .husky
+#   2. captainhook  captainhook.json
+#   3. grumphp      grumphp.yml, grumphp.yaml (also with .dist)
+#   4. lefthook     lefthook.yml, .lefthook.yml (also .yaml)
+#   5. hooks-path   core.hooksPath set in the repository configuration
+#   6. none         no manager: the hooks folder of the repository
+#
+# What is written (only when no hook file exists yet; a foreign hook is never changed):
+#   husky        .husky/commit-msg
+#   hooks-path   <core.hooksPath>/commit-msg
+#   none         <git dir>/hooks/commit-msg
+# captainhook, grumphp and lefthook are configured in their own formats: the exact snippet is printed
+# and nothing is written. A symlinked target folder or file is never written.
+#
+# Output on stdout: "manager: <name>", then "result: <installed|unchanged|foreign|snippet|skipped> [<path>]",
+# then a snippet where one is due. Warnings go to stderr. Exit 0 whenever the run was handled (also when
+# nothing was written), 2 on a usage error. Plain POSIX sh.
+
+script=vendor/jardis/dev-skills/scripts/commit-msg
+name=install-commit-msg-hook
+
+case ${1:-} in
+    '')
+        ;;
+    -h | --help)
+        echo "Usage: $name    (run in the project root)"
+        exit 0
+        ;;
+    *)
+        echo "Usage: $name    (run in the project root)" >&2
+        exit 2
+        ;;
+esac
+
+warn() {
+    printf '%s: warning: %s\n' "$name" "$1" >&2
+}
+
+skip() {
+    warn "$1"
+    echo 'result: skipped'
+    exit 0
+}
+
+hook_body() {
+    cat <<EOF
+#!/bin/sh
+# commit-msg hook (jardis/dev-skills): a feat/fix commit needs a knowledge note.
+# A missing package never blocks a commit.
+[ -f $script ] || exit 0
+exec sh $script "\$1"
+EOF
+}
+
+# The lines to add to a hook that is not ours (they keep the hook's own exit status in charge).
+append_snippet() {
+    cat <<EOF
+[ -f $script ] && { sh $script "\$1" || exit 1; }
+EOF
+}
+
+captainhook_snippet() {
+    cat <<EOF
+"commit-msg": {
+    "enabled": true,
+    "actions": [
+        {
+            "action": "test ! -f $script || sh $script {\$ARG|value-of:message-file}"
+        }
+    ]
+}
+EOF
+}
+
+lefthook_snippet() {
+    cat <<EOF
+commit-msg:
+  commands:
+    knowledge-note:
+      run: test ! -f $script || sh $script {1}
+EOF
+}
+
+grumphp_snippet() {
+    cat <<EOF
+# GrumPHP has no task that runs a script on commit-msg. Give GrumPHP your own hook templates
+# (grumphp.yml: grumphp.hooks_dir), copy its commit-msg template there, and add before the
+# "Run GrumPHP" line of that template:
+[ -f $script ] && { sh $script "\$COMMIT_MSG_FILE" || exit 1; }
+EOF
+}
+
+print_snippet() {
+    echo 'result: snippet'
+    echo
+    "$1"
+}
+
+# install_into <folder> : writes <folder>/commit-msg unless a foreign or linked entry is in the way.
+install_into() {
+    folder=$1
+    target=$folder/commit-msg
+
+    if [ -L "$folder" ]; then
+        skip "$folder is a symlink; nothing written"
+    fi
+    if [ -e "$folder" ] && [ ! -d "$folder" ]; then
+        skip "$folder is not a folder; nothing written"
+    fi
+    if [ -L "$target" ]; then
+        skip "$target is a symlink; nothing written"
+    fi
+
+    if [ -e "$target" ]; then
+        if hook_body | cmp -s - "$target" || grep -qF "$script" "$target"; then
+            echo "result: unchanged $target"
+            exit 0
+        fi
+        warn "$target is a hook of its own and stays as it is; add the lines below to it"
+        echo "result: foreign $target"
+        echo
+        append_snippet
+        exit 0
+    fi
+
+    if [ ! -d "$folder" ] && ! mkdir -p "$folder"; then
+        skip "cannot create $folder; nothing written"
+    fi
+    hook_body > "$target" || skip "cannot write $target"
+    chmod 755 "$target"
+    echo "result: installed $target"
+    exit 0
+}
+
+top=$(git rev-parse --show-toplevel 2>/dev/null) || top=
+if [ -z "$top" ]; then
+    echo 'manager: none'
+    skip 'not inside a Git work tree; nothing installed'
+fi
+if [ "$top" != "$(pwd -P)" ]; then
+    echo 'manager: none'
+    skip 'not in the project root; run it there. Nothing installed'
+fi
+
+hooks_path=$(git config --local --get core.hooksPath 2>/dev/null) || hooks_path=
+
+if [ -d .husky ] || [ -L .husky ]; then
+    manager=husky
+elif [ "${hooks_path#.husky}" != "$hooks_path" ]; then
+    manager=husky
+elif [ -f captainhook.json ]; then
+    manager=captainhook
+elif [ -f grumphp.yml ] || [ -f grumphp.yaml ] || [ -f grumphp.yml.dist ] || [ -f grumphp.yaml.dist ]; then
+    manager=grumphp
+elif [ -f lefthook.yml ] || [ -f .lefthook.yml ] || [ -f lefthook.yaml ] || [ -f .lefthook.yaml ]; then
+    manager=lefthook
+elif [ -n "$hooks_path" ]; then
+    manager=hooks-path
+elif [ -n "$(git config --get core.hooksPath 2>/dev/null)" ]; then
+    echo 'manager: hooks-path'
+    warn 'core.hooksPath is set outside this repository (global or system configuration); nothing written'
+    print_snippet append_snippet
+    exit 0
+else
+    manager=none
+fi
+
+echo "manager: $manager"
+
+case $manager in
+    husky)
+        install_into .husky
+        ;;
+    captainhook)
+        print_snippet captainhook_snippet
+        ;;
+    grumphp)
+        print_snippet grumphp_snippet
+        ;;
+    lefthook)
+        print_snippet lefthook_snippet
+        ;;
+    hooks-path)
+        case $hooks_path in
+            '~'*)
+                skip "core.hooksPath '$hooks_path' starts with ~; nothing written"
+                ;;
+        esac
+        install_into "$hooks_path"
+        ;;
+    none)
+        git_common=$(git rev-parse --git-common-dir 2>/dev/null) || skip 'cannot locate the Git directory; nothing installed'
+        install_into "$git_common/hooks"
+        ;;
+esac

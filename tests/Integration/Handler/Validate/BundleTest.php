@@ -48,6 +48,50 @@ final class BundleTest extends TestCase
         self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
     }
 
+    public function testSetupSkillKeepsInstallHooksPhaseAndAddsCommitMsgPhase(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('git-setup-repository'));
+
+        $hooks   = strpos($content, '### Phase 5: Git hooks');
+        $commit  = strpos($content, '### Phase 6: commit-msg hook');
+        $verify  = strpos($content, '### Phase 7: Verify');
+        self::assertIsInt($hooks);
+        self::assertIsInt($commit);
+        self::assertIsInt($verify);
+        self::assertLessThan($commit, $hooks);
+        self::assertLessThan($verify, $commit);
+        self::assertStringNotContainsString('### Phase 6: Verify', $content);
+
+        self::assertStringContainsString('make install-hooks', substr($content, $hooks, $commit - $hooks));
+
+        $phase = substr($content, $commit, $verify - $commit);
+        self::assertStringContainsString('sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook', $phase);
+        foreach (['Husky', 'CaptainHook', 'GrumPHP', 'Lefthook', 'core.hooksPath', '.git/hooks/commit-msg'] as $term) {
+            self::assertStringContainsString($term, $phase);
+        }
+        self::assertStringContainsString('never overwrit', $content);
+        self::assertStringContainsString('commit-msg hook wired in', $content);
+
+        self::assertSame(0, preg_match('/[\x{00C4}\x{00D6}\x{00DC}\x{00E4}\x{00F6}\x{00FC}\x{00DF}]/u', $content), 'The body is English.');
+        self::assertSame([], (new CheckSkillLinks())($this->skillFile('git-setup-repository')));
+    }
+
+    public function testComplianceSkillWarnsOnMissingCommitMsgHook(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('git-check-compliance'));
+
+        self::assertStringNotContainsString('10 checks', $content);
+        self::assertStringContainsString('11 checks for git hooks', $content);
+        self::assertStringContainsString('### The 11 checks', $content);
+        self::assertStringContainsString('commit-msg hook wired (a warning when missing, never a FAIL)', $content);
+        self::assertStringContainsString('[WARN] commit-msg hook missing', $content);
+
+        $start = (int) strpos($content, '### The 11 checks');
+        $end   = (int) strpos($content, '### Output format');
+        preg_match_all('/^(\d+)\. /m', substr($content, $start, $end - $start), $matches);
+        self::assertSame(range(1, 11), array_map('intval', $matches[1]));
+    }
+
     public function testFoundationPhpOmitsReleaseLifecycleAndNamespaceAssignment(): void
     {
         $content = (string) file_get_contents($this->skillFile('foundation-php'));
