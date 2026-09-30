@@ -118,6 +118,13 @@ final class SkillUninstaller
             $report->addRemovedSkill($name);
         }
 
-        $report->setAgentsMdAction(($this->removeAggregatedAgentsMd)($projectRoot));
+        $action = ($this->removeAggregatedAgentsMd)($projectRoot);
+        $report->setAgentsMdAction($action);
+        if ($action === AgentsMdUninstallAction::SkippedLink) {
+            $report->addWarningIfAny(
+                'AGENTS.md is a link or lies behind one; it was not followed or changed.'
+                . ' A managed block from an older release may still stand behind the link.',
+            );
+        }
     }
 }

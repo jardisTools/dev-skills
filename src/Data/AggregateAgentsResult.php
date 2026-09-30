@@ -12,6 +12,7 @@ final readonly class AggregateAgentsResult
         public bool $healedDuplicateBlock = false,
         public ?string $sizeWarning = null,
         public bool $agentsMdCreated = false,
+        public ?string $skippedWarning = null,
     ) {
     }
 }

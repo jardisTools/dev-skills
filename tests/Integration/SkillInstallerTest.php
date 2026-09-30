@@ -956,4 +956,35 @@ final class SkillInstallerTest extends TestCase
 
         return $result;
     }
+
+    public function testAgentsMdLinkedToClaudeMdInstallsThroughWritesNeitherFileAndWarnsTwice(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', "# Router\nRoute here.\n");
+        $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+        $claude = "# Claude rules\n";
+        $this->project->writeFile('CLAUDE.md', $claude);
+        self::assertTrue(symlink('CLAUDE.md', $this->project->path('AGENTS.md')));
+
+        $report = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root))(
+            $this->project->root,
+            $this->project->path('vendor'),
+            '1.4.0',
+        );
+
+        self::assertSame(['foundation-alpha'], $report->installedSkills());
+        self::assertFileExists($this->project->path('.claude/skills/foundation-alpha/SKILL.md'));
+        self::assertSame(ManifestState::Healthy, (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->state);
+        self::assertSame($claude, file_get_contents($this->project->path('CLAUDE.md')));
+        self::assertSame($claude, file_get_contents($this->project->path('AGENTS.md')));
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertStringNotContainsString('@AGENTS.md', (string) file_get_contents($this->project->path('CLAUDE.md')));
+        self::assertFileDoesNotExist($this->project->path('AGENTS.md.backup'));
+        self::assertCount(2, $report->warnings());
+        self::assertStringContainsString('AGENTS.md is a link or lies behind one', $report->warnings()[0]);
+        self::assertStringContainsString('AGENTS.md is a link to CLAUDE.md', $report->warnings()[1]);
+        $selfSet = (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->manifest?->selfSet ?? [];
+        self::assertArrayNotHasKey('AGENTS.md', $selfSet);
+        self::assertArrayNotHasKey('CLAUDE.md', $selfSet);
+    }
 }

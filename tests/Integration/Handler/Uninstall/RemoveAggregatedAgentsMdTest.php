@@ -117,4 +117,39 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
         $this->expectExceptionMessage('Could not strip managed block');
         $handler($this->project->root);
     }
+
+    public function testLinkIsNotFollowedAndWarns(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $managed = AnalyzeAgentsMd::HEADER . "\nold block\n" . AnalyzeAgentsMd::FOOTER . "\n";
+            $outside->writeFile('agents.md', $managed);
+            $this->project->writeFile('inner.md', $managed);
+
+            foreach ([$outside->path('agents.md') => $outside->path('agents.md'), 'inner.md' => $this->project->path('inner.md')] as $link => $real) {
+                $path = $this->project->path('AGENTS.md');
+                self::assertTrue(symlink($link, $path));
+
+                $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+
+                self::assertSame(AgentsMdUninstallAction::SkippedLink, $action);
+                self::assertTrue(is_link($path));
+                self::assertSame($managed, file_get_contents($real));
+                unlink($path);
+            }
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDanglingLinkIsSkipped(): void
+    {
+        self::assertTrue(symlink($this->project->path('nowhere.md'), $this->project->path('AGENTS.md')));
+
+        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+
+        self::assertSame(AgentsMdUninstallAction::SkippedLink, $action);
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertFileDoesNotExist($this->project->path('nowhere.md'));
+    }
 }

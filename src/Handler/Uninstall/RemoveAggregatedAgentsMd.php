@@ -10,7 +10,13 @@ use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Exception\InstallFailedException;
 use JardisTools\DevSkills\Exception\UninstallFailedException;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 
+/**
+ * Reverses the plugin's changes to AGENTS.md. Never through a link: when AGENTS.md is a link (out of the
+ * project, dangling, or to a file inside it) or lies behind one, it is neither read, stripped, deleted nor
+ * written; the action is SkippedLink and the caller warns (an old block may still stand behind the link).
+ */
 final class RemoveAggregatedAgentsMd
 {
     /** @var Closure(string): AgentsMdAnalysis */
@@ -22,25 +28,34 @@ final class RemoveAggregatedAgentsMd
     /** @var Closure(string, string): (int|false) */
     private readonly Closure $write;
 
+    /** @var Closure(string, string): bool */
+    private readonly Closure $isPathBehindLink;
+
     public function __construct(
         ?Closure $analyze = null,
         ?Closure $unlink = null,
         ?Closure $write = null,
+        ?Closure $isPathBehindLink = null,
     ) {
         $this->analyze = $analyze ?? (new AnalyzeAgentsMd())->__invoke(...);
         $this->unlink = $unlink ?? static fn (string $path): bool => @unlink($path);
         $this->write = $write ?? static fn (string $path, string $content): int|false
             => @file_put_contents($path, $content);
+        $this->isPathBehindLink = $isPathBehindLink ?? (new IsPathBehindLink())->__invoke(...);
     }
 
     /**
      * Reverses the plugin's changes to <projectRoot>/AGENTS.md. User content
      * outside the managed block is always preserved. Corrupt marker states
-     * are reported but the file is left untouched (defensive on uninstall).
+     * are reported but the file is left untouched (defensive on uninstall). A link is skipped.
      */
     public function __invoke(string $projectRoot): AgentsMdUninstallAction
     {
         $target = $projectRoot . '/AGENTS.md';
+        if (($this->isPathBehindLink)($projectRoot, $target)) {
+            return AgentsMdUninstallAction::SkippedLink;
+        }
+
         if (!is_file($target)) {
             return AgentsMdUninstallAction::Untouched;
         }

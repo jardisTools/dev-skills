@@ -193,6 +193,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
             AgentsMdUninstallAction::BlockStripped => 'block stripped (user content kept)',
             AgentsMdUninstallAction::Untouched => 'kept',
             AgentsMdUninstallAction::Corrupt => 'kept (corrupt markers)',
+            AgentsMdUninstallAction::SkippedLink => 'kept (link, not followed)',
         };
 
         return sprintf(

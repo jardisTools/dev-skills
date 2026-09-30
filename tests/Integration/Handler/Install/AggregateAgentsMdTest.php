@@ -319,4 +319,68 @@ final class AggregateAgentsMdTest extends TestCase
             '# Router',
         );
     }
+
+    public function testLinkLeadingOutOfTheProjectGetsNoBlockAndWarns(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $outside->writeFile('notes.md', "# Notes\n");
+            self::assertTrue(symlink($outside->path('notes.md'), $this->project->path('AGENTS.md')));
+
+            $result = (new AggregateAgentsMd(new Filesystem()))(
+                [new AgentsDescriptor('jardisadapter/cache', '# cache')],
+                $this->project->root,
+                true,
+                '# Router',
+            );
+
+            self::assertSame("# Notes\n", file_get_contents($outside->path('notes.md')));
+            self::assertTrue(is_link($this->project->path('AGENTS.md')));
+            self::assertFileDoesNotExist($this->project->path('AGENTS.md.backup'));
+            self::assertFileDoesNotExist($outside->path('notes.md.backup'));
+            self::assertSame(0, $result->aggregatedCount);
+            self::assertNull($result->backupPath);
+            self::assertFalse($result->agentsMdCreated);
+            self::assertNull($result->sizeWarning);
+            self::assertStringContainsString('AGENTS.md is a link', (string) $result->skippedWarning);
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDanglingLinkGetsNoBlockAndWarns(): void
+    {
+        self::assertTrue(symlink($this->project->path('nowhere.md'), $this->project->path('AGENTS.md')));
+
+        $result = (new AggregateAgentsMd(new Filesystem()))(
+            [new AgentsDescriptor('jardisadapter/cache', '# cache')],
+            $this->project->root,
+        );
+
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertFileDoesNotExist($this->project->path('nowhere.md'));
+        self::assertFileDoesNotExist($this->project->path('AGENTS.md.backup'));
+        self::assertFalse($result->agentsMdCreated);
+        self::assertStringContainsString('AGENTS.md is a link', (string) $result->skippedWarning);
+    }
+
+    public function testLinkToClaudeMdInsideTheProjectGetsNoBlockAndWarns(): void
+    {
+        $claude = "# Claude rules\r\n\r\nKeep.\r\n";
+        $this->project->writeFile('CLAUDE.md', $claude);
+        self::assertTrue(symlink('CLAUDE.md', $this->project->path('AGENTS.md')));
+
+        $result = (new AggregateAgentsMd(new Filesystem()))(
+            [new AgentsDescriptor('jardisadapter/cache', '# cache')],
+            $this->project->root,
+        );
+
+        self::assertSame($claude, file_get_contents($this->project->path('CLAUDE.md')));
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertFileDoesNotExist($this->project->path('AGENTS.md.backup'));
+        self::assertFileDoesNotExist($this->project->path('CLAUDE.md.backup'));
+        self::assertSame(0, $result->aggregatedCount);
+        self::assertStringContainsString('regular file', (string) $result->skippedWarning);
+        self::assertStringContainsString('`@AGENTS.md`', (string) $result->skippedWarning);
+    }
 }
