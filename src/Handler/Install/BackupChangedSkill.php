@@ -6,9 +6,7 @@ namespace JardisTools\DevSkills\Handler\Install;
 
 use Closure;
 use JardisTools\DevSkills\Data\Manifest;
-use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\StagedSkill;
-use JardisTools\DevSkills\Exception\InstallFailedException;
 
 /**
  * Copies an existing skill folder to `<backupRoot>/<name>/` before it is
@@ -50,14 +48,12 @@ final class BackupChangedSkill
     ];
 
     /**
-     * @param Closure(SkillDescriptor, string): void $copySkill
-     * @param Closure(string): string                $checksumDirectory
-     * @param Closure(string, string): string        $findFreeBackupDir
+     * @param Closure(string, string, string): string $backupFolder
+     * @param Closure(string): string                 $checksumDirectory
      */
     public function __construct(
-        private readonly Closure $copySkill,
+        private readonly Closure $backupFolder,
         private readonly Closure $checksumDirectory,
-        private readonly Closure $findFreeBackupDir,
     ) {
     }
 
@@ -70,20 +66,7 @@ final class BackupChangedSkill
             return null;
         }
 
-        $backupDir = ($this->findFreeBackupDir)($backupRoot, $staged->skill->name);
-        $copy = new SkillDescriptor($staged->skill->name, $staged->targetDir, 'local-backup');
-
-        try {
-            ($this->copySkill)($copy, $backupDir);
-        } catch (\Throwable $failure) {
-            throw new InstallFailedException(
-                sprintf('Could not back up "%s" to "%s": %s', $staged->targetDir, $backupDir, $failure->getMessage()),
-                0,
-                $failure,
-            );
-        }
-
-        return $backupDir;
+        return ($this->backupFolder)($staged->targetDir, $staged->skill->name, $backupRoot);
     }
 
     private function needsBackup(StagedSkill $staged, ?Manifest $manifest): bool

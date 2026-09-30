@@ -8,6 +8,8 @@ use JardisTools\DevSkills\Data\SkillDescriptor;
 
 final class ScanPluginSkills
 {
+    public const SOURCE_PACKAGE = 'jardis/dev-skills';
+
     /**
      * Scans the plugin repo's own `skills/` directory for cross-package
      * methodology skills (schema-authoring, platform-implementation,
@@ -37,7 +39,7 @@ final class ScanPluginSkills
             $skills[] = new SkillDescriptor(
                 name: basename($dir),
                 sourceDir: $dir,
-                sourcePackage: 'jardis/dev-skills',
+                sourcePackage: self::SOURCE_PACKAGE,
             );
         }
 

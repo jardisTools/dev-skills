@@ -9,6 +9,7 @@ use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\StagedSkill;
 use JardisTools\DevSkills\Handler\Install\BackupChangedSkill;
+use JardisTools\DevSkills\Handler\Install\BackupFolder;
 use JardisTools\DevSkills\Handler\Install\CopySkill;
 use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
@@ -144,10 +145,13 @@ final class BackupChangedSkillTest extends TestCase
 
     private function backup(StagedSkill $staged, ?Manifest $manifest): ?string
     {
-        $handler = new BackupChangedSkill(
+        $backupFolder = new BackupFolder(
             (new CopySkill(new Filesystem()))->__invoke(...),
-            (new ChecksumDirectory())->__invoke(...),
             (new FindFreeBackupDir(fn (): \DateTimeImmutable => $this->now))->__invoke(...),
+        );
+        $handler = new BackupChangedSkill(
+            $backupFolder->__invoke(...),
+            (new ChecksumDirectory())->__invoke(...),
         );
 
         return $handler($staged, $manifest, $this->backupRoot());

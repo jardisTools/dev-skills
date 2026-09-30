@@ -40,7 +40,7 @@ final class SkillInstaller
         $fs = $filesystem ?? new Filesystem();
 
         $this->installSkills = new InstallSkills(
-            $config ?? PluginConfig::none(),
+            $config ?? PluginConfig::all(),
             $pluginRoot ?? dirname(__DIR__),
             $fs,
         );

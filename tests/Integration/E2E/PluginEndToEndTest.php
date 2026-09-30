@@ -93,11 +93,9 @@ final class PluginEndToEndTest extends TestCase
         );
     }
 
-    public function testComposerInstallWithoutBundledSkillsConfigInstallsCatalogAndVendorSkills(): void
+    public function testComposerInstallWithoutBundledSkillsConfigInstallsAllSkills(): void
     {
-        // No bundled-skills key in extra → default-on: jardis-catalog,
-        // jardis-start-here and jardis-mcp-consumer are installed, other bundle
-        // skills (e.g. rules-architecture) are not.
+        // No bundled-skills key in extra -> every bundle skill plus the vendor skills, in both folders.
         $this->writeConsumerComposerJson(bundledSkills: false);
         $this->runComposer('install');
 
@@ -105,22 +103,16 @@ final class PluginEndToEndTest extends TestCase
             $this->project->path('.claude/skills/adapter-fakecache/SKILL.md'),
             'Vendor skill must be installed even without explicit bundled-skills config.',
         );
-        self::assertFileExists(
-            $this->project->path('.claude/skills/jardis-catalog/SKILL.md'),
-            'jardis-catalog must be installed by default (default-on) when bundled-skills key is absent.',
-        );
-        self::assertFileExists(
-            $this->project->path('.claude/skills/jardis-start-here/SKILL.md'),
-            'jardis-start-here must be installed by default (default-on) when bundled-skills key is absent.',
-        );
-        self::assertFileExists(
-            $this->project->path('.claude/skills/jardis-mcp-consumer/SKILL.md'),
-            'jardis-mcp-consumer must be installed by default (default-on) when bundled-skills key is absent.',
-        );
-        self::assertDirectoryDoesNotExist(
-            $this->project->path('.claude/skills/rules-architecture'),
-            'Other bundled skills must NOT be installed when bundled-skills key is absent.',
-        );
+        foreach (['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer', 'rules-architecture', 'platform-implementation'] as $name) {
+            self::assertFileExists(
+                $this->project->path('.claude/skills/' . $name . '/SKILL.md'),
+                $name . ' must be installed when the bundled-skills key is absent.',
+            );
+            self::assertFileEquals(
+                $this->project->path('.claude/skills/' . $name . '/SKILL.md'),
+                $this->project->path('.agents/skills/' . $name . '/SKILL.md'),
+            );
+        }
     }
 
     public function testComposerRemovePluginCleansUpJardisSkillsAndAgentsMd(): void

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration;
 
+use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Exception\InstallFailedException;
+use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
 use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
@@ -69,53 +71,132 @@ final class SkillInstallerTest extends TestCase
         );
     }
 
-    public function testDefaultOnConfigInstallsCatalogAndLifecycleSkills(): void
+    public function testAbsentKeyInstallsAllSkillsIntoAnExistingThreeSkillProject(): void
     {
-        // When ReadPluginConfig sees no bundled-skills key it returns defaultOn()
-        // (include: ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer']).
-        // Only these three are copied; other bundle skills remain absent.
-        $this->pluginRepo->writeFile('skills/jardis-catalog/SKILL.md', 'catalog-skill');
-        $this->pluginRepo->writeFile('skills/jardis-start-here/SKILL.md', 'start-here-skill');
-        $this->pluginRepo->writeFile('skills/jardis-mcp-consumer/SKILL.md', 'mcp-consumer-skill');
-        $this->pluginRepo->writeFile('skills/plan-requirements/SKILL.md', 'plan-skill');
-        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'rules-skill');
+        // Fixture "1.3.6, key missing": a project that got the three former default skills
+        // from 1.3.x, config without a bundled-skills key -> every bundle skill is installed.
+        foreach (['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer', 'plan-requirements', 'rules-architecture'] as $name) {
+            $this->pluginRepo->writeFile('skills/' . $name . '/SKILL.md', $name);
+        }
+        LegacyFixture::writeInstalledBundle($this->project, ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer']);
 
         $installer = new SkillInstaller(
-            config: PluginConfig::defaultOn(),
+            config: (new ReadPluginConfig())([]),
             pluginRoot: $this->pluginRepo->root,
         );
         $report = $installer($this->project->root, $this->project->path('vendor'));
 
-        self::assertSame(3, $report->installedSkillCount());
+        self::assertSame(5, $report->installedSkillCount());
+        foreach (['.claude/skills', '.agents/skills'] as $root) {
+            foreach (['jardis-catalog', 'plan-requirements', 'rules-architecture'] as $name) {
+                self::assertFileExists($this->project->path($root . '/' . $name . '/SKILL.md'));
+            }
+        }
+    }
+
+    public function testFalseKeepsOnlyMandatoryGroupsAndRemovesTheRestViaManifest(): void
+    {
+        foreach (['foundation-alpha', 'process-beta', 'rules-architecture'] as $name) {
+            $this->pluginRepo->writeFile('skills/' . $name . '/SKILL.md', $name);
+        }
+        $this->installer(PluginConfig::all());
+        self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
+
+        $report = $this->installer((new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => false]]));
+
+        self::assertSame(['foundation-alpha', 'process-beta'], $report->installedSkills());
+        self::assertSame(['rules-architecture'], $report->removedBundledSkills());
+        self::assertSame([], $report->backedUpSkills());
+        foreach (['.claude/skills', '.agents/skills'] as $root) {
+            self::assertDirectoryDoesNotExist($this->project->path($root . '/rules-architecture'));
+            self::assertFileExists($this->project->path($root . '/foundation-alpha/SKILL.md'));
+            self::assertFileExists($this->project->path($root . '/process-beta/SKILL.md'));
+        }
+        $manifest = (new ReadManifest())($this->project->path(Manifest::FILE), '0.0.0')->manifest;
+        self::assertNotNull($manifest);
         self::assertSame(
-            ['jardis-catalog', 'jardis-mcp-consumer', 'jardis-start-here'],
-            $report->installedSkills(),
+            ['.agents/skills/foundation-alpha', '.agents/skills/process-beta', '.claude/skills/foundation-alpha', '.claude/skills/process-beta'],
+            array_keys($manifest->entries),
         );
-        self::assertFileExists($this->project->path('.claude/skills/jardis-catalog/SKILL.md'));
-        self::assertFileExists($this->project->path('.claude/skills/jardis-start-here/SKILL.md'));
-        self::assertFileExists($this->project->path('.claude/skills/jardis-mcp-consumer/SKILL.md'));
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/plan-requirements'));
+    }
+
+    public function testFalseIsRespectedOnEveryFurtherRun(): void
+    {
+        $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => false]]);
+
+        $this->installer($config);
+        $report = $this->installer($config);
+
+        self::assertSame(['foundation-alpha'], $report->installedSkills());
         self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-architecture'));
     }
 
-    public function testFilteredConfigInstallsSubsetAndRemovesStale(): void
+    public function testFilteredConfigInstallsSubsetPlusMandatoryAndRemovesStale(): void
     {
-        $this->pluginRepo->writeFile('skills/plan-requirements/SKILL.md', 'plan-skill');
-        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'rules-skill');
-        // Stale bundled skill on disk from a previous wider config.
-        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'old');
+        foreach (['plan-requirements', 'rules-architecture', 'foundation-alpha'] as $name) {
+            $this->pluginRepo->writeFile('skills/' . $name . '/SKILL.md', $name);
+        }
+        $this->installer(PluginConfig::all());
 
-        $installer = new SkillInstaller(
-            config: PluginConfig::filtered(['plan-*'], []),
-            pluginRoot: $this->pluginRepo->root,
-        );
-        $report = $installer($this->project->root, $this->project->path('vendor'));
+        $report = $this->installer(PluginConfig::filtered(['plan-*'], ['foundation-alpha']));
 
-        self::assertSame(1, $report->installedSkillCount());
-        self::assertSame(['plan-requirements'], $report->installedSkills());
+        self::assertSame(['foundation-alpha', 'plan-requirements'], $report->installedSkills());
         self::assertSame(['rules-architecture'], $report->removedBundledSkills());
         self::assertFileExists($this->project->path('.claude/skills/plan-requirements/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-alpha/SKILL.md'));
         self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/rules-architecture'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/rules-architecture'));
+        self::assertNotEmpty(array_filter(
+            $report->warnings(),
+            static fn (string $w): bool => str_contains($w, 'has no effect on "foundation-alpha"'),
+        ));
+    }
+
+    public function testStaleRemovalBacksUpLocalEditsAndSparesFoldersNotInTheManifest(): void
+    {
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $this->pluginRepo->writeFile('skills/rules-testing/SKILL.md', 't');
+        $this->installer(PluginConfig::all());
+        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'edited locally');
+        // Same name as a bundle skill that is not selected, but the plugin never installed it here.
+        $this->project->writeFile('.claude/skills/rules-patterns/SKILL.md', 'user folder');
+        $this->pluginRepo->writeFile('skills/rules-patterns/SKILL.md', 'p');
+
+        $report = $this->installer(PluginConfig::filtered(['rules-testing'], []));
+
+        self::assertSame(['rules-architecture'], $report->removedBundledSkills());
+        self::assertSame(
+            'edited locally',
+            file_get_contents($this->project->path('.claude/.jardis-backup/rules-architecture/SKILL.md')),
+        );
+        self::assertCount(1, $report->backedUpSkills());
+        self::assertFileExists($this->project->path('.claude/skills/rules-patterns/SKILL.md'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/rules-architecture'));
+    }
+
+    public function testAbortAfterStagingKeepsDeselectedSkillsUntouched(): void
+    {
+        $this->pluginRepo->writeFile('skills/rules-architecture/SKILL.md', 'r');
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/beta/SKILL.md', 'beta-v1');
+        $this->installer(PluginConfig::all());
+
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/beta/SKILL.md', 'beta-v2');
+        symlink(
+            $this->project->path('vendor/none'),
+            $this->project->path('vendor/jardisadapter/cache/.claude/skills/beta/broken'),
+        );
+
+        try {
+            $this->installer(PluginConfig::onlyMandatory());
+            self::fail('The install must abort on the uncopyable entry.');
+        } catch (InstallFailedException) {
+            // expected
+        }
+
+        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
     }
 
     public function testWritesManifestForBothTargetsWithChecksumOfTheTargets(): void
@@ -398,11 +479,18 @@ final class SkillInstallerTest extends TestCase
         return $found;
     }
 
-    private function install(string $pluginVersion = '0.0.0'): \JardisTools\DevSkills\Data\InstallReport
+    private function install(string $pluginVersion = '0.0.0'): InstallReport
     {
         $installer = new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root);
 
         return $installer($this->project->root, $this->project->path('vendor'), $pluginVersion);
+    }
+
+    private function installer(PluginConfig $config): InstallReport
+    {
+        $installer = new SkillInstaller(config: $config, pluginRoot: $this->pluginRepo->root);
+
+        return $installer($this->project->root, $this->project->path('vendor'));
     }
 
     public function testRunsOnEmptyVendorWithoutErrors(): void

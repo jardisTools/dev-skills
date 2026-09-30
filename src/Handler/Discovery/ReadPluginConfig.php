@@ -20,8 +20,7 @@ final class ReadPluginConfig
     {
         $root = $extra[self::ROOT_KEY] ?? null;
         if (!is_array($root) || !array_key_exists(self::BUNDLED_KEY, $root)) {
-            // Key absent → default-on (catalog only); explicit false → none() (handled below).
-            return PluginConfig::defaultOn();
+            return PluginConfig::all();
         }
 
         $raw = $root[self::BUNDLED_KEY];
@@ -30,7 +29,7 @@ final class ReadPluginConfig
             return PluginConfig::all();
         }
         if ($raw === false) {
-            return PluginConfig::none();
+            return $this->mandatoryOnly();
         }
 
         try {
@@ -48,10 +47,13 @@ final class ReadPluginConfig
                 get_debug_type($raw),
             ));
         } catch (InvalidPluginConfigException $e) {
-            return PluginConfig::invalid(
-                $e->getMessage() . ' Falling back to default (none installed).',
-            );
+            return PluginConfig::invalid($e->getMessage());
         }
+    }
+
+    private function mandatoryOnly(): PluginConfig
+    {
+        return PluginConfig::onlyMandatory('bundled-skills=false: ' . PluginConfig::MANDATORY_NOTICE);
     }
 
     /**
@@ -60,7 +62,7 @@ final class ReadPluginConfig
     private function fromList(array $list): PluginConfig
     {
         if ($list === []) {
-            return PluginConfig::none();
+            return $this->mandatoryOnly();
         }
 
         return PluginConfig::filtered($this->normalizeGlobs($list, 'bundled-skills'), []);
@@ -74,9 +76,9 @@ final class ReadPluginConfig
         $include = $this->readListKey($map, 'include');
         $exclude = $this->readListKey($map, 'exclude');
 
-        // Explicit empty include = user asked for "none".
+        // Explicit empty include = user asked for "none" (same as an empty list).
         if ($include === []) {
-            return PluginConfig::none();
+            return $this->mandatoryOnly();
         }
 
         return PluginConfig::filtered($include ?? [], $exclude ?? []);

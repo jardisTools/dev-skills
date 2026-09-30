@@ -13,16 +13,20 @@ use JardisTools\DevSkills\Data\ManifestState;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\SkillSelection;
+use JardisTools\DevSkills\Data\StaleRemovalResult;
 use JardisTools\DevSkills\Data\StagedSkill;
 use JardisTools\DevSkills\Handler\Discovery\ScanPluginSkills;
 use JardisTools\DevSkills\Handler\Discovery\ScanVendor;
 use JardisTools\DevSkills\Handler\Install\BackupChangedSkill;
+use JardisTools\DevSkills\Handler\Install\BackupFolder;
 use JardisTools\DevSkills\Handler\Install\BuildManifestEntries;
 use JardisTools\DevSkills\Handler\Install\CommitStagedSkills;
 use JardisTools\DevSkills\Handler\Install\ComputeStaleBundledSkills;
 use JardisTools\DevSkills\Handler\Install\CopySkill;
 use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
 use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
+use JardisTools\DevSkills\Handler\Install\FindProtectedExcludes;
+use JardisTools\DevSkills\Handler\Install\IsMandatorySkill;
 use JardisTools\DevSkills\Handler\Install\RelocateLegacyBackup;
 use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
 use JardisTools\DevSkills\Handler\Install\ResolveSkillCollisions;
@@ -34,9 +38,9 @@ use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 
 /**
  * Sub-orchestrator for the skills part of an install run: chains discovery,
- * config filtering, stale removal, collision resolution, staging, backup of
- * locally changed folders, the swap into every resolved target and finally the
- * manifest. Contains no logic of its own.
+ * config filtering, collision resolution, staging, backup of
+ * locally changed folders, the swap into every resolved target, removal of deselected
+ * bundle skills (via manifest paths) and finally the manifest. Contains no logic of its own.
  */
 final class InstallSkills
 {
@@ -51,10 +55,13 @@ final class InstallSkills
     /** @var Closure(list<SkillDescriptor>, PluginConfig): list<SkillDescriptor> */
     private readonly Closure $filterBundledSkills;
 
-    /** @var Closure(list<SkillDescriptor>, list<SkillDescriptor>): list<string> */
+    /** @var Closure(list<SkillDescriptor>, PluginConfig): list<string> */
+    private readonly Closure $findProtectedExcludes;
+
+    /** @var Closure(?Manifest, list<SkillDescriptor>): list<string> */
     private readonly Closure $computeStaleBundledSkills;
 
-    /** @var Closure(list<string>, string): list<string> */
+    /** @var Closure(list<string>, ?Manifest, string, string): StaleRemovalResult */
     private readonly Closure $removeStaleBundledSkills;
 
     /** @var Closure(list<SkillDescriptor>, list<SkillDescriptor>): SkillSelection */
@@ -91,9 +98,10 @@ final class InstallSkills
     ) {
         $this->scanVendor = (new ScanVendor())->__invoke(...);
         $this->scanPluginSkills = (new ScanPluginSkills())->__invoke(...);
-        $this->filterBundledSkills = (new FilterBundledSkills())->__invoke(...);
+        $isMandatorySkill = (new IsMandatorySkill())->__invoke(...);
+        $this->filterBundledSkills = (new FilterBundledSkills($isMandatorySkill))->__invoke(...);
+        $this->findProtectedExcludes = (new FindProtectedExcludes($isMandatorySkill))->__invoke(...);
         $this->computeStaleBundledSkills = (new ComputeStaleBundledSkills())->__invoke(...);
-        $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills($filesystem))->__invoke(...);
         $this->resolveSkillCollisions = (new ResolveSkillCollisions())->__invoke(...);
         $this->resolveTargets = (new ResolveTargets($filesystem))->__invoke(...);
         $copySkill = (new CopySkill($filesystem))->__invoke(...);
@@ -104,7 +112,10 @@ final class InstallSkills
             static fn (): \DateTimeImmutable => new \DateTimeImmutable(),
         ))->__invoke(...);
         $this->relocateLegacyBackup = (new RelocateLegacyBackup($findFreeBackupDir))->__invoke(...);
-        $this->backupChangedSkill = (new BackupChangedSkill($copySkill, $checksum, $findFreeBackupDir))->__invoke(...);
+        $backupFolder = (new BackupFolder($copySkill, $findFreeBackupDir))->__invoke(...);
+        $this->backupChangedSkill = (new BackupChangedSkill($backupFolder, $checksum))->__invoke(...);
+        $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills($filesystem, $checksum, $backupFolder))
+            ->__invoke(...);
         $this->commitStagedSkills = (new CommitStagedSkills($filesystem))->__invoke(...);
         $this->buildManifestEntries = (new BuildManifestEntries($checksum))->__invoke(...);
         $this->writeManifest = (new WriteManifest())->__invoke(...);
@@ -121,10 +132,8 @@ final class InstallSkills
     ): array {
         $allBundled = ($this->scanPluginSkills)($this->pluginRoot);
         $keptBundled = ($this->filterBundledSkills)($allBundled, $this->config);
-        $staleNames = ($this->computeStaleBundledSkills)($allBundled, $keptBundled);
-
-        foreach (($this->removeStaleBundledSkills)($staleNames, $projectRoot) as $removed) {
-            $report->addRemovedBundledSkill($removed);
+        foreach (($this->findProtectedExcludes)($allBundled, $this->config) as $warning) {
+            $report->addWarning($warning);
         }
 
         $selection = ($this->resolveSkillCollisions)($keptBundled, ($this->scanVendor)($vendorDir));
@@ -138,6 +147,7 @@ final class InstallSkills
             $report->addWarning($read->warning);
         }
         $previous = $read->state === ManifestState::Healthy ? $read->manifest : null;
+        $staleKeys = ($this->computeStaleBundledSkills)($previous, $selection->skills);
 
         $targets = ($this->resolveTargets)($projectRoot);
         $staged = ($this->stageSkills)($selection->skills, $targets, $projectRoot);
@@ -150,6 +160,15 @@ final class InstallSkills
         }
 
         ($this->commitStagedSkills)($staged);
+
+        $removal = ($this->removeStaleBundledSkills)($staleKeys, $previous, $projectRoot, $backupRoot);
+        foreach ($removal->removed as $removed) {
+            $report->addRemovedBundledSkill($removed);
+        }
+        foreach ($removal->backups as $backup) {
+            $report->addBackedUpSkill($backup['skill'], $backup['backupPath']);
+        }
+
         ($this->writeManifest)(
             $manifestPath,
             ($this->buildManifestEntries)($previous, $staged, $projectRoot, $pluginVersion),
