@@ -305,7 +305,10 @@ final class SkillInstallerRedirectTest extends TestCase
      */
     private function bundleNames(): array
     {
-        return array_map('basename', glob($this->pluginRoot . '/skills/*', GLOB_ONLYDIR) ?: []);
+        $dirs = glob($this->pluginRoot . '/skills/*', GLOB_ONLYDIR) ?: [];
+
+        // A folder without SKILL.md (e.g. a reviewer source folder) is not a bundle skill.
+        return array_values(array_map('basename', array_filter($dirs, static fn (string $dir): bool => is_file($dir . '/SKILL.md'))));
     }
 
     /**

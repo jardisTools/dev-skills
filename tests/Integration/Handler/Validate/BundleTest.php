@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Validate;
 
+use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
 use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
 use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -17,6 +18,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -215,6 +217,126 @@ final class BundleTest extends TestCase
         self::assertIsArray($words);
         self::assertNotEmpty($words);
         self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
+    }
+
+    public function testProcessSkillsHaveZoneProcessPersonaOAndShortDescription(): void
+    {
+        foreach (self::PROCESS_SKILLS as $name) {
+            $file = $this->skillFile($name);
+
+            self::assertFileExists($file, sprintf('Skill %s is not bundled.', $name));
+
+            $document = (new ParseSkillFrontmatter())((string) file_get_contents($file));
+            self::assertNotNull($document, sprintf('Skill %s has no frontmatter.', $name));
+            self::assertSame($name, $document['fields']['name'] ?? null);
+            self::assertSame('process', $document['fields']['zone'] ?? null);
+            self::assertSame('O', $document['fields']['persona'] ?? null);
+            self::assertSame([], (new CheckSkillLinks())($file));
+
+            $description = $document['fields']['description'] ?? '';
+            self::assertIsString($description);
+            $words = preg_split('/\s+/', trim($description), -1, PREG_SPLIT_NO_EMPTY);
+            self::assertIsArray($words);
+            self::assertNotEmpty($words);
+            self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
+        }
+    }
+
+    public function testProcessSkillFilesAreEnglishAndCarryNoPrivateTerms(): void
+    {
+        $files = $this->processFiles();
+        self::assertNotEmpty($files);
+
+        foreach ($files as $file) {
+            $content = (string) file_get_contents($file);
+            $label   = substr($file, strlen(dirname(__DIR__, 4)) + 1);
+
+            self::assertSame(0, preg_match('/[\x{00C4}\x{00D6}\x{00DC}\x{00E4}\x{00F6}\x{00FC}\x{00DF}]/u', $content), $label . ' is English.');
+            foreach (['make qa', 'prozess-check', 'kosten', 'beweggruende'] as $term) {
+                self::assertStringNotContainsStringIgnoringCase($term, $content, sprintf('%s must not contain "%s".', $label, $term));
+            }
+            self::assertSame(
+                0,
+                preg_match('/\b(opus|sonnet|haiku|fable|rolf)\b/i', $content),
+                $label . ' names no model or person.',
+            );
+        }
+    }
+
+    public function testChooseTierNamesFourTiersAndBothMarkers(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-choose-tier'));
+
+        foreach (['**0 Answer**', '**1 Single action**', '**2 Small assignment**', '**3 Undertaking**'] as $tier) {
+            self::assertStringContainsString($tier, $content);
+        }
+
+        $escalate = strpos($content, '<!-- rule:tier-escalate -->');
+        $offer    = strpos($content, '<!-- rule:chat-end-offer -->');
+        self::assertIsInt($escalate);
+        self::assertIsInt($offer);
+        foreach (['only with a named reason', 'the lower tier', 'two or more subtasks are never'] as $keyword) {
+            self::assertStringContainsString($keyword, $content);
+        }
+        foreach (['create a project folder?', 'docs/vorhaben/', 'carry knowledge into the pool?'] as $keyword) {
+            self::assertStringContainsString($keyword, substr($content, $offer));
+        }
+        self::assertLessThan(
+            (int) strpos($content, 'carry knowledge into the pool?'),
+            (int) strpos($content, 'create a project folder?'),
+            'Chat, then project documents, then knowledge.',
+        );
+
+        self::assertStringNotContainsStringIgnoringCase('builder', $content);
+        self::assertStringNotContainsString('jardis ui', $content);
+
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['process-check-existing'], $document['fields']['next'] ?? null);
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+    }
+
+    public function testExistingCapabilityCheckSourceParses(): void
+    {
+        $file   = dirname(__DIR__, 4) . '/skills/process-review-board/reviewers/existing-capability-check.md';
+        $parser = new ParseSkillFrontmatter();
+
+        self::assertFileExists($file);
+        $source = (new ParseReviewerSource(static fn (string $content): ?array => $parser($content)))(
+            'existing-capability-check',
+            (string) file_get_contents($file),
+        );
+
+        self::assertNotNull($source);
+        self::assertStringContainsString('MET | PARTIAL | NOT FOUND', $source->body);
+
+        $document = $parser((string) file_get_contents($file));
+        self::assertNotNull($document);
+        self::assertArrayNotHasKey('model', $document['fields']);
+
+        $check = (string) file_get_contents($this->skillFile('process-check-existing'));
+        self::assertStringContainsString('../process-review-board/reviewers/existing-capability-check.md', $check);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function processFiles(): array
+    {
+        $root  = dirname(__DIR__, 4) . '/skills';
+        $files = [];
+        $dirs  = [...(glob($root . '/process-*', GLOB_ONLYDIR) ?: []), ...(glob($root . '/code-review-change', GLOB_ONLYDIR) ?: [])];
+        foreach ($dirs as $dir) {
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator((string) $dir, \FilesystemIterator::SKIP_DOTS));
+            foreach ($iterator as $entry) {
+                if ($entry instanceof \SplFileInfo && $entry->isFile()) {
+                    $files[] = $entry->getPathname();
+                }
+            }
+        }
+        sort($files);
+
+        return $files;
     }
 
     /**
