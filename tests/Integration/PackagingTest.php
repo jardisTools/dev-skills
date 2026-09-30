@@ -104,6 +104,22 @@ final class PackagingTest extends TestCase
     }
 
     /**
+     * The commit-msg hook and the CI range check are installed into customer projects from the plugin folder,
+     * so both must ship in the dist archive, next to the pool check.
+     */
+    public function testCommitHookScriptsAreShipped(): void
+    {
+        foreach (['scripts/commit-msg', 'scripts/check-commit-messages'] as $path) {
+            self::assertFileExists($this->pluginRoot . '/' . $path);
+            self::assertSame(
+                'unspecified',
+                $this->exportIgnore($path),
+                sprintf('"%s" must ship in the dist archive but is export-ignored.', $path),
+            );
+        }
+    }
+
+    /**
      * Returns git's export-ignore verdict for $path: "set" or "unspecified".
      */
     private function exportIgnore(string $path): string
