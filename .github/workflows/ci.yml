@@ -9,6 +9,10 @@ on:
       - 'skills/**'
       - 'bin/**'
       - 'catalog/**'
+      - 'docs/**'
+      - 'router/**'
+      - 'scripts/**'
+      - 'README.md'
       - 'composer.json'
       - '.github/workflows/**'
       - 'Makefile'
@@ -25,6 +29,10 @@ on:
       - 'skills/**'
       - 'bin/**'
       - 'catalog/**'
+      - 'docs/**'
+      - 'router/**'
+      - 'scripts/**'
+      - 'README.md'
       - 'composer.json'
       - '.github/workflows/**'
       - 'Makefile'
@@ -157,6 +165,44 @@ jobs:
 
       - name: Validate bundled SKILL.md files against docs/SKILL-FORMAT.md
         run: make validate-skills
+
+      - name: Cleanup
+        if: always()
+        run: make remove
+
+      - name: Logout from Docker Hub
+        if: always()
+        env:
+          DOCKER_CONFIG: /tmp/.docker
+        run: docker logout
+
+  check-public-text:
+    name: check-public-text
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_TEXT_DENYLIST: ${{ secrets.PUBLIC_TEXT_DENYLIST }}
+      # Denylist is required (fail-closed) except where the secret is unavailable:
+      # fork PRs and Dependabot runs cannot read Actions secrets. Push and same-repo PRs stay '1'.
+      PUBLIC_TEXT_REQUIRE_DENYLIST: ${{ ((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) || github.actor == 'dependabot[bot]') && '0' || '1' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup environment
+        run: cp .env.example .env
+
+      - name: Login to Docker Hub
+        if: ${{ github.actor != 'dependabot[bot]' }}
+        env:
+          DOCKER_CONFIG: /tmp/.docker
+        run: |
+          mkdir -p $DOCKER_CONFIG
+          echo "${{ secrets.DOCKER_PAT }}" | docker login -u "${{ secrets.DOCKER_USER_NAME }}" --password-stdin
+
+      - name: Install dependencies
+        run: make install
+
+      - name: Check public texts for home paths and private terms
+        run: make check-public-text
 
       - name: Cleanup
         if: always()

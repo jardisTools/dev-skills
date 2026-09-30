@@ -66,6 +66,10 @@ check-catalog-packagist: ## Check Packagist for Jardis packages missing from cat
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/check-catalog-packagist.php
 .PHONY: check-catalog-packagist
 
+check-public-text: ## Check publicly shipped texts for home paths and private denylist terms (env PUBLIC_TEXT_DENYLIST)
+	$(DOCKER_COMPOSE) run --rm --no-deps -e PUBLIC_TEXT_DENYLIST -e PUBLIC_TEXT_REQUIRE_DENYLIST phpcli php /app/bin/check-public-text.php
+.PHONY: check-public-text
+
 <---development----->: ## -----------------------------------------------------------------------
 shell: ## Run a shell inside the phpcli container
 	$(DOCKER_COMPOSE) run --rm --no-deps -it phpcli sh
