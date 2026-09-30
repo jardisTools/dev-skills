@@ -71,7 +71,7 @@ Merge the answers into one list, rule on every finding (work it into the plan or
 
 Show the human the plan with the findings and their rulings. The human releases it; no one else does. Where the undertaking has a surface, the target picture is stored as `KONZEPT.png` before the first stage.
 
-On release set the progress head to phase `stage`, stage `E1`, next step "brief for P1.1", and list the stages in the progress file as one line each.
+On release set the progress head to phase `stage`, stage `E1/<total>` (the form is `E<n>/<total>`, `<total>` the number of stages in the plan), next step "brief for P1.1", and list the stages in the progress file as one line each.
 
 **Exit:** `docs/vorhaben/<name>/PLAN.md`, released by the human.
 

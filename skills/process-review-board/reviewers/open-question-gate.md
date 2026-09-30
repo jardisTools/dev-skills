@@ -27,6 +27,7 @@ These questions are never delegable. Return UNDECIDABLE at once for:
 - destructive or irreversible operations;
 - a change to a public API or to the observable behaviour of a published package;
 - scope beyond the PRD;
+- everything that changes the target picture or a visible surface (send the picture with it);
 - a contradiction of the PRD's wording;
 - publication, cost or third parties.
 

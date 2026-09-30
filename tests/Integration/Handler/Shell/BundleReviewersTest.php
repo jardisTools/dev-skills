@@ -101,6 +101,16 @@ final class BundleReviewersTest extends TestCase
         }
     }
 
+    public function testOpenQuestionGateListsTheVisibleSurfaceAmongTheUndelegable(): void
+    {
+        $content = (string) file_get_contents($this->sourceDir() . '/open-question-gate.md');
+        $runStage = (string) file_get_contents($this->pluginRoot() . '/skills/process-run-stage/SKILL.md');
+        $item = 'everything that changes the target picture or a visible surface (send the picture with it)';
+
+        self::assertStringContainsString('- ' . $item . ";\n", $content);
+        self::assertStringContainsString($item, $runStage);
+    }
+
     private function pluginRoot(): string
     {
         return (string) realpath(dirname(__DIR__, 4));

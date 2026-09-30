@@ -33,6 +33,7 @@ Context load: <measured bytes> of 30 KB. Measure it, do not estimate it.
 - Do not run the full QA entry of the project.
 - No Git operation that changes state; you may read `git status` and `git diff`.
 - Do not write to the progress file.
+- Sight gate: for a built surface deliver the screenshot path and "same" or "differs in ..." in `VIEW`; the sight gate always blocks, the human decides, and the next stage never starts without that sight.
 - Commit message (English, for the main session to use): `<type>(<scope>): <summary>`
 
 ## Return schema

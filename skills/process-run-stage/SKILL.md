@@ -13,7 +13,7 @@ A stage is built phase by phase. Each phase has one brief and one implementer; t
 
 ### 1. Entry
 
-Read `docs/vorhaben/<name>/PROGRESS.md` and the stage plan. The head must say phase `stage` with the stage to build. If it does not, go back to `process-write-plan` (no released plan) or `process-resume` (a session that knows nothing yet). Read `.claude/PROJECT_PROFILE.md`: its QA entry names the gates of this project. A `STOPP:` entry in the head blocks everything until the human answered.
+Read `docs/vorhaben/<name>/PROGRESS.md` and the stage plan. The head must say phase `stage` with the stage to build in the form `E<n>/<total>`. If it does not, go back to `process-write-plan` (no released plan) or `process-resume` (a session that knows nothing yet). Read `.claude/PROJECT_PROFILE.md`: its QA entry names the gates of this project. A `STOPP:` entry in the head blocks everything until the human answered.
 
 ### 2. The stage loop
 
@@ -29,7 +29,7 @@ After the last phase of the stage:
 5. **Verifier**, once per stage (section 6).
 6. **QA gates**, once per stage (section 7).
 7. **Sight gate** where the stage builds a surface (section 9).
-8. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`). Then shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage or to phase `acceptance`.
+8. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`). Then shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage (`E<n+1>/<total>`) or to phase `acceptance`.
 
 ### 3. The brief
 

@@ -327,6 +327,40 @@ final class BundleTest extends TestCase
         }
     }
 
+    public function testHeadValuesTheSkillsPrescribePassPoolCheck(): void
+    {
+        $root     = dirname(__DIR__, 4);
+        $template = (string) file_get_contents($root . '/skills/process-concept/templates/PROGRESS.md');
+        $plan     = (string) file_get_contents($this->skillFile('process-write-plan'));
+        self::assertStringContainsString('phase `stage`, stage `E1/<total>`', $plan);
+        self::assertStringContainsString('`E<n>/<total>`', $plan);
+
+        $head = static fn (string $stage): string => str_replace(
+            ["- **Phase:** concept\n", "- **Stage:** \u{2014}\n"],
+            ["- **Phase:** stage\n", '- **Stage:** ' . $stage . "\n"],
+            $template,
+        );
+
+        $exits = [];
+        foreach (['E1/3', 'E1'] as $stage) {
+            $project = new TempProject();
+            try {
+                $project->writeFile('.claude/wissen/INDEX.md', "# Knowledge pool\n");
+                $project->writeFile('docs/vorhaben/demo/PROGRESS.md', $head($stage));
+
+                $result = RunScript::run($root . '/scripts/pool-check.php', $project->root, ['--root=' . $project->root]);
+                $exits[$stage] = $result['exit'];
+                if ($stage === 'E1') {
+                    self::assertStringContainsString("'E<n>/<total>'", $result['stdout'] . $result['stderr']);
+                }
+            } finally {
+                $project->cleanup();
+            }
+        }
+
+        self::assertSame(['E1/3' => 0, 'E1' => 1], $exits);
+    }
+
     public function testProjectProfileTemplateHasFourTopics(): void
     {
         $file = dirname(__DIR__, 4) . '/skills/process-concept/templates/PROJECT_PROFILE.md';
@@ -682,6 +716,8 @@ final class BundleTest extends TestCase
         foreach (['STATUS:', 'FILES:', 'DECISIONS:', 'QA:', 'COMMIT-MSG:', 'STATE:', 'VIEW:', 'NEXT STEP:'] as $key) {
             self::assertStringContainsString($key, $schema, $key);
         }
+        self::assertStringContainsString('the sight gate always blocks', $content);
+        self::assertStringContainsString('"same" or "differs in ..."', $content);
         self::assertStringEndsWith("Return exactly ONE final report in this schema.\n", $content);
         self::assertStringNotContainsString('/Users/', $content);
         self::assertStringNotContainsString('/home/', $content);

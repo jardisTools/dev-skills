@@ -65,6 +65,7 @@ The human accepts the artefact; no one else does. Show it, name what it fixes an
 
 - `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Free lines may follow.
 - `Phase` is one of `concept`, `prd`, `prd-review`, `plan`, `plan-review`, `stage`, `acceptance`, `close`.
+- `Stage` is `—` before phase `stage` and `E<n>/<total>` from phase `stage` on, for example `E1/3`.
 - `Next step` is one action in one line.
 - The file has at most 60 lines. It holds state, not a chronicle; only the main session writes it.
 - `php vendor/jardis/dev-skills/scripts/pool-check.php` checks head and length.
