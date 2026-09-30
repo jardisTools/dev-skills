@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\SkillDescriptor;
-use JardisTools\DevSkills\Handler\Install\HandleConflict;
 
 final class ScanPluginSkills
 {
@@ -31,10 +30,6 @@ final class ScanPluginSkills
         $skills = [];
 
         foreach ($entries as $dir) {
-            if (str_ends_with(basename($dir), HandleConflict::BACKUP_SUFFIX)) {
-                continue;
-            }
-
             if (!is_file($dir . '/SKILL.md')) {
                 continue;
             }

@@ -272,13 +272,15 @@ final class PluginTest extends TestCase
         $io = $this->createMock(IOInterface::class);
         $io->expects(self::atLeastOnce())
             ->method('writeError')
-            ->with(self::stringContains('existing skill "adapter-cache" moved to'));
+            ->with(self::stringContains('existing skill "adapter-cache" differs from the managed state, saved to'));
 
         $plugin = new Plugin();
         $plugin->activate($this->createComposer(), $io);
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
-        self::assertFileExists($this->project->path('.claude/skills/adapter-cache.backup/SKILL.md'));
+        self::assertSame('# existing', file_get_contents($this->project->path('.claude/.jardis-backup/adapter-cache/SKILL.md')));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/adapter-cache.backup'));
+        self::assertSame('# vendor', file_get_contents($this->project->path('.claude/skills/adapter-cache/SKILL.md')));
     }
 
     public function testDefaultInstallsNoBundledSkills(): void

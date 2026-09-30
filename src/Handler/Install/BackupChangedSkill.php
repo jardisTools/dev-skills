@@ -1,0 +1,104 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JardisTools\DevSkills\Handler\Install;
+
+use Closure;
+use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\SkillDescriptor;
+use JardisTools\DevSkills\Data\StagedSkill;
+use JardisTools\DevSkills\Exception\InstallFailedException;
+
+/**
+ * Copies an existing skill folder to `<backupRoot>/<name>/` before it is
+ * replaced, but only when there is evidence that local content would be lost:
+ *
+ * - folder listed in the manifest: its checksum differs from the manifest entry;
+ * - folder not listed: it differs from the content about to be installed, or
+ *   there is no manifest at all and the name is one of the bundle names
+ *   shipped up to 1.3.x (the only case backed up without proof of a change).
+ *
+ * Where the copy goes is decided by FindFreeBackupDir: existing backups are
+ * never overwritten or removed.
+ */
+final class BackupChangedSkill
+{
+    /**
+     * Skill names bundled up to 1.3.x.
+     * TODO: moves to RenamedSkills in P2.5 (single public source for old names).
+     */
+    private const LEGACY_BUNDLE_NAMES = [
+        'do-git-branch',
+        'do-git-commit',
+        'do-git-compliance',
+        'do-git-push',
+        'do-project-git-setup',
+        'jardis-catalog',
+        'jardis-mcp-consumer',
+        'jardis-start-here',
+        'platform-cookbook',
+        'platform-implementation',
+        'platform-usage',
+        'platform-versioning',
+        'platform-workflow',
+        'rules-architecture',
+        'rules-frontend',
+        'rules-patterns',
+        'rules-testing',
+        'schema-authoring',
+    ];
+
+    /**
+     * @param Closure(SkillDescriptor, string): void $copySkill
+     * @param Closure(string): string                $checksumDirectory
+     * @param Closure(string, string): string        $findFreeBackupDir
+     */
+    public function __construct(
+        private readonly Closure $copySkill,
+        private readonly Closure $checksumDirectory,
+        private readonly Closure $findFreeBackupDir,
+    ) {
+    }
+
+    /**
+     * @return ?string absolute path of the created backup, null when nothing needed saving
+     */
+    public function __invoke(StagedSkill $staged, ?Manifest $manifest, string $backupRoot): ?string
+    {
+        if (!is_dir($staged->targetDir) || !$this->needsBackup($staged, $manifest)) {
+            return null;
+        }
+
+        $backupDir = ($this->findFreeBackupDir)($backupRoot, $staged->skill->name);
+        $copy = new SkillDescriptor($staged->skill->name, $staged->targetDir, 'local-backup');
+
+        try {
+            ($this->copySkill)($copy, $backupDir);
+        } catch (\Throwable $failure) {
+            throw new InstallFailedException(
+                sprintf('Could not back up "%s" to "%s": %s', $staged->targetDir, $backupDir, $failure->getMessage()),
+                0,
+                $failure,
+            );
+        }
+
+        return $backupDir;
+    }
+
+    private function needsBackup(StagedSkill $staged, ?Manifest $manifest): bool
+    {
+        $current = ($this->checksumDirectory)($staged->targetDir);
+        $entry = $manifest?->entries[$staged->manifestKey] ?? null;
+
+        if ($entry !== null) {
+            return $entry['sha256'] !== $current;
+        }
+
+        if ($manifest === null && in_array($staged->skill->name, self::LEGACY_BUNDLE_NAMES, true)) {
+            return true;
+        }
+
+        return $current !== ($this->checksumDirectory)($staged->stagingDir);
+    }
+}

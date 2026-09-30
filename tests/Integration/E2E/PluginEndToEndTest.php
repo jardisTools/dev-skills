@@ -74,6 +74,11 @@ final class PluginEndToEndTest extends TestCase
             'Bundled skill was not mirrored into .agents/skills.',
         );
 
+        // Manifest written; no `*.backup` in either skill folder.
+        self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
+        self::assertSame([], glob($this->project->path('.claude/skills') . '/*.backup*') ?: []);
+        self::assertSame([], glob($this->project->path('.agents/skills') . '/*.backup*') ?: []);
+
         // AGENTS.md aggregation contains the fake vendor's body marker.
         $agentsMd = (string) file_get_contents($this->project->path('AGENTS.md'));
         self::assertStringContainsString(

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\SkillDescriptor;
-use JardisTools\DevSkills\Handler\Install\HandleConflict;
 
 final class ScanVendor
 {
@@ -35,10 +34,6 @@ final class ScanVendor
                 $sourcePackage = $vendorName . '/' . basename($package);
 
                 foreach ($this->listDirectories($skillsRoot) as $skillDir) {
-                    if (str_ends_with(basename($skillDir), HandleConflict::BACKUP_SUFFIX)) {
-                        continue;
-                    }
-
                     if (!is_file($skillDir . '/SKILL.md')) {
                         continue;
                     }

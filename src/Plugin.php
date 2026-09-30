@@ -18,6 +18,7 @@ use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
+use JardisTools\DevSkills\Handler\Manifest\ResolvePluginVersion;
 
 final class Plugin implements PluginInterface, EventSubscriberInterface
 {
@@ -85,7 +86,11 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
             ));
         }
 
-        $report = ($this->installer)($projectRoot, $vendorDir);
+        $report = ($this->installer)(
+            $projectRoot,
+            $vendorDir,
+            (new ResolvePluginVersion())($this->composer),
+        );
 
         $this->io->write($this->summarizeInstall($report));
         if ($report->agentsMdHealed()) {
@@ -104,7 +109,8 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
         }
         foreach ($report->backedUpSkills() as $backup) {
             $this->io->writeError(sprintf(
-                '<warning>jardis/dev-skills: existing skill "%s" moved to %s</warning>',
+                '<warning>jardis/dev-skills: existing skill "%s" differs from the managed state, '
+                . 'saved to %s</warning>',
                 $backup['skill'],
                 $backup['backupPath'],
             ));

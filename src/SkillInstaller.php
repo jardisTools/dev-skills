@@ -50,11 +50,11 @@ final class SkillInstaller
         $this->recordAgentsAggregation = (new RecordAgentsAggregation())->__invoke(...);
     }
 
-    public function __invoke(string $projectRoot, string $vendorDir): InstallReport
+    public function __invoke(string $projectRoot, string $vendorDir, string $pluginVersion = '0.0.0'): InstallReport
     {
         $report = new InstallReport();
 
-        $keptBundled = ($this->installSkills)($projectRoot, $vendorDir, $report);
+        $keptBundled = ($this->installSkills)($projectRoot, $vendorDir, $report, $pluginVersion);
 
         $result = ($this->aggregateAgentsMd)(
             ($this->scanAgentsFiles)($vendorDir),
