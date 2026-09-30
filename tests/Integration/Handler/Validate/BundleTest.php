@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Validate;
 
+use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
 use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
 use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
@@ -20,7 +21,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -390,6 +391,7 @@ final class BundleTest extends TestCase
         self::assertSame(['process-concept'], $prdDocument['fields']['prerequisites'] ?? null);
         self::assertSame(['process-write-plan'], $prdDocument['fields']['next'] ?? null);
         self::assertSame(['process-write-prd'], $planDocument['fields']['prerequisites'] ?? null);
+        self::assertSame(['process-run-stage'], $planDocument['fields']['next'] ?? null);
 
         foreach (['process-concept', 'process-resume'] as $name) {
             $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
@@ -556,6 +558,108 @@ final class BundleTest extends TestCase
         self::assertNotNull($document);
         self::assertSame(['foundation-working-principles'], $document['fields']['prerequisites'] ?? null);
         self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+    }
+
+    public function testRunStageNamesFallbackAndNeverMakeQa(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['process-write-plan'], $document['fields']['prerequisites'] ?? null);
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
+
+        $fresh    = strpos($content, '<!-- rule:fresh-session-per-stage -->');
+        $failure  = strpos($content, '<!-- rule:failure-path -->');
+        $question = strpos($content, '<!-- rule:question-points -->');
+        self::assertIsInt($fresh);
+        self::assertIsInt($failure);
+        self::assertIsInt($question);
+        self::assertStringContainsString('fresh agent session', substr($content, $fresh, 600));
+        self::assertStringContainsString('head of the progress file and the brief', substr($content, $fresh, 600));
+        foreach (['fix run', 'follow-up run', 'STOPP:', 'does not debug', 'failure-diagnosis'] as $keyword) {
+            self::assertStringContainsString($keyword, substr($content, $failure, 1400), $keyword);
+        }
+        foreach (['at most 2 question points', 'STOPP:', 'open-question gate', 'next stronger model'] as $keyword) {
+            self::assertStringContainsString($keyword, substr($content, $question, 2200), $keyword);
+        }
+
+        foreach (
+            [
+                'at most 6 KB',
+                'at most 8',
+                'at most 30 KB',
+                'once per stage',
+                'never inside a sub-agent',
+                'QA entry of `.claude/PROJECT_PROFILE.md`',
+                'The sight gate always blocks, headless as well',
+                'file and section of the target picture',
+                'git worktree',
+                'one after another, each in a fresh context',
+                '`claude -p "',
+                '`codex exec "',
+                '`agent -p "',
+                '`copilot -p "',
+                '`gemini -p "',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $content, $keyword);
+        }
+
+        self::assertStringNotContainsStringIgnoringCase('make qa', $content);
+    }
+
+    public function testBriefTemplateCarriesCapsAndReturnSchema(): void
+    {
+        $file = dirname(__DIR__, 4) . '/skills/process-run-stage/templates/brief.md';
+        self::assertFileExists($file);
+
+        $content = (string) file_get_contents($file);
+        self::assertLessThanOrEqual(6144, strlen($content));
+        self::assertStringStartsWith('<!-- Caps:', $content);
+        foreach (['6 KB', '8 commitments', '30 KB'] as $cap) {
+            self::assertStringContainsString($cap, substr($content, 0, (int) strpos($content, '-->')), $cap);
+        }
+
+        preg_match_all('/^## .+$/m', $content, $matches);
+        self::assertSame(
+            ['## Inputs (read in this order)', '## Commitments (at most 8)', '## Limits', '## Gates', '## Return schema'],
+            $matches[0],
+        );
+        self::assertStringContainsString('**Assignment:**', $content);
+        self::assertStringContainsString('**Target artefact:**', $content);
+
+        $schema = substr($content, (int) strpos($content, '## Return schema'));
+        foreach (['STATUS:', 'FILES:', 'DECISIONS:', 'QA:', 'COMMIT-MSG:', 'STATE:', 'VIEW:', 'NEXT STEP:'] as $key) {
+            self::assertStringContainsString($key, $schema, $key);
+        }
+        self::assertStringEndsWith("Return exactly ONE final report in this schema.\n", $content);
+        self::assertStringNotContainsString('/Users/', $content);
+        self::assertStringNotContainsString('/home/', $content);
+    }
+
+    public function testNoSkillBodyNamesARetiredSkill(): void
+    {
+        $root  = dirname(__DIR__, 4) . '/skills';
+        $files = [
+            ...(glob($root . '/*/SKILL.md') ?: []),
+            ...(glob($root . '/*/templates/*') ?: []),
+            ...(glob($root . '/process-review-board/reviewers/*') ?: []),
+        ];
+        self::assertNotEmpty($files);
+
+        foreach ($files as $file) {
+            $content = (string) file_get_contents($file);
+            $label   = substr($file, strlen($root) + 1);
+
+            foreach (array_keys(RenamedSkills::MAPPING) as $retired) {
+                self::assertSame(
+                    0,
+                    preg_match('/(?<![\w-])' . preg_quote($retired, '/') . '(?![\w-])/', $content),
+                    sprintf('%s names the retired skill "%s"; use "%s".', $label, $retired, RenamedSkills::MAPPING[$retired]),
+                );
+            }
+        }
     }
 
     /**

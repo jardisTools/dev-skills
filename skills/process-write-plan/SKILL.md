@@ -4,7 +4,7 @@ description: Use when the PRD is confirmed and stage 2 starts — cut the undert
 zone: process
 persona: O
 prerequisites: [process-write-prd]
-next: []
+next: [process-run-stage]
 ---
 
 ## Scope
@@ -61,7 +61,7 @@ A plan that exceeds a cap is cut again into more stages or fewer promises; the c
 Run the design board exactly once per undertaking, on the plan, blind and in parallel, run by `process-review-board`. Set the progress head to phase `plan-review` while it runs.
 
 - Default: two roles, architecture and test strategy.
-- Add the packages role only when the plan touches new package APIs; it then consults `jardis-catalog` instead of loading a battery of package skills.
+- Add the packages role only when the plan touches new package APIs; it then consults `packages-find-existing` instead of loading a battery of package skills.
 - Add a further role only with a reason from the nature of the work, such as tactical domain design or a user interface.
 - Where the tool cannot run agents in parallel, run the roles one after another, each in a fresh context.
 
