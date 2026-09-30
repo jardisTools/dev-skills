@@ -26,6 +26,7 @@ use JardisTools\DevSkills\Handler\Uninstall\RemoveClaudeMdImport;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveExcludeBlock;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveGeminiContext;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
+use JardisTools\DevSkills\Handler\Uninstall\RemoveReviewerShells;
 use JardisTools\DevSkills\Handler\Uninstall\ReverseTextEdit;
 use JardisTools\DevSkills\Handler\Uninstall\StripClaudeMdImport;
 
@@ -82,6 +83,7 @@ final class SkillUninstaller
                 (new IsEmptyGeminiScaffold())->__invoke(...),
                 $isLinkLeavingProject,
             ))->__invoke(...),
+            'reviewer-shells' => (new RemoveReviewerShells())->__invoke(...),
             'exclude-block' => (new RemoveExcludeBlock(
                 (new ResolveGitDir((new RunGit())->__invoke(...)))->__invoke(...),
                 (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),

@@ -48,6 +48,21 @@ final class PackagingTest extends TestCase
     }
 
     /**
+     * The reviewer sources are read from the plugin at install time, so their folder must be in the dist
+     * archive (it exists from the moment the prompts are shipped; the attribute decides before that).
+     */
+    public function testReviewerSourcePathIsShipped(): void
+    {
+        foreach (['skills/process-review-board', 'skills/process-review-board/reviewers'] as $path) {
+            self::assertSame(
+                'unspecified',
+                $this->exportIgnore($path),
+                sprintf('"%s" must ship in the dist archive but is export-ignored.', $path),
+            );
+        }
+    }
+
+    /**
      * Development / CI artefacts — must be export-ignored from the dist archive.
      */
     public function testDevelopmentArtefactsAreExcluded(): void

@@ -20,6 +20,18 @@ use JardisTools\DevSkills\Handler\Install\SyncExcludeBlock;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
+use JardisTools\DevSkills\Handler\Shell\BuildShellBody;
+use JardisTools\DevSkills\Handler\Shell\EncodeTomlBasicString;
+use JardisTools\DevSkills\Handler\Shell\EncodeTomlMultiline;
+use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
+use JardisTools\DevSkills\Handler\Shell\RenderClaudeShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCodexShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCopilotShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCursorShell;
+use JardisTools\DevSkills\Handler\Shell\RenderFrontmatterShell;
+use JardisTools\DevSkills\Handler\Shell\RenderGeminiShell;
+use JardisTools\DevSkills\Handler\Shell\RenderShell;
+use JardisTools\DevSkills\Handler\Shell\WriteReviewerShells;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
 use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
 use JardisTools\DevSkills\Handler\Support\RunGit;
@@ -30,6 +42,8 @@ use JardisTools\DevSkills\Handler\Uninstall\IsEmptyGeminiScaffold;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveClaudeMdImport;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveExcludeBlock;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveGeminiContext;
+use JardisTools\DevSkills\Handler\Uninstall\RemoveReviewerShells;
+use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
 use JardisTools\DevSkills\Handler\Uninstall\ReverseTextEdit;
 use JardisTools\DevSkills\Handler\Uninstall\StripClaudeMdImport;
 
@@ -83,6 +97,46 @@ final class AddonFactory
             (new IsEmptyGeminiScaffold())->__invoke(...),
             (new IsLinkLeavingProject())->__invoke(...),
         );
+    }
+
+    public static function parseReviewerSource(): ParseReviewerSource
+    {
+        return new ParseReviewerSource((new ParseSkillFrontmatter())->__invoke(...));
+    }
+
+    public static function renderShell(): RenderShell
+    {
+        $encodeBasicString = (new EncodeTomlBasicString())->__invoke(...);
+        $buildBody = (new BuildShellBody())->__invoke(...);
+        $frontmatter = (new RenderFrontmatterShell())->__invoke(...);
+
+        return new RenderShell(
+            (new RenderClaudeShell($frontmatter, $buildBody))->__invoke(...),
+            (new RenderCodexShell(
+                $encodeBasicString,
+                (new EncodeTomlMultiline($encodeBasicString))->__invoke(...),
+                $buildBody,
+            ))->__invoke(...),
+            (new RenderCursorShell($frontmatter, $buildBody))->__invoke(...),
+            (new RenderCopilotShell($frontmatter, $buildBody))->__invoke(...),
+            (new RenderGeminiShell($frontmatter, $buildBody))->__invoke(...),
+        );
+    }
+
+    public static function writeReviewerShells(string $pluginRoot): WriteReviewerShells
+    {
+        return new WriteReviewerShells(
+            $pluginRoot,
+            self::parseReviewerSource()->__invoke(...),
+            self::renderShell()->__invoke(...),
+            (new ReadManifest())->__invoke(...),
+            self::recordSelfSet(),
+        );
+    }
+
+    public static function removeReviewerShells(): RemoveReviewerShells
+    {
+        return new RemoveReviewerShells();
     }
 
     public static function syncExcludeBlock(ProcessDocsMode $mode): SyncExcludeBlock

@@ -30,6 +30,18 @@ use JardisTools\DevSkills\Handler\Install\ReplaceExcludeBlock;
 use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
 use JardisTools\DevSkills\Handler\Install\SyncExcludeBlock;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
+use JardisTools\DevSkills\Handler\Shell\BuildShellBody;
+use JardisTools\DevSkills\Handler\Shell\EncodeTomlBasicString;
+use JardisTools\DevSkills\Handler\Shell\EncodeTomlMultiline;
+use JardisTools\DevSkills\Handler\Shell\ParseReviewerSource;
+use JardisTools\DevSkills\Handler\Shell\RenderClaudeShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCodexShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCopilotShell;
+use JardisTools\DevSkills\Handler\Shell\RenderCursorShell;
+use JardisTools\DevSkills\Handler\Shell\RenderFrontmatterShell;
+use JardisTools\DevSkills\Handler\Shell\RenderGeminiShell;
+use JardisTools\DevSkills\Handler\Shell\RenderShell;
+use JardisTools\DevSkills\Handler\Shell\WriteReviewerShells;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
@@ -39,6 +51,7 @@ use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Support\ScanJsonArray;
 use JardisTools\DevSkills\Handler\Support\ScanJsonObject;
 use JardisTools\DevSkills\Handler\Support\SkipJsonValue;
+use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
 
 final class SkillInstaller
 {
@@ -95,7 +108,8 @@ final class SkillInstaller
 
     /**
      * The add-ons of a normal run: the CLAUDE.md import block, the Gemini context entry, the note
-     * that the plugin created AGENTS.md, and, last, the Git exclude block (`process-docs`).
+     * that the plugin created AGENTS.md, the reviewer shells and, last, the Git exclude block
+     * (`process-docs`). The shells come before the exclude block, so the block knows their paths.
      */
     private function standardAddons(PluginConfig $config): InstallAddons
     {
@@ -128,6 +142,7 @@ final class SkillInstaller
                 $isLinkLeavingProject,
             ))->__invoke(...),
             'agents-md-created' => (new RecordAgentsMdCreated($recordSelfSet))->__invoke(...),
+            'reviewer-shells' => $this->reviewerShells($recordSelfSet),
             'exclude-block' => (new SyncExcludeBlock(
                 $config->processDocs,
                 (new ResolveGitDir($runGit))->__invoke(...),
@@ -137,6 +152,35 @@ final class SkillInstaller
                 (new ListTrackedPaths($runGit))->__invoke(...),
             ))->__invoke(...),
         ]);
+    }
+
+    /**
+     * @param Closure(string, string, \JardisTools\DevSkills\Data\SelfSetEntry): void $recordSelfSet
+     * @return Closure(string, string, InstallReport): void
+     */
+    private function reviewerShells(Closure $recordSelfSet): Closure
+    {
+        $encodeBasicString = (new EncodeTomlBasicString())->__invoke(...);
+        $buildBody = (new BuildShellBody())->__invoke(...);
+        $frontmatter = (new RenderFrontmatterShell())->__invoke(...);
+
+        return (new WriteReviewerShells(
+            $this->pluginRoot,
+            (new ParseReviewerSource((new ParseSkillFrontmatter())->__invoke(...)))->__invoke(...),
+            (new RenderShell(
+                (new RenderClaudeShell($frontmatter, $buildBody))->__invoke(...),
+                (new RenderCodexShell(
+                    $encodeBasicString,
+                    (new EncodeTomlMultiline($encodeBasicString))->__invoke(...),
+                    $buildBody,
+                ))->__invoke(...),
+                (new RenderCursorShell($frontmatter, $buildBody))->__invoke(...),
+                (new RenderCopilotShell($frontmatter, $buildBody))->__invoke(...),
+                (new RenderGeminiShell($frontmatter, $buildBody))->__invoke(...),
+            ))->__invoke(...),
+            (new ReadManifest())->__invoke(...),
+            $recordSelfSet,
+        ))->__invoke(...);
     }
 
     public function __invoke(string $projectRoot, string $vendorDir, string $pluginVersion = '0.0.0'): InstallReport

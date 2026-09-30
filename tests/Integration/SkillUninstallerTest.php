@@ -8,6 +8,7 @@ use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\SkillInstaller;
 use JardisTools\DevSkills\SkillUninstaller;
 use JardisTools\DevSkills\UninstallAddons;
@@ -177,5 +178,51 @@ final class SkillUninstallerTest extends TestCase
         self::assertCount(1, $report->warnings());
         self::assertStringContainsString('add-on "demo" failed and was skipped: cannot remove', $report->warnings()[0]);
         self::assertSame(1, $report->removedSkillCount());
+    }
+
+    public function testUninstallRemovesOnlyManifestShells(): void
+    {
+        $pluginRepo = new TempProject('dev-skills-plugin-');
+        try {
+            $pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+            $pluginRepo->writeFile(
+                'skills/process-review-board/reviewers/test-reviewer.md',
+                (string) file_get_contents(__DIR__ . '/../Fixture/Reviewers/test-reviewer.md'),
+            );
+            $foreignCodex = "name = \"stage-verifier\"\n";
+            $this->project->writeFile('.codex/agents/stage-verifier.toml', $foreignCodex);
+            $this->project->writeFile('.claude/agents/mine.md', "my agent\n");
+            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+                $this->project->root,
+                $this->project->path('vendor'),
+                '1.0.0',
+            );
+            $shells = [
+                '.claude/agents/test-reviewer.md', '.codex/agents/test-reviewer.toml',
+                '.cursor/agents/test-reviewer.md', '.github/agents/test-reviewer.agent.md',
+                '.gemini/agents/test-reviewer.md',
+            ];
+            $manifest = (new ReadManifest())($this->project->path(Manifest::FILE), '1.0.0')->manifest;
+            $noted = array_values(array_intersect(array_keys($manifest->selfSet ?? []), $shells));
+            sort($shells);
+            self::assertSame($shells, $noted);
+            foreach ($shells as $shell) {
+                self::assertFileExists($this->project->path($shell));
+            }
+
+            $report = (new SkillUninstaller())($this->project->root, '1.0.0');
+
+            self::assertSame([], $report->warnings());
+            foreach ($shells as $shell) {
+                self::assertFileDoesNotExist($this->project->path($shell), $shell);
+            }
+            self::assertSame($foreignCodex, file_get_contents($this->project->path('.codex/agents/stage-verifier.toml')));
+            self::assertSame("my agent\n", file_get_contents($this->project->path('.claude/agents/mine.md')));
+            self::assertDirectoryDoesNotExist($this->project->path('.cursor'));
+            self::assertDirectoryDoesNotExist($this->project->path('.gemini'));
+            self::assertDirectoryDoesNotExist($this->project->path('.github'));
+        } finally {
+            $pluginRepo->cleanup();
+        }
     }
 }
