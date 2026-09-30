@@ -10,7 +10,6 @@ use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Exception\InstallFailedException;
 use JardisTools\DevSkills\Exception\UninstallFailedException;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
-use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 
 /**
  * Reverses the plugin's changes to AGENTS.md. Never through a link: when AGENTS.md is a link (out of the
@@ -28,20 +27,19 @@ final class RemoveAggregatedAgentsMd
     /** @var Closure(string, string): (int|false) */
     private readonly Closure $write;
 
-    /** @var Closure(string, string): bool */
-    private readonly Closure $isPathBehindLink;
-
+    /**
+     * @param Closure(string, string): bool $isPathBehindLink
+     */
     public function __construct(
+        private readonly Closure $isPathBehindLink,
         ?Closure $analyze = null,
         ?Closure $unlink = null,
         ?Closure $write = null,
-        ?Closure $isPathBehindLink = null,
     ) {
         $this->analyze = $analyze ?? (new AnalyzeAgentsMd())->__invoke(...);
         $this->unlink = $unlink ?? static fn (string $path): bool => @unlink($path);
         $this->write = $write ?? static fn (string $path, string $content): int|false
             => @file_put_contents($path, $content);
-        $this->isPathBehindLink = $isPathBehindLink ?? (new IsPathBehindLink())->__invoke(...);
     }
 
     /**

@@ -64,6 +64,11 @@ final class BundleTest extends TestCase
 
         self::assertStringContainsString('make install-hooks', substr($content, $hooks, $commit - $hooks));
 
+        $verifyPhase = substr($content, $verify);
+        self::assertStringNotContainsString('install-commit-msg-hook', $verifyPhase, 'Phase 7 only reads.');
+        self::assertStringContainsString('scripts/commit-msg', $verifyPhase);
+        self::assertStringContainsString('not wired in yet', $verifyPhase);
+
         $phase = substr($content, $commit, $verify - $commit);
         self::assertStringContainsString('sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook', $phase);
         foreach (['Husky', 'CaptainHook', 'GrumPHP', 'Lefthook', 'core.hooksPath', '.git/hooks/commit-msg'] as $term) {
@@ -145,6 +150,18 @@ final class BundleTest extends TestCase
         self::assertFileExists($templates . '/INDEX.md');
         self::assertFileExists($templates . '/themenseite.md');
         self::assertLessThan(10240, (int) filesize($templates . '/INDEX.md'));
+
+        foreach (self::KNOWLEDGE_SKILLS as $name) {
+            $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
+            self::assertNotNull($document);
+            $chain = $document['fields']['prerequisites'] ?? [];
+            self::assertIsArray($chain);
+            self::assertContains(
+                'foundation-working-principles',
+                $chain,
+                sprintf('%s must chain to foundation-working-principles.', $name),
+            );
+        }
 
         $record = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile('knowledge-record-decision')));
         self::assertNotNull($record);

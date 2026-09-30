@@ -162,7 +162,8 @@ final class CommitMsgHookTest extends TestCase
             "fixup! feat: add it\n",
             "squash! fix: repair it\n",
             "amend! feat: add it\n\nfeat: add it, better\n",
-            "feat: undo the thing\n\nThis reverts commit 0123abc.\n",
+            // A revert is recognised by its subject only; the old case (feat: subject, phrase in the body) was no revert.
+            "Revert \"feat: the thing\"\n\nThis reverts commit 0123abc.\n",
         ];
 
         foreach ($messages as $message) {
@@ -170,6 +171,13 @@ final class CommitMsgHookTest extends TestCase
 
             self::assertSame(0, $result['exit'], $message . $result['stderr']);
         }
+    }
+
+    public function testRevertPhraseInBodyDoesNotBypassTheRule(): void
+    {
+        $result = $this->runHook("feat: undo the thing\n\nThis reverts commit 0123abc.\n");
+
+        self::assertNotSame(0, $result['exit']);
     }
 
     public function testRealGitCommitIsRejectedAndAccepted(): void

@@ -10,7 +10,6 @@ use JardisTools\DevSkills\Data\AgentsDescriptor;
 use JardisTools\DevSkills\Data\AgentsMdAnalysis;
 use JardisTools\DevSkills\Data\AggregateAgentsResult;
 use JardisTools\DevSkills\Exception\InstallFailedException;
-use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 
 /**
  * Writes the aggregated managed block into AGENTS.md. Never through a link: when AGENTS.md is a link (out
@@ -31,22 +30,21 @@ final class AggregateAgentsMd
     /** @var Closure(int): ?string */
     private readonly Closure $sizeWarning;
 
-    /** @var Closure(string, string): bool */
-    private readonly Closure $isPathBehindLink;
-
+    /**
+     * @param Closure(string, string): bool $isPathBehindLink
+     */
     public function __construct(
         private readonly Filesystem $filesystem,
+        private readonly Closure $isPathBehindLink,
         ?Closure $analyze = null,
         ?Closure $backup = null,
         ?Closure $buildBlock = null,
         ?Closure $sizeWarning = null,
-        ?Closure $isPathBehindLink = null,
     ) {
         $this->analyze = $analyze ?? (new AnalyzeAgentsMd())->__invoke(...);
         $this->backup = $backup ?? (new BackupAgentsMd())->__invoke(...);
         $this->buildBlock = $buildBlock ?? (new BuildManagedBlock())->__invoke(...);
         $this->sizeWarning = $sizeWarning ?? (new BuildAgentsMdSizeWarning())->__invoke(...);
-        $this->isPathBehindLink = $isPathBehindLink ?? (new IsPathBehindLink())->__invoke(...);
     }
 
     /**

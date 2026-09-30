@@ -29,7 +29,8 @@ not part of it.
 3. commit-msg hook wired (a warning when missing, never a FAIL) → look for a `commit-msg`
    that calls `vendor/jardis/dev-skills/scripts/commit-msg`: in `.husky/`, in the
    `core.hooksPath` folder or in `.git/hooks/`; for CaptainHook, GrumPHP or Lefthook look in
-   their configuration. Fix: `/git-setup-repository` (commit-msg phase)
+   their configuration (read-only: this check never runs the installer). A `commit-msg` of
+   another tool that does not call it counts as missing. Fix: `/git-setup-repository` (commit-msg phase)
 4. No secrets committed → `git ls-files .env.local '*.key' | wc -l` is 0
    (the stack `.env` itself IS versioned by design in template projects —
    check it carries no real credentials, only the trivial defaults)

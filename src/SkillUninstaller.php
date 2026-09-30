@@ -21,6 +21,7 @@ use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
 use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Uninstall\IsEmptyGeminiScaffold;
+use JardisTools\DevSkills\Handler\Uninstall\RecordAgentsRemoval;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveAggregatedAgentsMd;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveClaudeMdImport;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveExcludeBlock;
@@ -44,6 +45,9 @@ final class SkillUninstaller
     /** @var Closure(string): AgentsMdUninstallAction */
     private readonly Closure $removeAggregatedAgentsMd;
 
+    /** @var Closure(UninstallReport, AgentsMdUninstallAction): void */
+    private readonly Closure $recordAgentsRemoval;
+
     /** @var Closure(ManifestReadResult): ?Manifest */
     private readonly Closure $selectPreviousManifest;
 
@@ -57,7 +61,10 @@ final class SkillUninstaller
         $this->removeManagedPaths = (new RemoveManagedPaths($fs, $resolveManagedFolder))->__invoke(...);
         $this->readManifest = (new ReadManifest())->__invoke(...);
         $this->guardManifestVersion = (new GuardManifestVersion($this->readManifest))->__invoke(...);
-        $this->removeAggregatedAgentsMd = (new RemoveAggregatedAgentsMd())->__invoke(...);
+        $this->removeAggregatedAgentsMd = (new RemoveAggregatedAgentsMd(
+            (new IsPathBehindLink())->__invoke(...),
+        ))->__invoke(...);
+        $this->recordAgentsRemoval = (new RecordAgentsRemoval())->__invoke(...);
         $this->selectPreviousManifest = (new SelectPreviousManifest())->__invoke(...);
         $this->uninstallAddons = $uninstallAddons ?? $this->standardAddons();
     }
@@ -118,13 +125,6 @@ final class SkillUninstaller
             $report->addRemovedSkill($name);
         }
 
-        $action = ($this->removeAggregatedAgentsMd)($projectRoot);
-        $report->setAgentsMdAction($action);
-        if ($action === AgentsMdUninstallAction::SkippedLink) {
-            $report->addWarningIfAny(
-                'AGENTS.md is a link or lies behind one; it was not followed or changed.'
-                . ' A managed block from an older release may still stand behind the link.',
-            );
-        }
+        ($this->recordAgentsRemoval)($report, ($this->removeAggregatedAgentsMd)($projectRoot));
     }
 }

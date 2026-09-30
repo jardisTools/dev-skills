@@ -194,11 +194,21 @@ none (Husky sets `core.hooksPath` itself, so it is checked first).
 git ls-remote --heads origin | grep -E 'main|develop'   # both exist
 gh api repos/{org}/{repo}/rulesets --jq '.[].name'       # ruleset present
 test -x .git/hooks/pre-commit && test -x .git/hooks/pre-push && echo "hooks OK"
-sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook | grep '^result:'
 ```
 
-For the commit-msg hook, `result: unchanged`, `foreign` or `snippet` is fine: the hook is
-already wired or belongs to another tool. Re-running never overwrites anything.
+The commit-msg hook is only read here, never installed again. Look in the place the
+`manager:` line of Phase 6 named (Husky: `.husky/commit-msg`; `core.hooksPath`:
+`<hooksPath>/commit-msg`; no manager: `.git/hooks/commit-msg`) and confirm that the file
+exists and calls `scripts/commit-msg`:
+
+```bash
+grep -q 'scripts/commit-msg' .git/hooks/commit-msg && echo "commit-msg OK"   # adjust the path
+```
+
+For CaptainHook, GrumPHP and Lefthook, check their configuration for the snippet.
+`result: foreign` and `result: snippet` mean the hook is **not wired in yet**: add the
+printed lines (or the snippet) to the existing hook or the manager's configuration, then
+run this check again.
 
 Then run `/git-check-compliance` for the full check list.
 

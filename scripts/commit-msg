@@ -38,9 +38,6 @@ case $subject in
         exit 0
         ;;
 esac
-if printf '%s\n' "$message" | grep -Eq 'This reverts commit [0-9a-f]{7,40}'; then
-    exit 0
-fi
 
 note_required=0
 if printf '%s\n' "$subject" | grep -Eq '^(feat|fix)(\([^)]*\))?!?:'; then
