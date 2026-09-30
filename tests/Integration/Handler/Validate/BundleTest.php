@@ -20,7 +20,7 @@ final class BundleTest extends TestCase
 {
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
-    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan'];
+    private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board'];
 
     public function testFoundationSkillsAreBundled(): void
     {
@@ -466,6 +466,96 @@ final class BundleTest extends TestCase
 
         $check = (string) file_get_contents($this->skillFile('process-check-existing'));
         self::assertStringContainsString('../process-review-board/reviewers/existing-capability-check.md', $check);
+    }
+
+    public function testFifteenReviewerSourcesParseAndNoneExistsForGo(): void
+    {
+        $dir    = dirname(__DIR__, 4) . '/skills/process-review-board/reviewers';
+        $parser = new ParseSkillFrontmatter();
+        $parse  = new ParseReviewerSource(static fn (string $content): ?array => $parser($content));
+
+        $roles = array_map(
+            static fn (string $file): string => basename($file, '.md'),
+            glob($dir . '/*') ?: [],
+        );
+        sort($roles);
+
+        $expected = [
+            'existing-capability-check',
+            'plan-review-architecture',
+            'plan-review-ddd-tactics',
+            'plan-review-frontend-a11y',
+            'plan-review-frontend-architecture',
+            'plan-review-frontend-tests',
+            'plan-review-frontend-types',
+            'plan-review-frontend-ux',
+            'plan-review-packages',
+            'plan-review-php',
+            'plan-review-test-strategy',
+            'prd-review-ddd-strategy',
+            'prd-review-domain-expert',
+            'prd-review-frontend-ux',
+            'prd-review-skeptic',
+        ];
+        self::assertSame($expected, $roles);
+        self::assertCount(15, $roles);
+        foreach ($roles as $role) {
+            self::assertSame(0, preg_match('/(^|-)go($|-)/', $role), 'No reviewer source exists for Go.');
+            self::assertStringNotContainsString('senior', $role);
+        }
+
+        foreach ($roles as $role) {
+            $content = (string) file_get_contents($dir . '/' . $role . '.md');
+            $source  = $parse($role, $content);
+
+            self::assertNotNull($source, sprintf('Reviewer source %s does not parse.', $role));
+            self::assertNotSame('', $source->body);
+            self::assertStringContainsString('## Return', $source->body, $role);
+
+            $document = $parser($content);
+            self::assertNotNull($document);
+            self::assertArrayNotHasKey('model', $document['fields'], $role);
+        }
+    }
+
+    public function testReviewBoardCarriesQuestionPointsMarker(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-review-board'));
+
+        $marker = strpos($content, '<!-- rule:question-points -->');
+        self::assertIsInt($marker);
+        $rule = substr($content, $marker, 1200);
+        foreach (['at most 2 roles', 'exactly once per undertaking', 'STOPP:'] as $keyword) {
+            self::assertStringContainsString($keyword, $rule);
+        }
+
+        foreach (
+            [
+                'parallel',
+                'one after another, each with a fresh context per role',
+                '`claude -p "',
+                '`codex exec "',
+                '`agent -p "',
+                '`copilot -p "',
+                '`gemini -p "',
+                'deadline in tool calls',
+                'Rule on every finding',
+                'Every fork goes to the human',
+                'blind',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $content);
+        }
+
+        self::assertStringContainsString(
+            '`packages-find-existing`',
+            (string) file_get_contents(dirname(__DIR__, 4) . '/skills/process-review-board/reviewers/plan-review-packages.md'),
+        );
+
+        $document = (new ParseSkillFrontmatter())($content);
+        self::assertNotNull($document);
+        self::assertSame(['foundation-working-principles'], $document['fields']['prerequisites'] ?? null);
+        self::assertLessThanOrEqual(250, substr_count($content, "\n"));
     }
 
     /**
