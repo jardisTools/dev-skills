@@ -15,6 +15,7 @@ use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\InstallAddons;
 use JardisTools\DevSkills\SkillInstaller;
+use JardisTools\DevSkills\Tests\Support\GitRepo;
 use JardisTools\DevSkills\Tests\Support\LegacyFixture;
 use JardisTools\DevSkills\Tests\Support\TempProject;
 use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
@@ -29,6 +30,8 @@ final class SkillInstallerTest extends TestCase
     {
         $this->project = new TempProject('dev-skills-project-');
         $this->pluginRepo = new TempProject('dev-skills-plugin-');
+        // A real repository: the exclude block (P4.3) warns when the project has none.
+        GitRepo::init($this->project->root);
     }
 
     protected function tearDown(): void

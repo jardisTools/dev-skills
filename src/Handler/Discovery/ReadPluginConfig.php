@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\PluginConfig;
+use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Exception\InvalidPluginConfigException;
 
 final class ReadPluginConfig
 {
     private const ROOT_KEY = 'jardis/dev-skills';
     private const BUNDLED_KEY = 'bundled-skills';
+    private const PROCESS_DOCS_KEY = 'process-docs';
 
     /**
      * @param array<string, mixed> $extra the value returned by
@@ -19,7 +21,47 @@ final class ReadPluginConfig
     public function __invoke(array $extra): PluginConfig
     {
         $root = $extra[self::ROOT_KEY] ?? null;
-        if (!is_array($root) || !array_key_exists(self::BUNDLED_KEY, $root)) {
+        if (!is_array($root)) {
+            return PluginConfig::all();
+        }
+
+        [$mode, $modeWarning] = $this->readProcessDocs($root);
+
+        return $this->readBundledSkills($root)->withProcessDocs($mode, $modeWarning);
+    }
+
+    /**
+     * `process-docs` is independent of `bundled-skills`. An absent key means `committed`; any
+     * other value than the two modes is reported and treated as `local`, so nothing can land
+     * in a customer repository by accident.
+     *
+     * @param array<array-key, mixed> $root
+     * @return array{ProcessDocsMode, ?string}
+     */
+    private function readProcessDocs(array $root): array
+    {
+        if (!array_key_exists(self::PROCESS_DOCS_KEY, $root)) {
+            return [ProcessDocsMode::Committed, null];
+        }
+
+        $raw = $root[self::PROCESS_DOCS_KEY];
+        $mode = is_string($raw) ? ProcessDocsMode::tryFrom($raw) : null;
+        if ($mode !== null) {
+            return [$mode, null];
+        }
+
+        return [ProcessDocsMode::Local, sprintf(
+            'process-docs must be "committed" or "local"; got %s. Treated as process-docs=local.',
+            is_string($raw) ? '"' . $raw . '"' : get_debug_type($raw),
+        )];
+    }
+
+    /**
+     * @param array<array-key, mixed> $root
+     */
+    private function readBundledSkills(array $root): PluginConfig
+    {
+        if (!array_key_exists(self::BUNDLED_KEY, $root)) {
             return PluginConfig::all();
         }
 

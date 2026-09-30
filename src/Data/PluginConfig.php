@@ -21,7 +21,25 @@ final readonly class PluginConfig
         public array $includeGlobs,
         public array $excludeGlobs,
         public ?string $warning,
+        public ProcessDocsMode $processDocs = ProcessDocsMode::Committed,
+        public ?string $processDocsWarning = null,
     ) {
+    }
+
+    /**
+     * The same configuration with the `process-docs` mode and the warning about its raw value.
+     */
+    public function withProcessDocs(ProcessDocsMode $mode, ?string $warning): self
+    {
+        return new self(
+            $this->installAll,
+            $this->mandatoryOnly,
+            $this->includeGlobs,
+            $this->excludeGlobs,
+            $this->warning,
+            $mode,
+            $warning,
+        );
     }
 
     /**

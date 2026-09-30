@@ -13,13 +13,17 @@ use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\Handler\Install\ReplaceExcludeBlock;
+use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
 use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
 use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
+use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Uninstall\IsEmptyGeminiScaffold;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveAggregatedAgentsMd;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveClaudeMdImport;
+use JardisTools\DevSkills\Handler\Uninstall\RemoveExcludeBlock;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveGeminiContext;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveManagedPaths;
 use JardisTools\DevSkills\Handler\Uninstall\ReverseTextEdit;
@@ -77,6 +81,10 @@ final class SkillUninstaller
                 (new ReverseTextEdit())->__invoke(...),
                 (new IsEmptyGeminiScaffold())->__invoke(...),
                 $isLinkLeavingProject,
+            ))->__invoke(...),
+            'exclude-block' => (new RemoveExcludeBlock(
+                (new ResolveGitDir((new RunGit())->__invoke(...)))->__invoke(...),
+                (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),
             ))->__invoke(...),
         ]);
     }

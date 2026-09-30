@@ -15,20 +15,27 @@ use JardisTools\DevSkills\Handler\Discovery\ScanAgentsFiles;
 use JardisTools\DevSkills\Handler\Install\AggregateAgentsMd;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\Handler\Install\BuildClaudeMdContent;
+use JardisTools\DevSkills\Handler\Install\BuildExcludeLines;
 use JardisTools\DevSkills\Handler\Install\BuildJsonMemberInsertion;
 use JardisTools\DevSkills\Handler\Install\EnsureClaudeMdImport;
 use JardisTools\DevSkills\Handler\Install\EnsureGeminiContext;
 use JardisTools\DevSkills\Handler\Install\HasAgentsImport;
 use JardisTools\DevSkills\Handler\Install\IsCatalogInstalled;
+use JardisTools\DevSkills\Handler\Install\ListTrackedPaths;
 use JardisTools\DevSkills\Handler\Install\LoadRouterText;
 use JardisTools\DevSkills\Handler\Install\PlanGeminiContextEdit;
 use JardisTools\DevSkills\Handler\Install\RecordAgentsAggregation;
+use JardisTools\DevSkills\Handler\Install\RecordAgentsMdCreated;
+use JardisTools\DevSkills\Handler\Install\ReplaceExcludeBlock;
+use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
+use JardisTools\DevSkills\Handler\Install\SyncExcludeBlock;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
 use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
+use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Support\ScanJsonArray;
 use JardisTools\DevSkills\Handler\Support\ScanJsonObject;
 use JardisTools\DevSkills\Handler\Support\SkipJsonValue;
@@ -40,6 +47,8 @@ final class SkillInstaller
     private readonly InstallAddons $installAddons;
 
     private readonly string $pluginRoot;
+
+    private readonly ?string $processDocsWarning;
 
     /** @var Closure(string, string, Closure(): void): ?string */
     private readonly Closure $guardManifestVersion;
@@ -67,13 +76,14 @@ final class SkillInstaller
     ) {
         $fs = $filesystem ?? new Filesystem();
         $this->pluginRoot = $pluginRoot ?? dirname(__DIR__);
+        $this->processDocsWarning = $config?->processDocsWarning;
 
         $this->installSkills = new InstallSkills(
             $config ?? PluginConfig::all(),
             $this->pluginRoot,
             $fs,
         );
-        $this->installAddons = $installAddons ?? $this->standardAddons();
+        $this->installAddons = $installAddons ?? $this->standardAddons($config ?? PluginConfig::all());
         $this->guardManifestVersion = (new GuardManifestVersion((new ReadManifest())->__invoke(...)))
             ->__invoke(...);
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
@@ -84,9 +94,10 @@ final class SkillInstaller
     }
 
     /**
-     * The add-ons of a normal run: the CLAUDE.md import block and the Gemini context entry.
+     * The add-ons of a normal run: the CLAUDE.md import block, the Gemini context entry, the note
+     * that the plugin created AGENTS.md, and, last, the Git exclude block (`process-docs`).
      */
-    private function standardAddons(): InstallAddons
+    private function standardAddons(PluginConfig $config): InstallAddons
     {
         $recordSelfSet = (new RecordSelfSetEntry(
             (new ReadManifest())->__invoke(...),
@@ -95,6 +106,7 @@ final class SkillInstaller
         $detectLineEnding = (new DetectLineEnding())->__invoke(...);
         $skipValue = (new SkipJsonValue())->__invoke(...);
         $isLinkLeavingProject = (new IsLinkLeavingProject())->__invoke(...);
+        $runGit = (new RunGit())->__invoke(...);
 
         return new InstallAddons([
             'claude-md-import' => (new EnsureClaudeMdImport(
@@ -115,12 +127,22 @@ final class SkillInstaller
                 $recordSelfSet,
                 $isLinkLeavingProject,
             ))->__invoke(...),
+            'agents-md-created' => (new RecordAgentsMdCreated($recordSelfSet))->__invoke(...),
+            'exclude-block' => (new SyncExcludeBlock(
+                $config->processDocs,
+                (new ResolveGitDir($runGit))->__invoke(...),
+                (new ReadManifest())->__invoke(...),
+                (new BuildExcludeLines())->__invoke(...),
+                (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),
+                (new ListTrackedPaths($runGit))->__invoke(...),
+            ))->__invoke(...),
         ]);
     }
 
     public function __invoke(string $projectRoot, string $vendorDir, string $pluginVersion = '0.0.0'): InstallReport
     {
         $report = new InstallReport();
+        $report->addWarningIfAny($this->processDocsWarning);
 
         $report->addWarningIfAny(($this->guardManifestVersion)(
             $projectRoot,

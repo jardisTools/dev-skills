@@ -87,6 +87,7 @@ final class AggregateAgentsMd
             $backupPath,
             $analysis->healedDuplicateBlock,
             ($this->sizeWarning)(strlen($payload)),
+            !$analysis->fileExisted,
         );
     }
 

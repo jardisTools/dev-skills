@@ -11,6 +11,7 @@ final readonly class AggregateAgentsResult
         public ?string $backupPath,
         public bool $healedDuplicateBlock = false,
         public ?string $sizeWarning = null,
+        public bool $agentsMdCreated = false,
     ) {
     }
 }
