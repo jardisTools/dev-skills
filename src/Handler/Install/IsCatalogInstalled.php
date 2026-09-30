@@ -8,7 +8,7 @@ use JardisTools\DevSkills\Data\SkillDescriptor;
 
 final class IsCatalogInstalled
 {
-    public const CATALOG_SKILL = 'jardis-catalog';
+    public const CATALOG_SKILL = 'packages-find-existing';
 
     /**
      * @param list<SkillDescriptor> $bundledSkills bundle skills selected for installation

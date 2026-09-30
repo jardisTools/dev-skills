@@ -5,7 +5,7 @@ This directory contains the curated source of truth for the Jardis Capability Ca
 ## Purpose
 
 `manifest.json` is the hand-curated input from which `bin/generate-catalog.php` renders
-`skills/jardis-catalog/SKILL.md`. It lists every Packagist-published Jardis package with
+`skills/packages-find-existing/SKILL.md`. It lists every Packagist-published Jardis package with
 capability-oriented metadata so an AI agent can discover suitable packages **before**
 installing them — and recommend `composer require` instead of building from scratch.
 

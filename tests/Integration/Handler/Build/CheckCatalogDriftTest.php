@@ -30,7 +30,7 @@ final class CheckCatalogDriftTest extends TestCase
     {
         self::$repoRoot          = (string) realpath(__DIR__ . '/../../../../');
         self::$manifestPath      = self::$repoRoot . '/catalog/manifest.json';
-        self::$checkedInSkillPath = self::$repoRoot . '/skills/jardis-catalog/SKILL.md';
+        self::$checkedInSkillPath = self::$repoRoot . '/skills/packages-find-existing/SKILL.md';
     }
 
     protected function setUp(): void
@@ -65,7 +65,7 @@ final class CheckCatalogDriftTest extends TestCase
         // Write a modified copy of the SKILL.md into a temp location.
         $checkedIn = (string) file_get_contents(self::$checkedInSkillPath);
         $modified  = $checkedIn . "\n<!-- injected line to simulate drift -->\n";
-        $tempTarget = $this->project->writeFile('skills/jardis-catalog/SKILL.md', $modified);
+        $tempTarget = $this->project->writeFile('skills/packages-find-existing/SKILL.md', $modified);
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/Drift detected/i');
@@ -79,7 +79,7 @@ final class CheckCatalogDriftTest extends TestCase
 
     public function testThrowsWhenTargetFileDoesNotExist(): void
     {
-        $missingPath = $this->project->path('skills/jardis-catalog/SKILL.md');
+        $missingPath = $this->project->path('skills/packages-find-existing/SKILL.md');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessageMatches('/not found/i');

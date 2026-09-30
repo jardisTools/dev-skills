@@ -41,7 +41,7 @@ final class GenerateCatalogSkillTest extends TestCase
 
     public function testGeneratesValidSkillMdFromRealManifest(): void
     {
-        $target = $this->project->path('skills/jardis-catalog/SKILL.md');
+        $target = $this->project->path('skills/packages-find-existing/SKILL.md');
 
         (new GenerateCatalogSkill())(self::$manifestPath, $target);
 
@@ -57,7 +57,7 @@ final class GenerateCatalogSkillTest extends TestCase
 
     public function testGeneratedSkillMdContainsAllManifestPackages(): void
     {
-        $target = $this->project->path('skills/jardis-catalog/SKILL.md');
+        $target = $this->project->path('skills/packages-find-existing/SKILL.md');
 
         (new GenerateCatalogSkill())(self::$manifestPath, $target);
 
@@ -81,8 +81,8 @@ final class GenerateCatalogSkillTest extends TestCase
 
     public function testTwoRunsProduceByteIdenticalOutput(): void
     {
-        $target1 = $this->project->path('run1/skills/jardis-catalog/SKILL.md');
-        $target2 = $this->project->path('run2/skills/jardis-catalog/SKILL.md');
+        $target1 = $this->project->path('run1/skills/packages-find-existing/SKILL.md');
+        $target2 = $this->project->path('run2/skills/packages-find-existing/SKILL.md');
 
         $generator = new GenerateCatalogSkill();
         $generator(self::$manifestPath, $target1);

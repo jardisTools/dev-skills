@@ -237,7 +237,7 @@ jobs:
       - name: Install dependencies
         run: make install
 
-      - name: Check that skills/jardis-catalog/SKILL.md matches catalog/manifest.json
+      - name: Check that skills/packages-find-existing/SKILL.md matches catalog/manifest.json
         run: make generate-catalog-check
 
       - name: Cleanup

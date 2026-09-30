@@ -54,7 +54,7 @@ validate-skills: ## Validate every bundled SKILL.md against docs/SKILL-FORMAT.md
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/validate-skills.php
 .PHONY: validate-skills
 
-generate-catalog: ## Generate skills/jardis-catalog/SKILL.md from catalog/manifest.json
+generate-catalog: ## Generate skills/packages-find-existing/SKILL.md from catalog/manifest.json
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/generate-catalog.php
 .PHONY: generate-catalog
 

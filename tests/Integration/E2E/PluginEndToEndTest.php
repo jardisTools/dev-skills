@@ -63,16 +63,16 @@ final class PluginEndToEndTest extends TestCase
 
         // Plugin-own bundled skills were copied because bundled-skills: true.
         self::assertFileExists(
-            $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
-            'Bundled skill rules-architecture was not copied.',
+            $this->project->path('.claude/skills/foundation-architecture/SKILL.md'),
+            'Bundled skill foundation-architecture was not copied.',
         );
         self::assertFileExists(
-            $this->project->path('.claude/skills/platform-implementation/SKILL.md'),
-            'Bundled skill platform-implementation was not copied.',
+            $this->project->path('.claude/skills/generated-code-extend/SKILL.md'),
+            'Bundled skill generated-code-extend was not copied.',
         );
         self::assertFileEquals(
-            $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
-            $this->project->path('.agents/skills/rules-architecture/SKILL.md'),
+            $this->project->path('.claude/skills/foundation-architecture/SKILL.md'),
+            $this->project->path('.agents/skills/foundation-architecture/SKILL.md'),
             'Bundled skill was not mirrored into .agents/skills.',
         );
 
@@ -105,7 +105,7 @@ final class PluginEndToEndTest extends TestCase
             $this->project->path('.claude/skills/adapter-fakecache/SKILL.md'),
             'Vendor skill must be installed even without explicit bundled-skills config.',
         );
-        foreach (['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer', 'rules-architecture', 'platform-implementation'] as $name) {
+        foreach (['packages-find-existing', 'start-orientation', 'design-headless-mcp', 'foundation-architecture', 'generated-code-extend'] as $name) {
             self::assertFileExists(
                 $this->project->path('.claude/skills/' . $name . '/SKILL.md'),
                 $name . ' must be installed when the bundled-skills key is absent.',
@@ -136,7 +136,7 @@ final class PluginEndToEndTest extends TestCase
             "Vendor skill should be cleaned up on plugin removal (managed prefix).\nComposer output:\n" . $output,
         );
         self::assertDirectoryDoesNotExist(
-            $this->project->path('.claude/skills/rules-architecture'),
+            $this->project->path('.claude/skills/foundation-architecture'),
             "Bundled skill should be cleaned up on plugin removal.\nComposer output:\n" . $output,
         );
         self::assertFileDoesNotExist(
@@ -162,7 +162,7 @@ final class PluginEndToEndTest extends TestCase
         $manifest = json_decode((string) file_get_contents($this->project->path('.claude/skills/.jardis-managed.json')), true);
         $managedPaths = array_keys($manifest['paths']);
         self::assertContains('.claude/skills/adapter-fakecache', $managedPaths);
-        self::assertContains('.agents/skills/rules-architecture', $managedPaths);
+        self::assertContains('.agents/skills/foundation-architecture', $managedPaths);
         foreach ($managedPaths as $path) {
             self::assertDirectoryExists($this->project->path($path));
         }
@@ -200,7 +200,7 @@ final class PluginEndToEndTest extends TestCase
         );
         $this->runComposer('install');
         $before = TreeSnapshot::ofProject($this->project);
-        self::assertDirectoryExists($this->project->path('.claude/skills/rules-architecture'));
+        self::assertDirectoryExists($this->project->path('.claude/skills/foundation-architecture'));
 
         $output = $this->runComposer('install --no-dev');
 
@@ -254,7 +254,7 @@ final class PluginEndToEndTest extends TestCase
 
         self::assertDirectoryDoesNotExist($this->project->path('.git'));
         self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
-        self::assertFileExists($this->project->path('.claude/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.claude/skills/foundation-architecture/SKILL.md'));
         self::assertFileExists($this->project->path('.agents/skills/adapter-fakecache/SKILL.md'));
         self::assertFileExists($this->project->path('AGENTS.md'));
     }
@@ -272,7 +272,7 @@ final class PluginEndToEndTest extends TestCase
 
         self::assertSame(0, $exit, $output);
         self::assertFileExists($this->project->path('.claude/skills/.jardis-managed.json'));
-        self::assertFileExists($this->project->path('.agents/skills/rules-architecture/SKILL.md'));
+        self::assertFileExists($this->project->path('.agents/skills/foundation-architecture/SKILL.md'));
     }
 
     public function testNoScriptsInstallsLikeNormal(): void
@@ -314,7 +314,7 @@ final class PluginEndToEndTest extends TestCase
             '.claude/skills/.jardis-managed.json',
             '{"schemaVersion":2,"pluginVersion":"9.9.9","paths":{}}' . "\n",
         );
-        $this->project->writeFile('.claude/skills/rules-architecture/SKILL.md', 'old content');
+        $this->project->writeFile('.claude/skills/foundation-architecture/SKILL.md', 'old content');
         $before = TreeSnapshot::ofProject($this->project);
 
         $output = $this->runComposer('install');

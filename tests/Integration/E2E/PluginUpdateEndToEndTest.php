@@ -86,17 +86,17 @@ final class PluginUpdateEndToEndTest extends TestCase
             JSON_THROW_ON_ERROR,
         );
         self::assertSame(self::CANDIDATE, $manifest['pluginVersion']);
-        self::assertArrayHasKey('.claude/skills/rules-architecture', $manifest['paths']);
-        self::assertArrayHasKey('.agents/skills/rules-architecture', $manifest['paths']);
+        self::assertArrayHasKey('.claude/skills/foundation-architecture', $manifest['paths']);
+        self::assertArrayHasKey('.agents/skills/foundation-architecture', $manifest['paths']);
         self::assertArrayHasKey('.agents/skills/adapter-fakecache', $manifest['paths']);
 
         self::assertFileEquals(
-            $this->project->path('.claude/skills/rules-architecture/SKILL.md'),
-            $this->project->path('.agents/skills/rules-architecture/SKILL.md'),
+            $this->project->path('.claude/skills/foundation-architecture/SKILL.md'),
+            $this->project->path('.agents/skills/foundation-architecture/SKILL.md'),
         );
         self::assertNotSame(
             "local edit\n",
-            file_get_contents($this->project->path('.claude/skills/rules-architecture/SKILL.md')),
+            file_get_contents($this->project->path('.claude/skills/foundation-architecture/SKILL.md')),
         );
 
         // The 1.3.6 update run moved the edited folder to `rules-architecture.backup`; the

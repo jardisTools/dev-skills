@@ -9,15 +9,15 @@ use JardisTools\DevSkills\Data\AgentsDescriptor;
 final class BuildManagedBlock
 {
     /**
-     * Thin pointer sentence placed inside the managed block when jardis-catalog
+     * Thin pointer sentence placed inside the managed block when packages-find-existing
      * is installed. Points the agent at the catalog skill before any Eigenbau,
-     * and at `jardis-start-here` as the master entry point for the full
+     * and at `start-orientation` as the master entry point for the full
      * lifecycle (schema -> design -> implementation).
      */
     public const CATALOG_POINTER
         = 'Before hand-building a reusable building block, '
-        . 'consult the `jardis-catalog` skill to check for an installable Jardis package. '
-        . 'For the full workflow from schema to implementation, start with the `jardis-start-here` skill.';
+        . 'consult the `packages-find-existing` skill to check for an installable Jardis package. '
+        . 'For the full workflow from schema to implementation, start with the `start-orientation` skill.';
 
     /**
      * Builds the managed-block string (header + intro + optional catalog pointer
