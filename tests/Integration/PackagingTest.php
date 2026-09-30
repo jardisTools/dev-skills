@@ -16,7 +16,10 @@ use PHPUnit\Framework\TestCase;
  * failure modes only surface at release time — this test catches them in CI.
  *
  * Measured via `git check-attr` against the working tree (index + worktree),
- * so it is accurate even before the change is committed.
+ * so it is accurate even before the change is committed. `safe.directory=*` keeps
+ * the verdict independent of who owns the checkout (a container bind mount hands
+ * ownership over asynchronously; without it git refuses with "dubious ownership"
+ * depending on timing and test order).
  */
 final class PackagingTest extends TestCase
 {
@@ -70,7 +73,7 @@ final class PackagingTest extends TestCase
     private function exportIgnore(string $path): string
     {
         $cmd = sprintf(
-            'git -C %s check-attr export-ignore -- %s 2>&1',
+            "git -c 'safe.directory=*' -C %s check-attr export-ignore -- %s 2>&1",
             escapeshellarg($this->pluginRoot),
             escapeshellarg($path),
         );

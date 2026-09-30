@@ -12,106 +12,81 @@ use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Handler\Discovery\ScanAgentsFiles;
-use JardisTools\DevSkills\Handler\Discovery\ScanPluginSkills;
-use JardisTools\DevSkills\Handler\Discovery\ScanVendor;
 use JardisTools\DevSkills\Handler\Install\AggregateAgentsMd;
-use JardisTools\DevSkills\Handler\Install\ComputeStaleBundledSkills;
-use JardisTools\DevSkills\Handler\Install\CopySkill;
-use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
-use JardisTools\DevSkills\Handler\Install\HandleConflict;
-use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
+use JardisTools\DevSkills\Handler\Install\IsCatalogInstalled;
+use JardisTools\DevSkills\Handler\Install\RecordAgentsAggregation;
+use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
+use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 
 final class SkillInstaller
 {
-    /** @var Closure(string): list<SkillDescriptor> */
-    private readonly Closure $scanVendor;
+    private readonly InstallSkills $installSkills;
 
-    /** @var Closure(string): list<SkillDescriptor> */
-    private readonly Closure $scanPluginSkills;
+    private readonly InstallAddons $installAddons;
+
+    /** @var Closure(string, string, Closure(): void): ?string */
+    private readonly Closure $guardManifestVersion;
 
     /** @var Closure(string): list<AgentsDescriptor> */
     private readonly Closure $scanAgentsFiles;
 
-    /** @var Closure(list<SkillDescriptor>, PluginConfig): list<SkillDescriptor> */
-    private readonly Closure $filterBundledSkills;
-
-    /** @var Closure(list<SkillDescriptor>, list<SkillDescriptor>): list<string> */
-    private readonly Closure $computeStaleBundledSkills;
-
-    /** @var Closure(list<string>, string): list<string> */
-    private readonly Closure $removeStaleBundledSkills;
-
-    /** @var Closure(SkillDescriptor, string): ?string */
-    private readonly Closure $copySkill;
+    /** @var Closure(list<SkillDescriptor>): bool */
+    private readonly Closure $isCatalogInstalled;
 
     /** @var Closure(list<AgentsDescriptor>, string, bool): AggregateAgentsResult */
     private readonly Closure $aggregateAgentsMd;
 
-    private readonly string $pluginRoot;
-
-    private readonly PluginConfig $config;
+    /** @var Closure(InstallReport, AggregateAgentsResult): void */
+    private readonly Closure $recordAgentsAggregation;
 
     public function __construct(
         ?PluginConfig $config = null,
         ?Filesystem $filesystem = null,
         ?string $pluginRoot = null,
+        ?InstallAddons $installAddons = null,
     ) {
         $fs = $filesystem ?? new Filesystem();
-        $handleConflict = (new HandleConflict($fs))->__invoke(...);
 
-        $this->scanVendor = (new ScanVendor())->__invoke(...);
-        $this->scanPluginSkills = (new ScanPluginSkills())->__invoke(...);
+        $this->installSkills = new InstallSkills(
+            $config ?? PluginConfig::all(),
+            $pluginRoot ?? dirname(__DIR__),
+            $fs,
+        );
+        $this->installAddons = $installAddons ?? new InstallAddons();
+        $this->guardManifestVersion = (new GuardManifestVersion((new ReadManifest())->__invoke(...)))
+            ->__invoke(...);
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
-        $this->filterBundledSkills = (new FilterBundledSkills())->__invoke(...);
-        $this->computeStaleBundledSkills = (new ComputeStaleBundledSkills())->__invoke(...);
-        $this->removeStaleBundledSkills = (new RemoveStaleBundledSkills($fs))->__invoke(...);
-        $this->copySkill = (new CopySkill($fs, $handleConflict))->__invoke(...);
+        $this->isCatalogInstalled = (new IsCatalogInstalled())->__invoke(...);
         $this->aggregateAgentsMd = (new AggregateAgentsMd($fs))->__invoke(...);
-        $this->pluginRoot = $pluginRoot ?? dirname(__DIR__);
-        $this->config = $config ?? PluginConfig::none();
+        $this->recordAgentsAggregation = (new RecordAgentsAggregation())->__invoke(...);
     }
 
-    public function __invoke(string $projectRoot, string $vendorDir): InstallReport
+    public function __invoke(string $projectRoot, string $vendorDir, string $pluginVersion = '0.0.0'): InstallReport
     {
         $report = new InstallReport();
 
-        $allBundled = ($this->scanPluginSkills)($this->pluginRoot);
-        $keptBundled = ($this->filterBundledSkills)($allBundled, $this->config);
-        $staleNames = ($this->computeStaleBundledSkills)($allBundled, $keptBundled);
-
-        foreach (($this->removeStaleBundledSkills)($staleNames, $projectRoot) as $removed) {
-            $report->addRemovedBundledSkill($removed);
-        }
-
-        $skills = [
-            ...$keptBundled,
-            ...($this->scanVendor)($vendorDir),
-        ];
-
-        foreach ($skills as $skill) {
-            $backupPath = ($this->copySkill)($skill, $projectRoot);
-            $report->addInstalledSkill($skill->name);
-            if ($backupPath !== null) {
-                $report->addBackedUpSkill($skill->name, $backupPath);
-            }
-        }
-
-        $catalogInstalled = in_array(
-            'jardis-catalog',
-            array_map(static fn (SkillDescriptor $s): string => $s->name, $keptBundled),
-            true,
-        );
-
-        $agents = ($this->scanAgentsFiles)($vendorDir);
-        $result = ($this->aggregateAgentsMd)($agents, $projectRoot, $catalogInstalled);
-        $report->setAgentsFilesAggregated($result->aggregatedCount);
-        if ($result->backupPath !== null) {
-            $report->setAgentsMdBackupPath($result->backupPath);
-        }
-        if ($result->healedDuplicateBlock) {
-            $report->setAgentsMdHealed(true);
-        }
+        $report->addWarningIfAny(($this->guardManifestVersion)(
+            $projectRoot,
+            $pluginVersion,
+            function () use ($projectRoot, $vendorDir, $pluginVersion, $report): void {
+                $this->run($projectRoot, $vendorDir, $pluginVersion, $report);
+            },
+        ));
 
         return $report;
+    }
+
+    private function run(string $projectRoot, string $vendorDir, string $pluginVersion, InstallReport $report): void
+    {
+        $keptBundled = ($this->installSkills)($projectRoot, $vendorDir, $report, $pluginVersion);
+
+        $result = ($this->aggregateAgentsMd)(
+            ($this->scanAgentsFiles)($vendorDir),
+            $projectRoot,
+            ($this->isCatalogInstalled)($keptBundled),
+        );
+        ($this->recordAgentsAggregation)($report, $result);
+
+        ($this->installAddons)($projectRoot, $vendorDir, $report);
     }
 }

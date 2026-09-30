@@ -66,25 +66,32 @@ final class ScanVendorTest extends TestCase
         self::assertSame([], $skills);
     }
 
-    public function testSkipsBackupSkillDirectories(): void
+    public function testSkipsNonSkillFoldersAndKeepsRealSkills(): void
     {
         $this->project->writeFile(
             'vendor/jardisadapter/cache/.claude/skills/adapter-cache/SKILL.md',
             "---\nname: adapter-cache\n---\n",
         );
-        $this->project->writeFile(
-            'vendor/jardisadapter/cache/.claude/skills/adapter-cache.backup/SKILL.md',
-            "---\nname: adapter-cache\n---\n",
-        );
-        $this->project->writeFile(
-            'vendor/jardisadapter/cache/.claude/skills/adapter-cache.backup.backup/SKILL.md',
-            "---\nname: adapter-cache\n---\n",
-        );
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/.jardis-backup/adapter-cache/note.md', 'x');
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/notes/readme.md', 'x');
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/loose-file.md', 'x');
 
         $skills = (new ScanVendor())($this->project->path('vendor'));
         $names = array_map(static fn ($s) => $s->name, $skills);
 
         self::assertSame(['adapter-cache'], $names);
+    }
+
+    public function testReturnsSameNamedSkillsOfDifferentPackagesForCollisionResolution(): void
+    {
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/shared/SKILL.md', 'a');
+        $this->project->writeFile('vendor/jardissupport/data/.claude/skills/shared/SKILL.md', 'b');
+
+        $skills = (new ScanVendor())($this->project->path('vendor'));
+        $packages = array_map(static fn ($s) => $s->sourcePackage, $skills);
+        sort($packages);
+
+        self::assertSame(['jardisadapter/cache', 'jardissupport/data'], $packages);
     }
 
     public function testReturnsEmptyForMissingVendorDir(): void

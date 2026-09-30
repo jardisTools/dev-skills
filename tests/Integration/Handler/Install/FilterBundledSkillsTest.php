@@ -7,104 +7,105 @@ namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
+use JardisTools\DevSkills\Handler\Install\IsMandatorySkill;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Fixture names only: the mandatory groups match `foundation-*` / `process-*`,
+ * the bundle has no such skills yet.
+ */
 final class FilterBundledSkillsTest extends TestCase
 {
-    public function testInstallNoneReturnsEmptyList(): void
+    public function testAllReturnsEverythingUnchanged(): void
     {
-        $kept = (new FilterBundledSkills())($this->bundled(), PluginConfig::none());
+        $bundled = $this->bundled();
+
+        self::assertSame($bundled, $this->filter($bundled, PluginConfig::all()));
+    }
+
+    public function testOnlyMandatoryKeepsJustTheMandatoryGroups(): void
+    {
+        $kept = $this->filter($this->bundled(), PluginConfig::onlyMandatory());
+
+        self::assertSame(['foundation-alpha', 'process-beta'], $this->names($kept));
+    }
+
+    public function testOnlyMandatoryWithoutMandatorySkillsKeepsNothing(): void
+    {
+        $kept = $this->filter([$this->skill('adapter-cache')], PluginConfig::onlyMandatory());
 
         self::assertSame([], $kept);
     }
 
-    public function testInstallAllReturnsAllUnchanged(): void
+    public function testIncludeGlobKeepsMatchesPlusMandatoryGroups(): void
     {
-        $bundled = $this->bundled();
-        $kept = (new FilterBundledSkills())($bundled, PluginConfig::all());
+        $kept = $this->filter($this->bundled(), PluginConfig::filtered(['adapter-*'], []));
 
-        self::assertSame($bundled, $kept);
+        self::assertSame(['foundation-alpha', 'process-beta', 'adapter-cache'], $this->names($kept));
     }
 
-    public function testIncludeGlobKeepsOnlyMatches(): void
+    public function testNoMatchingIncludeStillKeepsMandatoryGroups(): void
     {
-        $kept = (new FilterBundledSkills())(
-            $this->bundled(),
-            PluginConfig::filtered(['schema-*'], []),
-        );
+        $kept = $this->filter($this->bundled(), PluginConfig::filtered(['nonexistent-*'], []));
 
-        self::assertSame(
-            ['schema-authoring'],
-            array_map(static fn (SkillDescriptor $s): string => $s->name, $kept),
-        );
+        self::assertSame(['foundation-alpha', 'process-beta'], $this->names($kept));
     }
 
-    public function testExcludeRemovesMatchesWhenIncludeIsEmpty(): void
+    public function testExcludeOnlyRemovesMatchesFromEverything(): void
     {
-        $kept = (new FilterBundledSkills())(
-            $this->bundled(),
-            PluginConfig::filtered([], ['rules-*']),
-        );
+        $kept = $this->filter($this->bundled(), PluginConfig::filtered([], ['rules-*']));
 
-        $names = array_map(static fn (SkillDescriptor $s): string => $s->name, $kept);
-        self::assertContains('schema-authoring', $names);
-        self::assertContains('platform-implementation', $names);
-        self::assertNotContains('rules-architecture', $names);
+        $names = $this->names($kept);
+        self::assertContains('adapter-cache', $names);
+        self::assertContains('foundation-alpha', $names);
         self::assertNotContains('rules-patterns', $names);
     }
 
     public function testIncludeThenExcludeCombines(): void
     {
-        $kept = (new FilterBundledSkills())(
-            $this->bundled(),
-            PluginConfig::filtered(['schema-*', 'rules-*'], ['rules-patterns']),
-        );
+        $kept = $this->filter($this->bundled(), PluginConfig::filtered(['adapter-*', 'rules-*'], ['rules-patterns']));
 
-        $names = array_map(static fn (SkillDescriptor $s): string => $s->name, $kept);
-        self::assertContains('schema-authoring', $names);
-        self::assertContains('rules-architecture', $names);
-        self::assertNotContains('rules-patterns', $names);
-        self::assertNotContains('platform-implementation', $names);
-    }
-
-    public function testNoMatchesYieldsEmptyList(): void
-    {
-        $kept = (new FilterBundledSkills())(
-            $this->bundled(),
-            PluginConfig::filtered(['nonexistent-*'], []),
-        );
-
-        self::assertSame([], $kept);
-    }
-
-    public function testDefaultOnConfigKeepsDefaultSkills(): void
-    {
-        // PluginConfig::defaultOn() = include:['jardis-catalog','jardis-start-here',
-        // 'jardis-mcp-consumer'], exclude:[]. Only these three pass the filter;
-        // all other bundled skills are dropped.
-        $kept = (new FilterBundledSkills())($this->bundled(), PluginConfig::defaultOn());
-
-        $names = array_map(static fn (SkillDescriptor $s): string => $s->name, $kept);
-        self::assertSame(['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'], $names);
-        self::assertNotContains('platform-implementation', $names);
-        self::assertNotContains('rules-architecture', $names);
+        $names = $this->names($kept);
+        self::assertContains('adapter-cache', $names);
+        self::assertContains('rules-testing', $names);
         self::assertNotContains('rules-patterns', $names);
         self::assertNotContains('schema-authoring', $names);
     }
 
-    public function testExcludeJardisCatalogOptOut(): void
+    public function testExcludeCannotRemoveMandatoryGroups(): void
     {
-        // When the user sets exclude: ['jardis-catalog'] the catalog is removed
-        // while other bundled skills remain (include empty = "all except excluded").
-        $kept = (new FilterBundledSkills())(
+        $kept = $this->filter(
             $this->bundled(),
-            PluginConfig::filtered([], ['jardis-catalog']),
+            PluginConfig::filtered([], ['foundation-*', 'process-beta', 'rules-*']),
         );
 
-        $names = array_map(static fn (SkillDescriptor $s): string => $s->name, $kept);
-        self::assertNotContains('jardis-catalog', $names);
-        self::assertContains('rules-architecture', $names);
-        self::assertContains('platform-implementation', $names);
+        $names = $this->names($kept);
+        self::assertContains('foundation-alpha', $names);
+        self::assertContains('process-beta', $names);
+        self::assertNotContains('rules-testing', $names);
+    }
+
+    /**
+     * @param list<SkillDescriptor> $bundled
+     * @return list<SkillDescriptor>
+     */
+    private function filter(array $bundled, PluginConfig $config): array
+    {
+        return (new FilterBundledSkills((new IsMandatorySkill())->__invoke(...)))($bundled, $config);
+    }
+
+    /**
+     * @param list<SkillDescriptor> $skills
+     * @return list<string>
+     */
+    private function names(array $skills): array
+    {
+        return array_map(static fn (SkillDescriptor $s): string => $s->name, $skills);
+    }
+
+    private function skill(string $name): SkillDescriptor
+    {
+        return new SkillDescriptor($name, '/irrelevant/' . $name, 'jardis/dev-skills');
     }
 
     /**
@@ -112,18 +113,13 @@ final class FilterBundledSkillsTest extends TestCase
      */
     private function bundled(): array
     {
-        return array_map(
-            static fn (string $name): SkillDescriptor
-                => new SkillDescriptor($name, '/irrelevant/' . $name, 'jardis/dev-skills'),
-            [
-                'jardis-catalog',
-                'jardis-start-here',
-                'jardis-mcp-consumer',
-                'platform-implementation',
-                'rules-architecture',
-                'rules-patterns',
-                'schema-authoring',
-            ],
-        );
+        return array_map($this->skill(...), [
+            'foundation-alpha',
+            'process-beta',
+            'adapter-cache',
+            'rules-patterns',
+            'rules-testing',
+            'schema-authoring',
+        ]);
     }
 }

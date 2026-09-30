@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\SkillDescriptor;
-use JardisTools\DevSkills\Handler\Install\HandleConflict;
 
 final class ScanPluginSkills
 {
+    public const SOURCE_PACKAGE = 'jardis/dev-skills';
+
     /**
      * Scans the plugin repo's own `skills/` directory for cross-package
      * methodology skills (schema-authoring, platform-implementation,
@@ -31,10 +32,6 @@ final class ScanPluginSkills
         $skills = [];
 
         foreach ($entries as $dir) {
-            if (str_ends_with(basename($dir), HandleConflict::BACKUP_SUFFIX)) {
-                continue;
-            }
-
             if (!is_file($dir . '/SKILL.md')) {
                 continue;
             }
@@ -42,7 +39,7 @@ final class ScanPluginSkills
             $skills[] = new SkillDescriptor(
                 name: basename($dir),
                 sourceDir: $dir,
-                sourcePackage: 'jardis/dev-skills',
+                sourcePackage: self::SOURCE_PACKAGE,
             );
         }
 

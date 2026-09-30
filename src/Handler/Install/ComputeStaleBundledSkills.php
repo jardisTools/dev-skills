@@ -4,24 +4,39 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Handler\Install;
 
+use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\SkillDescriptor;
+use JardisTools\DevSkills\Handler\Discovery\ScanPluginSkills;
 
 final class ComputeStaleBundledSkills
 {
     /**
-     * Returns the names of bundled skills that exist in $all but not in $kept,
-     * i.e. skills that were selected under a previous wider config and should
-     * now be removed from disk.
+     * Returns the manifest paths of bundle skills that were installed earlier
+     * but are no longer part of the selection (e.g. the config got narrower).
+     * Only paths the manifest lists come back; nothing is derived from the
+     * current bundle list, so folders the plugin never installed are safe.
      *
-     * @param list<SkillDescriptor> $all
-     * @param list<SkillDescriptor> $kept
-     * @return list<string>
+     * @param list<SkillDescriptor> $selected final selection of this run (bundle and vendor)
+     * @return list<string> manifest keys
      */
-    public function __invoke(array $all, array $kept): array
+    public function __invoke(?Manifest $previous, array $selected): array
     {
-        $keptNames = array_map(static fn (SkillDescriptor $s): string => $s->name, $kept);
-        $allNames = array_map(static fn (SkillDescriptor $s): string => $s->name, $all);
+        if ($previous === null) {
+            return [];
+        }
 
-        return array_values(array_diff($allNames, $keptNames));
+        $selectedNames = array_map(static fn (SkillDescriptor $s): string => $s->name, $selected);
+
+        $stale = [];
+        foreach ($previous->entries as $key => $entry) {
+            if ($entry['source'] !== ScanPluginSkills::SOURCE_PACKAGE) {
+                continue;
+            }
+            if (!in_array(basename($key), $selectedNames, true)) {
+                $stale[] = $key;
+            }
+        }
+
+        return $stale;
     }
 }

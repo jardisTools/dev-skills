@@ -115,6 +115,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The update test archives the release tag v1.3.6 and needs full history and tags.
+          fetch-depth: 0
 
       - name: Setup environment
         run: cp .env.example .env

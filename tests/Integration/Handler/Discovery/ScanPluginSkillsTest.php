@@ -43,10 +43,10 @@ final class ScanPluginSkillsTest extends TestCase
         self::assertSame('jardis/dev-skills', $skills[0]->sourcePackage);
     }
 
-    public function testSkipsBackupSkillDirectories(): void
+    public function testSkipsNonSkillFoldersAndKeepsRealSkills(): void
     {
         $this->project->writeFile('skills/platform-usage/SKILL.md', 'x');
-        $this->project->writeFile('skills/platform-usage.backup/SKILL.md', 'stale');
+        $this->project->writeFile('skills/notes/readme.md', 'x');
 
         $skills = (new ScanPluginSkills())($this->project->root);
         $names = array_map(static fn ($s) => $s->name, $skills);

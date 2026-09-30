@@ -6,34 +6,30 @@ namespace JardisTools\DevSkills\Data;
 
 final readonly class PluginConfig
 {
+    /** Skill groups that are always installed, whatever `bundled-skills` says. */
+    public const MANDATORY_GLOBS = ['foundation-*', 'process-*'];
+
+    public const MANDATORY_NOTICE = 'mandatory groups foundation-*/process-* are always installed';
+
     /**
      * @param list<string> $includeGlobs
      * @param list<string> $excludeGlobs
      */
     public function __construct(
         public bool $installAll,
-        public bool $installNone,
+        public bool $mandatoryOnly,
         public array $includeGlobs,
         public array $excludeGlobs,
         public ?string $warning,
     ) {
     }
 
-    public static function none(): self
-    {
-        return new self(false, true, [], [], null);
-    }
-
     /**
-     * Default-on: the catalog skill plus the two consumer-lifecycle skills
-     * (`jardis-start-here`, `jardis-mcp-consumer`) are installed even when the
-     * user omits `bundled-skills` from their composer.json extra. All other
-     * bundle skills stay off; the user can still opt out via
-     * exclude: ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'].
+     * Only the mandatory groups; used for `false`, `[]` and invalid values.
      */
-    public static function defaultOn(): self
+    public static function onlyMandatory(?string $warning = null): self
     {
-        return new self(false, false, ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'], [], null);
+        return new self(false, true, [], [], $warning);
     }
 
     public static function all(): self
@@ -52,6 +48,6 @@ final readonly class PluginConfig
 
     public static function invalid(string $reason): self
     {
-        return new self(false, true, [], [], $reason);
+        return self::onlyMandatory(sprintf('%s Treated as bundled-skills=false: %s.', $reason, self::MANDATORY_NOTICE));
     }
 }

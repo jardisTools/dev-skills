@@ -21,6 +21,21 @@ final class InstallReport
     /** @var list<string> */
     private array $removedBundledSkills = [];
 
+    /** @var list<string> */
+    private array $warnings = [];
+
+    public function addWarning(string $warning): void
+    {
+        $this->warnings[] = $warning;
+    }
+
+    public function addWarningIfAny(?string $warning): void
+    {
+        if ($warning !== null && $warning !== '') {
+            $this->warnings[] = $warning;
+        }
+    }
+
     public function addInstalledSkill(string $name): void
     {
         $this->installedSkills[] = $name;
@@ -36,12 +51,19 @@ final class InstallReport
         $this->backedUpSkills[] = ['skill' => $name, 'backupPath' => $backupPath];
     }
 
+    public function addBackedUpSkillIfAny(string $name, ?string $backupPath): void
+    {
+        if ($backupPath !== null) {
+            $this->addBackedUpSkill($name, $backupPath);
+        }
+    }
+
     public function setAgentsFilesAggregated(int $count): void
     {
         $this->agentsFilesAggregated = $count;
     }
 
-    public function setAgentsMdBackupPath(string $path): void
+    public function setAgentsMdBackupPath(?string $path): void
     {
         $this->agentsMdBackupPath = $path;
     }
@@ -93,5 +115,13 @@ final class InstallReport
     public function removedBundledSkills(): array
     {
         return $this->removedBundledSkills;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function warnings(): array
+    {
+        return $this->warnings;
     }
 }
