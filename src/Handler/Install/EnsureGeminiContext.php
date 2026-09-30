@@ -17,6 +17,8 @@ use JardisTools\DevSkills\Exception\InstallFailedException;
  * change and whether the plugin created the file go into the manifest, so uninstall can
  * reverse exactly this. A file that cannot be extended character for character, or is not valid
  * JSON, is left untouched and reported (the planner throws, the add-on decorator warns).
+ * Never through a link: neither the file nor a folder on the way to it (`.gemini`) may be a link, whether it
+ * leads out of the project or stays inside it; the check runs before anything is read, created or written.
  */
 final class EnsureGeminiContext
 {
@@ -27,12 +29,12 @@ final class EnsureGeminiContext
     /**
      * @param Closure(string): ?TextEdit                  $planEdit
      * @param Closure(string, string, SelfSetEntry): void $recordSelfSet
-     * @param Closure(string, string): bool               $isLinkLeavingProject
+     * @param Closure(string, string): bool               $isPathBehindLink
      */
     public function __construct(
         private readonly Closure $planEdit,
         private readonly Closure $recordSelfSet,
-        private readonly Closure $isLinkLeavingProject,
+        private readonly Closure $isPathBehindLink,
     ) {
     }
 
@@ -40,12 +42,16 @@ final class EnsureGeminiContext
     {
         $target = $projectRoot . '/' . self::FILE;
 
-        if (file_exists($target) && !is_file($target)) {
-            throw new InstallFailedException(sprintf('"%s" exists but is not a regular file.', $target));
+        if (($this->isPathBehindLink)($projectRoot, $target)) {
+            throw new InstallFailedException(sprintf(
+                '"%s" is a link or lies behind one (a link that leads out of the project or stays inside it);'
+                . ' nothing was written.',
+                $target,
+            ));
         }
 
-        if (($this->isLinkLeavingProject)($projectRoot, $target)) {
-            throw new InstallFailedException(sprintf('"%s" is a link that leads out of the project.', $target));
+        if (file_exists($target) && !is_file($target)) {
+            throw new InstallFailedException(sprintf('"%s" exists but is not a regular file.', $target));
         }
 
         $created = !is_file($target);

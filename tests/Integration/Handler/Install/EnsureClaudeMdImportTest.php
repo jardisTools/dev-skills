@@ -126,6 +126,20 @@ final class EnsureClaudeMdImportTest extends TestCase
         }
     }
 
+    public function testLinkToAnotherFileInsideTheProjectIsNotWrittenThrough(): void
+    {
+        $this->project->writeFile('notes.md', "# Notes\n");
+        self::assertTrue(symlink('notes.md', $this->project->path('CLAUDE.md')));
+
+        $report = $this->ensure();
+
+        self::assertSame("# Notes\n", file_get_contents($this->project->path('notes.md')));
+        self::assertTrue(is_link($this->project->path('CLAUDE.md')));
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('CLAUDE.md is a link; the file is unchanged.', $report->warnings()[0]);
+        self::assertFileDoesNotExist($this->project->path(Manifest::FILE));
+    }
+
     public function testSecondRunChangesNothing(): void
     {
         $this->ensure();

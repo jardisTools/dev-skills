@@ -192,6 +192,43 @@ final class WriteReviewerShellsTest extends TestCase
         }
     }
 
+    public function testDirectoryLinkLeadingOutOfTheProjectCreatesNothingThere(): void
+    {
+        $this->addFixtureSource('test-reviewer');
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            symlink($outside->root, $this->project->path('.codex'));
+            $before = TreeSnapshot::of($outside->root);
+
+            $report = $this->write();
+
+            self::assertSame([], $before);
+            self::assertSame($before, TreeSnapshot::of($outside->root));
+            self::assertDirectoryDoesNotExist($outside->path('agents'));
+            self::assertCount(1, $report->warnings());
+            self::assertStringContainsString('.codex/agents', $report->warnings()[0]);
+            foreach (['.claude/agents/test-reviewer.md', '.cursor/agents/test-reviewer.md', '.github/agents/test-reviewer.agent.md', '.gemini/agents/test-reviewer.md'] as $shell) {
+                self::assertFileExists($this->project->path($shell));
+            }
+            self::assertArrayNotHasKey('.codex/agents/test-reviewer.toml', $this->manifest()->selfSet ?? []);
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDirectoryLinkInsideTheProjectCreatesNothingBehindIt(): void
+    {
+        $this->addFixtureSource('test-reviewer');
+        $this->project->mkdir('elsewhere');
+        symlink('elsewhere', $this->project->path('.gemini'));
+
+        $report = $this->write();
+
+        self::assertSame([], TreeSnapshot::of($this->project->path('elsewhere')));
+        self::assertCount(1, $report->warnings());
+        self::assertFileExists($this->project->path('.claude/agents/test-reviewer.md'));
+    }
+
     public function testTheInstallerWritesShellsBeforeTheExcludeBlockAndTheBlockListsThem(): void
     {
         $this->plugin->writeFile('skills/plan-requirements/SKILL.md', 'plan-skill');

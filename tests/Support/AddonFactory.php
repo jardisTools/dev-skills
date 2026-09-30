@@ -33,7 +33,7 @@ use JardisTools\DevSkills\Handler\Shell\RenderGeminiShell;
 use JardisTools\DevSkills\Handler\Shell\RenderShell;
 use JardisTools\DevSkills\Handler\Shell\WriteReviewerShells;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
-use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
+use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Support\ScanJsonArray;
 use JardisTools\DevSkills\Handler\Support\ScanJsonObject;
@@ -60,7 +60,7 @@ final class AddonFactory
             (new DetectLineEnding())->__invoke(...),
             (new BuildClaudeMdContent())->__invoke(...),
             self::recordSelfSet(),
-            (new IsLinkLeavingProject())->__invoke(...),
+            (new IsPathBehindLink())->__invoke(...),
         );
     }
 
@@ -76,7 +76,7 @@ final class AddonFactory
                 (new BuildJsonMemberInsertion())->__invoke(...),
             ))->__invoke(...),
             self::recordSelfSet(),
-            (new IsLinkLeavingProject())->__invoke(...),
+            (new IsPathBehindLink())->__invoke(...),
         );
     }
 
@@ -86,7 +86,7 @@ final class AddonFactory
             (new AnalyzeAgentsMd())->__invoke(...),
             (new DetectLineEnding())->__invoke(...),
             (new StripClaudeMdImport())->__invoke(...),
-            (new IsLinkLeavingProject())->__invoke(...),
+            (new IsPathBehindLink())->__invoke(...),
         );
     }
 
@@ -95,7 +95,7 @@ final class AddonFactory
         return new RemoveGeminiContext(
             (new ReverseTextEdit())->__invoke(...),
             (new IsEmptyGeminiScaffold())->__invoke(...),
-            (new IsLinkLeavingProject())->__invoke(...),
+            (new IsPathBehindLink())->__invoke(...),
         );
     }
 
@@ -131,12 +131,13 @@ final class AddonFactory
             self::renderShell()->__invoke(...),
             (new ReadManifest())->__invoke(...),
             self::recordSelfSet(),
+            (new IsPathBehindLink())->__invoke(...),
         );
     }
 
     public static function removeReviewerShells(): RemoveReviewerShells
     {
-        return new RemoveReviewerShells();
+        return new RemoveReviewerShells((new IsPathBehindLink())->__invoke(...));
     }
 
     public static function syncExcludeBlock(ProcessDocsMode $mode): SyncExcludeBlock

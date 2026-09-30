@@ -16,19 +16,20 @@ use JardisTools\DevSkills\Handler\Install\EnsureGeminiContext;
  * created the file and only an empty scaffold is left after the reversal, the file
  * is deleted (and its folder, when that is empty now); otherwise the file stays without
  * the entry. No manifest note, no file, or a change that cannot be found any more:
- * nothing happens (the last case with a warning).
+ * nothing happens (the last case with a warning). Never through a link: if the file or its folder
+ * is a link, the entry is skipped and nothing is changed or deleted.
  */
 final class RemoveGeminiContext
 {
     /**
      * @param Closure(string, string, string): ?string $reverseEdit
      * @param Closure(string): bool                    $isEmptyScaffold
-     * @param Closure(string, string): bool            $isLinkLeavingProject
+     * @param Closure(string, string): bool            $isPathBehindLink
      */
     public function __construct(
         private readonly Closure $reverseEdit,
         private readonly Closure $isEmptyScaffold,
-        private readonly Closure $isLinkLeavingProject,
+        private readonly Closure $isPathBehindLink,
     ) {
     }
 
@@ -36,7 +37,7 @@ final class RemoveGeminiContext
     {
         $entry = $manifest->selfSet[EnsureGeminiContext::FILE] ?? null;
         $target = $projectRoot . '/' . EnsureGeminiContext::FILE;
-        if ($entry === null || !is_file($target) || ($this->isLinkLeavingProject)($projectRoot, $target)) {
+        if ($entry === null || !is_file($target) || ($this->isPathBehindLink)($projectRoot, $target)) {
             return;
         }
 

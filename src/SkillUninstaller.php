@@ -18,7 +18,7 @@ use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
 use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
-use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
+use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Uninstall\IsEmptyGeminiScaffold;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveAggregatedAgentsMd;
@@ -69,21 +69,21 @@ final class SkillUninstaller
     {
         $analyze = (new AnalyzeAgentsMd())->__invoke(...);
         $detectLineEnding = (new DetectLineEnding())->__invoke(...);
-        $isLinkLeavingProject = (new IsLinkLeavingProject())->__invoke(...);
+        $isPathBehindLink = (new IsPathBehindLink())->__invoke(...);
 
         return new UninstallAddons([
             'claude-md-import' => (new RemoveClaudeMdImport(
                 $analyze,
                 $detectLineEnding,
                 (new StripClaudeMdImport())->__invoke(...),
-                $isLinkLeavingProject,
+                $isPathBehindLink,
             ))->__invoke(...),
             'gemini-context' => (new RemoveGeminiContext(
                 (new ReverseTextEdit())->__invoke(...),
                 (new IsEmptyGeminiScaffold())->__invoke(...),
-                $isLinkLeavingProject,
+                $isPathBehindLink,
             ))->__invoke(...),
-            'reviewer-shells' => (new RemoveReviewerShells())->__invoke(...),
+            'reviewer-shells' => (new RemoveReviewerShells($isPathBehindLink))->__invoke(...),
             'exclude-block' => (new RemoveExcludeBlock(
                 (new ResolveGitDir((new RunGit())->__invoke(...)))->__invoke(...),
                 (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),

@@ -225,4 +225,47 @@ final class SkillUninstallerTest extends TestCase
             $pluginRepo->cleanup();
         }
     }
+
+    public function testInstallAndUninstallNeverWriteThroughFolderLinksLeavingTheProject(): void
+    {
+        $pluginRepo = new TempProject('dev-skills-plugin-');
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
+            $pluginRepo->writeFile(
+                'skills/process-review-board/reviewers/test-reviewer.md',
+                (string) file_get_contents(__DIR__ . '/../Fixture/Reviewers/test-reviewer.md'),
+            );
+            $outside->writeFile('gemini/settings.json', "{\"theme\": \"dark\"}\n");
+            $outside->writeFile('codex/agents/stage-verifier.toml', "name = \"stage-verifier\"\n");
+            self::assertTrue(symlink($outside->path('gemini'), $this->project->path('.gemini')));
+            self::assertTrue(symlink($outside->path('codex'), $this->project->path('.codex')));
+            $before = TreeSnapshot::of($outside->root);
+
+            $installReport = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+                $this->project->root,
+                $this->project->path('vendor'),
+                '1.0.0',
+            );
+
+            self::assertSame($before, TreeSnapshot::of($outside->root), 'the outside trees are the same after install');
+            $warnings = implode("\n", $installReport->warnings());
+            self::assertStringContainsString('.gemini/settings.json', $warnings);
+            self::assertStringContainsString('.codex/agents', $warnings);
+            self::assertFileExists($this->project->path('.claude/agents/test-reviewer.md'));
+            self::assertTrue(is_link($this->project->path('.gemini')));
+            self::assertTrue(is_link($this->project->path('.codex')));
+
+            $uninstallReport = (new SkillUninstaller())($this->project->root, '1.0.0');
+
+            self::assertSame($before, TreeSnapshot::of($outside->root), 'the outside trees are the same after uninstall');
+            self::assertSame([], $uninstallReport->warnings());
+            self::assertFileDoesNotExist($this->project->path('.claude/agents/test-reviewer.md'));
+            self::assertTrue(is_link($this->project->path('.gemini')));
+            self::assertTrue(is_link($this->project->path('.codex')));
+        } finally {
+            $outside->cleanup();
+            $pluginRepo->cleanup();
+        }
+    }
 }

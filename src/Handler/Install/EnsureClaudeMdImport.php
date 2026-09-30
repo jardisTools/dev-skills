@@ -17,8 +17,8 @@ use JardisTools\DevSkills\Exception\InstallFailedException;
  * - CLAUDE.md missing: created with the block;
  * - CLAUDE.md without the import: the block is appended, the rest stays byte for byte;
  * - a block is there, or `@AGENTS.md` stands on its own line outside of one: nothing changes;
- * - corrupt markers, a link that leads to AGENTS.md itself (writing the block would put it into
- *   AGENTS.md) or out of the project: a warning, the file stays untouched.
+ * - corrupt markers, or a link (to AGENTS.md itself, where the block would land in AGENTS.md, out of the
+ *   project, or to another file inside it): a warning, the file stays untouched. Never through a link.
  *
  * Anything else that goes wrong (a directory in place of the file, a write error) throws;
  * the add-on decorator turns that into a warning.
@@ -33,7 +33,7 @@ final class EnsureClaudeMdImport
      * @param Closure(string): string           $detectLineEnding
      * @param Closure(string, string): string   $buildContent
      * @param Closure(string, string, SelfSetEntry): void $recordSelfSet
-     * @param Closure(string, string): bool   $isLinkLeavingProject
+     * @param Closure(string, string): bool   $isPathBehindLink
      */
     public function __construct(
         private readonly Closure $analyze,
@@ -41,7 +41,7 @@ final class EnsureClaudeMdImport
         private readonly Closure $detectLineEnding,
         private readonly Closure $buildContent,
         private readonly Closure $recordSelfSet,
-        private readonly Closure $isLinkLeavingProject,
+        private readonly Closure $isPathBehindLink,
     ) {
     }
 
@@ -60,8 +60,10 @@ final class EnsureClaudeMdImport
             return;
         }
 
-        if (($this->isLinkLeavingProject)($projectRoot, $target)) {
-            $report->addWarning('CLAUDE.md is a link that leads out of the project; the file is unchanged.');
+        if (($this->isPathBehindLink)($projectRoot, $target)) {
+            $report->addWarning($this->leadsOutOfProject($target, $projectRoot)
+                ? 'CLAUDE.md is a link that leads out of the project; the file is unchanged.'
+                : 'CLAUDE.md is a link; the file is unchanged.');
 
             return;
         }
@@ -86,5 +88,13 @@ final class EnsureClaudeMdImport
         }
 
         ($this->recordSelfSet)($projectRoot, self::FILE, new SelfSetEntry(!$analysis->fileExisted));
+    }
+
+    private function leadsOutOfProject(string $target, string $projectRoot): bool
+    {
+        $real = realpath($target);
+        $root = realpath($projectRoot);
+
+        return $real === false || $root === false || !str_starts_with($real, $root . DIRECTORY_SEPARATOR);
     }
 }

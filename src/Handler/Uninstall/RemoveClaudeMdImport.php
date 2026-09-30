@@ -15,8 +15,9 @@ use JardisTools\DevSkills\Handler\Install\EnsureClaudeMdImport;
 /**
  * Takes the plugin's import block out of the root CLAUDE.md. Text outside the block stays
  * byte for byte; if only white space is left, the file is deleted. A file without the block,
- * a `@AGENTS.md` line outside of one, and a link to AGENTS.md (its block belongs to the
- * AGENTS.md removal) or out of the project stay as they are. Corrupt markers: a warning, the file stays untouched.
+ * a `@AGENTS.md` line outside of one, and a link (to AGENTS.md, whose block belongs to the AGENTS.md
+ * removal, or anywhere else) stay as they are: never through a link. Corrupt markers: a warning,
+ * the file stays untouched.
  */
 final class RemoveClaudeMdImport
 {
@@ -24,13 +25,13 @@ final class RemoveClaudeMdImport
      * @param Closure(string): AgentsMdAnalysis $analyze
      * @param Closure(string): string           $detectLineEnding
      * @param Closure(string, string, string): string $stripImport
-     * @param Closure(string, string): bool           $isLinkLeavingProject
+     * @param Closure(string, string): bool           $isPathBehindLink
      */
     public function __construct(
         private readonly Closure $analyze,
         private readonly Closure $detectLineEnding,
         private readonly Closure $stripImport,
-        private readonly Closure $isLinkLeavingProject,
+        private readonly Closure $isPathBehindLink,
     ) {
     }
 
@@ -39,7 +40,7 @@ final class RemoveClaudeMdImport
         $target = $projectRoot . '/' . EnsureClaudeMdImport::FILE;
         if (
             !is_file($target)
-            || ($this->isLinkLeavingProject)($projectRoot, $target)
+            || ($this->isPathBehindLink)($projectRoot, $target)
             || (is_link($target) && realpath($target) === realpath($projectRoot . '/AGENTS.md'))
         ) {
             return;

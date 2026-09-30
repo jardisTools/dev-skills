@@ -206,6 +206,54 @@ final class EnsureGeminiContextTest extends TestCase
         }
     }
 
+    public function testDirectoryLinkLeadingOutOfTheProjectIsNotWrittenThrough(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $outside->writeFile('settings.json', '{"a": 1}');
+            self::assertTrue(symlink($outside->root, $this->project->path('.gemini')));
+
+            $report = $this->ensureGuarded();
+
+            self::assertSame('{"a": 1}', file_get_contents($outside->path('settings.json')));
+            self::assertSame(['settings.json'], $this->names($outside->root));
+            self::assertCount(1, $report->warnings());
+            self::assertStringContainsString('lies behind', $report->warnings()[0]);
+            self::assertNull($this->noted());
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDirectoryLinkInsideTheProjectIsNotWrittenThrough(): void
+    {
+        $this->project->writeFile('elsewhere/settings.json', '{"a": 1}');
+        self::assertTrue(symlink('elsewhere', $this->project->path('.gemini')));
+
+        $report = $this->ensureGuarded();
+
+        self::assertSame('{"a": 1}', file_get_contents($this->project->path('elsewhere/settings.json')));
+        self::assertSame(['settings.json'], $this->names($this->project->path('elsewhere')));
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('lies behind', $report->warnings()[0]);
+        self::assertNull($this->noted());
+    }
+
+    public function testDanglingDirectoryLinkCreatesNothingBehindIt(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            self::assertTrue(symlink($outside->path('missing'), $this->project->path('.gemini')));
+
+            $report = $this->ensureGuarded();
+
+            self::assertSame([], $this->names($outside->root));
+            self::assertCount(1, $report->warnings());
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
     private function ensure(): InstallReport
     {
         $report = new InstallReport();
@@ -225,6 +273,15 @@ final class EnsureGeminiContextTest extends TestCase
 
         return $report;
     }
+
+    /**
+     * @return list<string>
+     */
+    private function names(string $directory): array
+    {
+        return array_values(array_diff(scandir($directory) ?: [], ['.', '..']));
+    }
+
 
     private function noted(): ?SelfSetEntry
     {

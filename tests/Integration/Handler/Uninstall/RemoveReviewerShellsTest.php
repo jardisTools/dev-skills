@@ -9,6 +9,7 @@ use JardisTools\DevSkills\Data\SelfSetEntry;
 use JardisTools\DevSkills\Data\UninstallReport;
 use JardisTools\DevSkills\Tests\Support\AddonFactory;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 final class RemoveReviewerShellsTest extends TestCase
@@ -61,6 +62,35 @@ final class RemoveReviewerShellsTest extends TestCase
         } finally {
             $outside->cleanup();
         }
+    }
+
+    public function testDirectoryLinkIsNotFollowed(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $outside->writeFile('agents/alpha.toml', 'outside');
+            self::assertTrue(symlink($outside->root, $this->project->path('.codex')));
+            $before = TreeSnapshot::of($outside->root);
+
+            $this->remove(['.codex/agents/alpha.toml' => true]);
+
+            self::assertSame($before, TreeSnapshot::of($outside->root));
+            self::assertSame('outside', file_get_contents($outside->path('agents/alpha.toml')));
+            self::assertTrue(is_link($this->project->path('.codex')));
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDirectoryLinkInsideTheProjectIsNotFollowed(): void
+    {
+        $this->project->writeFile('elsewhere/agents/beta.md', 'mine');
+        self::assertTrue(symlink('elsewhere', $this->project->path('.gemini')));
+
+        $this->remove(['.gemini/agents/beta.md' => true]);
+
+        self::assertSame('mine', file_get_contents($this->project->path('elsewhere/agents/beta.md')));
+        self::assertTrue(is_link($this->project->path('.gemini')));
     }
 
     public function testEntriesNotCreatedByThePluginAreKept(): void

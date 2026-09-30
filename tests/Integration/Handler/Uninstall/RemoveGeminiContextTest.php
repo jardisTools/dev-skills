@@ -102,6 +102,26 @@ final class RemoveGeminiContextTest extends TestCase
         self::assertSame([], $report->warnings());
     }
 
+    public function testDirectoryLinkIsNotFollowed(): void
+    {
+        $this->install();
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $settings = (string) file_get_contents($this->project->path(self::SETTINGS));
+            rename($this->project->path('.gemini'), $outside->path('moved'));
+            self::assertTrue(symlink($outside->path('moved'), $this->project->path('.gemini')));
+
+            $report = $this->remove();
+
+            self::assertSame($settings, file_get_contents($outside->path('moved/settings.json')));
+            self::assertTrue(is_link($this->project->path('.gemini')));
+            self::assertSame([], $report->warnings());
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+
     private function install(): void
     {
         AddonFactory::ensureGemini()($this->project->root, $this->project->path('vendor'), new InstallReport());

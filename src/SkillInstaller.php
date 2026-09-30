@@ -46,7 +46,7 @@ use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
-use JardisTools\DevSkills\Handler\Support\IsLinkLeavingProject;
+use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Support\ScanJsonArray;
 use JardisTools\DevSkills\Handler\Support\ScanJsonObject;
@@ -119,7 +119,7 @@ final class SkillInstaller
         ))->__invoke(...);
         $detectLineEnding = (new DetectLineEnding())->__invoke(...);
         $skipValue = (new SkipJsonValue())->__invoke(...);
-        $isLinkLeavingProject = (new IsLinkLeavingProject())->__invoke(...);
+        $isPathBehindLink = (new IsPathBehindLink())->__invoke(...);
         $runGit = (new RunGit())->__invoke(...);
 
         return new InstallAddons([
@@ -129,7 +129,7 @@ final class SkillInstaller
                 $detectLineEnding,
                 (new BuildClaudeMdContent())->__invoke(...),
                 $recordSelfSet,
-                $isLinkLeavingProject,
+                $isPathBehindLink,
             ))->__invoke(...),
             'gemini-context' => (new EnsureGeminiContext(
                 (new PlanGeminiContextEdit(
@@ -139,7 +139,7 @@ final class SkillInstaller
                     (new BuildJsonMemberInsertion())->__invoke(...),
                 ))->__invoke(...),
                 $recordSelfSet,
-                $isLinkLeavingProject,
+                $isPathBehindLink,
             ))->__invoke(...),
             'agents-md-created' => (new RecordAgentsMdCreated($recordSelfSet))->__invoke(...),
             'reviewer-shells' => $this->reviewerShells($recordSelfSet),
@@ -180,6 +180,7 @@ final class SkillInstaller
             ))->__invoke(...),
             (new ReadManifest())->__invoke(...),
             $recordSelfSet,
+            (new IsPathBehindLink())->__invoke(...),
         ))->__invoke(...);
     }
 

@@ -25,7 +25,9 @@ use JardisTools\DevSkills\Handler\Manifest\ResolvePluginVersion;
  * target path (a foreign file, a folder, a link) stays as it is and is reported. A write error for one
  * shell is a warning as well; the other shells are still written. A new shell is noted in the manifest
  * after it was written: an interrupted run leaves a file the next run treats as foreign, never the
- * other way round. Writes stay below the real project root, never through a link.
+ * other way round. Never through a link: a link at the target or in a folder on the way (`.codex`,
+ * `.codex/agents`) is left alone, nothing is written and no folder is created behind it; the check runs
+ * before the first `mkdir`, and the real path of the folder is checked once more afterwards.
  */
 final class WriteReviewerShells
 {
@@ -36,6 +38,7 @@ final class WriteReviewerShells
      * @param Closure(ReviewerSource, ShellFormat): string $renderShell
      * @param Closure(string, string): ManifestReadResult $readManifest
      * @param Closure(string, string, SelfSetEntry): void $recordSelfSet
+     * @param Closure(string, string): bool $isPathBehindLink
      */
     public function __construct(
         private readonly string $pluginRoot,
@@ -43,6 +46,7 @@ final class WriteReviewerShells
         private readonly Closure $renderShell,
         private readonly Closure $readManifest,
         private readonly Closure $recordSelfSet,
+        private readonly Closure $isPathBehindLink,
     ) {
     }
 
@@ -152,7 +156,7 @@ final class WriteReviewerShells
             return null;
         }
 
-        $this->ensureDirectory(dirname($target), $realRoot);
+        $this->ensureDirectory(dirname($target), $projectRoot, $realRoot);
         if (@file_put_contents($target, $content) === false) {
             throw new InstallFailedException(sprintf('Could not write the reviewer shell "%s".', $path));
         }
@@ -173,8 +177,14 @@ final class WriteReviewerShells
         return null;
     }
 
-    private function ensureDirectory(string $directory, string $realRoot): void
+    private function ensureDirectory(string $directory, string $projectRoot, string $realRoot): void
     {
+        if (($this->isPathBehindLink)($projectRoot, $directory)) {
+            throw new InstallFailedException(
+                sprintf('The folder "%s" is a link or lies behind one; nothing was written.', $directory),
+            );
+        }
+
         if (!is_dir($directory) && !@mkdir($directory, 0o755, true) && !is_dir($directory)) {
             throw new InstallFailedException(sprintf('Could not create the folder "%s".', $directory));
         }

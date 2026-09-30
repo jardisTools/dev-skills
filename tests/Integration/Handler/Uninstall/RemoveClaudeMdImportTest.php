@@ -107,6 +107,35 @@ final class RemoveClaudeMdImportTest extends TestCase
         self::assertTrue(is_link($this->project->path('CLAUDE.md')));
     }
 
+    public function testLinkToAnotherFileInsideTheProjectIsNotWrittenThrough(): void
+    {
+        $notes = AnalyzeAgentsMd::HEADER . "\ncontent\n" . AnalyzeAgentsMd::FOOTER . "\n";
+        $this->project->writeFile('notes.md', $notes);
+        self::assertTrue(symlink('notes.md', $this->project->path('CLAUDE.md')));
+
+        $this->remove();
+
+        self::assertSame($notes, file_get_contents($this->project->path('notes.md')));
+        self::assertTrue(is_link($this->project->path('CLAUDE.md')));
+    }
+
+    public function testLinkLeadingOutOfTheProjectIsNotWrittenThrough(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $notes = AnalyzeAgentsMd::HEADER . "\ncontent\n" . AnalyzeAgentsMd::FOOTER . "\n";
+            $outside->writeFile('notes.md', $notes);
+            self::assertTrue(symlink($outside->path('notes.md'), $this->project->path('CLAUDE.md')));
+
+            $this->remove();
+
+            self::assertSame($notes, file_get_contents($outside->path('notes.md')));
+            self::assertTrue(is_link($this->project->path('CLAUDE.md')));
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
     private function remove(): UninstallReport
     {
         $report = new UninstallReport();
