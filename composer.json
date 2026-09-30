@@ -32,6 +32,9 @@
             "JardisTools\\DevSkills\\Tests\\": "tests/"
         }
     },
+    "bin": [
+        "scripts/pool-check.php"
+    ],
     "config": {
         "audit": {
             "ignore": [

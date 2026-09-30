@@ -102,7 +102,10 @@ final class SkillInstaller
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
         $this->isCatalogInstalled = (new IsCatalogInstalled())->__invoke(...);
         $this->loadRouterText = (new LoadRouterText())->__invoke(...);
-        $this->aggregateAgentsMd = (new AggregateAgentsMd($fs))->__invoke(...);
+        $this->aggregateAgentsMd = (new AggregateAgentsMd(
+            $fs,
+            (new IsPathBehindLink())->__invoke(...),
+        ))->__invoke(...);
         $this->recordAgentsAggregation = (new RecordAgentsAggregation())->__invoke(...);
     }
 

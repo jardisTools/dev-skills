@@ -158,4 +158,20 @@ final class EnsureClaudeMdImportTest extends TestCase
 
         return $report;
     }
+
+    public function testAgentsMdLinkedToClaudeMdGetsNoImportBlock(): void
+    {
+        $claude = "# Claude rules\n";
+        $this->project->writeFile('CLAUDE.md', $claude);
+        self::assertTrue(symlink('CLAUDE.md', $this->project->path('AGENTS.md')));
+
+        $report = $this->ensure();
+
+        self::assertSame($claude, file_get_contents($this->project->path('CLAUDE.md')));
+        self::assertFalse(is_link($this->project->path('CLAUDE.md')));
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('AGENTS.md is a link to CLAUDE.md', $report->warnings()[0]);
+        self::assertFileDoesNotExist($this->project->path(Manifest::FILE));
+    }
 }

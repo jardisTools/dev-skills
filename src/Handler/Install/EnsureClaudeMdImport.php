@@ -17,8 +17,9 @@ use JardisTools\DevSkills\Exception\InstallFailedException;
  * - CLAUDE.md missing: created with the block;
  * - CLAUDE.md without the import: the block is appended, the rest stays byte for byte;
  * - a block is there, or `@AGENTS.md` stands on its own line outside of one: nothing changes;
- * - corrupt markers, or a link (to AGENTS.md itself, where the block would land in AGENTS.md, out of the
- *   project, or to another file inside it): a warning, the file stays untouched. Never through a link.
+ * - corrupt markers, or a link (to AGENTS.md itself, or AGENTS.md being the link to CLAUDE.md, in both cases
+ *   the same file, where the block would land in AGENTS.md or import itself; out of the project, or to another
+ *   file inside it): a warning, the file stays untouched. Never through a link.
  *
  * Anything else that goes wrong (a directory in place of the file, a write error) throws;
  * the add-on decorator turns that into a warning.
@@ -52,10 +53,11 @@ final class EnsureClaudeMdImport
         if (file_exists($target) && !is_file($target)) {
             throw new InstallFailedException(sprintf('"%s" exists but is not a regular file.', $target));
         }
-        if (is_link($target) && realpath($target) === realpath($projectRoot . '/AGENTS.md')) {
-            $report->addWarning(
-                'CLAUDE.md is a link to AGENTS.md; the import block was not added and the file is unchanged.',
-            );
+        $realClaudeMd = realpath($target);
+        if ($realClaudeMd !== false && $realClaudeMd === realpath($projectRoot . '/AGENTS.md')) {
+            $report->addWarning(is_link($target)
+                ? 'CLAUDE.md is a link to AGENTS.md; the import block was not added and the file is unchanged.'
+                : 'AGENTS.md is a link to CLAUDE.md; the import block was not added and the file is unchanged.');
 
             return;
         }

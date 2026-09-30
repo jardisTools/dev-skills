@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Uninstall;
 
+use Closure;
 use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Exception\UninstallFailedException;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
+use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
 use JardisTools\DevSkills\Handler\Uninstall\RemoveAggregatedAgentsMd;
 use JardisTools\DevSkills\Tests\Support\TempProject;
 use PHPUnit\Framework\TestCase;
@@ -25,6 +27,15 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
         $this->project->cleanup();
     }
 
+    private function handler(?Closure $unlink = null, ?Closure $write = null): RemoveAggregatedAgentsMd
+    {
+        return new RemoveAggregatedAgentsMd(
+            (new IsPathBehindLink())->__invoke(...),
+            unlink: $unlink,
+            write: $write,
+        );
+    }
+
     public function testDeletesFileWhenOnlyManagedBlockIsPresent(): void
     {
         $this->project->writeFile(
@@ -32,7 +43,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
             AnalyzeAgentsMd::HEADER . "\ncontent\n" . AnalyzeAgentsMd::FOOTER . "\n",
         );
 
-        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+        $action = ($this->handler())($this->project->root);
 
         self::assertSame(AgentsMdUninstallAction::FileDeleted, $action);
         self::assertFileDoesNotExist($this->project->path('AGENTS.md'));
@@ -46,7 +57,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
             AnalyzeAgentsMd::FOOTER,
         ));
 
-        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+        $action = ($this->handler())($this->project->root);
 
         self::assertSame(AgentsMdUninstallAction::BlockStripped, $action);
         $remaining = file_get_contents($this->project->path('AGENTS.md'));
@@ -61,7 +72,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
     {
         $this->project->writeFile('AGENTS.md', "# My hand-written AGENTS\n");
 
-        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+        $action = ($this->handler())($this->project->root);
 
         self::assertSame(AgentsMdUninstallAction::Untouched, $action);
         self::assertFileExists($this->project->path('AGENTS.md'));
@@ -69,7 +80,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
 
     public function testReturnsUntouchedWhenMissing(): void
     {
-        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+        $action = ($this->handler())($this->project->root);
 
         self::assertSame(AgentsMdUninstallAction::Untouched, $action);
     }
@@ -79,7 +90,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
         $corrupt = "head\n" . AnalyzeAgentsMd::HEADER . "\nno footer\n";
         $this->project->writeFile('AGENTS.md', $corrupt);
 
-        $action = (new RemoveAggregatedAgentsMd())($this->project->root);
+        $action = ($this->handler())($this->project->root);
 
         self::assertSame(AgentsMdUninstallAction::Corrupt, $action);
         self::assertSame($corrupt, file_get_contents($this->project->path('AGENTS.md')));
@@ -92,7 +103,7 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
             AnalyzeAgentsMd::HEADER . "\nbody\n" . AnalyzeAgentsMd::FOOTER . "\n",
         );
 
-        $handler = new RemoveAggregatedAgentsMd(
+        $handler = $this->handler(
             unlink: static fn (string $p): bool => false,
         );
 
@@ -109,12 +120,47 @@ final class RemoveAggregatedAgentsMdTest extends TestCase
             AnalyzeAgentsMd::FOOTER,
         ));
 
-        $handler = new RemoveAggregatedAgentsMd(
+        $handler = $this->handler(
             write: static fn (string $p, string $c): int|false => false,
         );
 
         $this->expectException(UninstallFailedException::class);
         $this->expectExceptionMessage('Could not strip managed block');
         $handler($this->project->root);
+    }
+
+    public function testLinkIsNotFollowedAndWarns(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $managed = AnalyzeAgentsMd::HEADER . "\nold block\n" . AnalyzeAgentsMd::FOOTER . "\n";
+            $outside->writeFile('agents.md', $managed);
+            $this->project->writeFile('inner.md', $managed);
+
+            foreach ([$outside->path('agents.md') => $outside->path('agents.md'), 'inner.md' => $this->project->path('inner.md')] as $link => $real) {
+                $path = $this->project->path('AGENTS.md');
+                self::assertTrue(symlink($link, $path));
+
+                $action = ($this->handler())($this->project->root);
+
+                self::assertSame(AgentsMdUninstallAction::SkippedLink, $action);
+                self::assertTrue(is_link($path));
+                self::assertSame($managed, file_get_contents($real));
+                unlink($path);
+            }
+        } finally {
+            $outside->cleanup();
+        }
+    }
+
+    public function testDanglingLinkIsSkipped(): void
+    {
+        self::assertTrue(symlink($this->project->path('nowhere.md'), $this->project->path('AGENTS.md')));
+
+        $action = ($this->handler())($this->project->root);
+
+        self::assertSame(AgentsMdUninstallAction::SkippedLink, $action);
+        self::assertTrue(is_link($this->project->path('AGENTS.md')));
+        self::assertFileDoesNotExist($this->project->path('nowhere.md'));
     }
 }

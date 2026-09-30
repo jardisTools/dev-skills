@@ -11,6 +11,11 @@ use JardisTools\DevSkills\Data\AgentsMdAnalysis;
 use JardisTools\DevSkills\Data\AggregateAgentsResult;
 use JardisTools\DevSkills\Exception\InstallFailedException;
 
+/**
+ * Writes the aggregated managed block into AGENTS.md. Never through a link: when AGENTS.md is a link (out
+ * of the project, dangling, or to a file inside it such as CLAUDE.md) or lies behind one, nothing is
+ * analyzed, backed up or written; the result carries a warning and the install goes on.
+ */
 final class AggregateAgentsMd
 {
     /** @var Closure(string): AgentsMdAnalysis */
@@ -25,8 +30,12 @@ final class AggregateAgentsMd
     /** @var Closure(int): ?string */
     private readonly Closure $sizeWarning;
 
+    /**
+     * @param Closure(string, string): bool $isPathBehindLink
+     */
     public function __construct(
         private readonly Filesystem $filesystem,
+        private readonly Closure $isPathBehindLink,
         ?Closure $analyze = null,
         ?Closure $backup = null,
         ?Closure $buildBlock = null,
@@ -47,6 +56,8 @@ final class AggregateAgentsMd
      *   without vendor sources is written.
      * - Router text (may be empty) opens the managed block, before the vendor aggregation.
      * - A file above the Codex size limit is still written; the result carries a warning.
+     * - AGENTS.md is a link or lies behind one → no block, no backup, nothing written; result has count 0
+     *   and a warning that names the way out (a regular AGENTS.md, imported by CLAUDE.md via `@AGENTS.md`).
      * - A write failure (e.g. a directory at the target) is a core error: InstallFailedException.
      * - Existing file without marker → original is moved to AGENTS.md.backup
      *   and preserved above the new block.
@@ -67,6 +78,10 @@ final class AggregateAgentsMd
 
         $target = $projectRoot . '/AGENTS.md';
         $this->filesystem->ensureDirectoryExists($projectRoot);
+
+        if (($this->isPathBehindLink)($projectRoot, $target)) {
+            return new AggregateAgentsResult(0, null, skippedWarning: $this->linkWarning());
+        }
 
         $analysis = ($this->analyze)($target);
 
@@ -89,6 +104,13 @@ final class AggregateAgentsMd
             ($this->sizeWarning)(strlen($payload)),
             !$analysis->fileExisted,
         );
+    }
+
+    private function linkWarning(): string
+    {
+        return 'AGENTS.md is a link or lies behind one; the managed block was not written and the file is'
+            . ' unchanged. To keep the block, make AGENTS.md a regular file and let CLAUDE.md import it with'
+            . ' `@AGENTS.md`.';
     }
 
     private function composePayload(AgentsMdAnalysis $analysis, string $block, bool $backedUp): string

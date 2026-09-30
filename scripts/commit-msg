@@ -1,0 +1,83 @@
+#!/bin/sh
+# commit-msg hook: a feat/fix commit must carry a knowledge note.
+#
+# Usage: commit-msg <message-file>      (Git passes the file of the message being committed)
+#
+# Accepted notes (one trailer line, the first one counts):
+#   Wissen: <page>#<section>        section is one of stand|entscheide|fallen|ersetzt|verweise
+#   Wissen: keins – <reason>        the dash is the en dash U+2013; the reason must not be empty
+#
+# Rules:
+#   - a feat or fix subject (also feat(scope): and feat!:) without a note is rejected
+#   - a note that is present is checked for its form, whatever the type of the commit
+#   - lines starting with # are comments and ignored, so a commented note does not count
+#   - merge, revert, fixup!, squash! and amend! messages pass without any check
+#
+# Reads the message file only, never writes. Plain POSIX sh. Exit 0 accepts, 1 rejects, 2 usage error.
+
+allowed="allowed: 'Wissen: <page>#<section>' (section: stand|entscheide|fallen|ersetzt|verweise) or 'Wissen: keins – <reason>'."
+
+reject() {
+    printf 'commit-msg: %s; %s\n' "$1" "$allowed" >&2
+    exit 1
+}
+
+message_file=${1:-}
+if [ -z "$message_file" ] || [ ! -f "$message_file" ]; then
+    echo 'commit-msg: usage: commit-msg <message-file>' >&2
+    exit 2
+fi
+
+# Drop comment lines and carriage returns; command substitution drops trailing newlines.
+message=$(grep -v '^#' "$message_file" | tr -d '\r') || true
+
+subject=$(printf '%s\n' "$message" | sed -n '/[^[:space:]]/{p;q;}')
+
+case $subject in
+    'Merge '* | 'Revert "'* | 'fixup! '* | 'squash! '* | 'amend! '*)
+        exit 0
+        ;;
+esac
+
+note_required=0
+if printf '%s\n' "$subject" | grep -Eq '^(feat|fix)(\([^)]*\))?!?:'; then
+    note_required=1
+fi
+
+note_line=$(printf '%s\n' "$message" | sed -n '/^Wissen:/{p;q;}')
+
+if [ -z "$note_line" ]; then
+    if [ "$note_required" -eq 1 ]; then
+        reject "feat/fix commit without a 'Wissen:' note"
+    fi
+    exit 0
+fi
+
+value=$(printf '%s\n' "$note_line" | sed 's/^Wissen:[[:space:]]*//; s/[[:space:]]*$//')
+
+if printf '%s\n' "$value" | grep -Eq '^keins([[:space:]]|–|$)'; then
+    if printf '%s\n' "$value" | grep -Eq '^keins[[:space:]]*–[[:space:]]*[^[:space:]]'; then
+        exit 0
+    fi
+    reject "'Wissen: keins' needs a reason after the en dash"
+fi
+
+if printf '%s\n' "$value" | grep -Eq '^[a-z][a-z0-9-]*#[^[:space:]]+$'; then
+    section=${value#*#}
+    case $section in
+        stand | entscheide | fallen | ersetzt | verweise)
+            exit 0
+            ;;
+    esac
+    reject "'#$section' is not a known section"
+fi
+
+if printf '%s\n' "$value" | grep -Eq '^[a-z][a-z0-9-]*[[:space:]]+#'; then
+    reject "no space allowed before '#' in '$note_line'"
+fi
+
+if printf '%s\n' "$value" | grep -Eq '^[a-z][a-z0-9-]*$'; then
+    reject "'$note_line' names no section"
+fi
+
+reject "'$note_line' is neither '<page>#<section>' nor 'keins – <reason>'"

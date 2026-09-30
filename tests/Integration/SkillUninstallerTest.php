@@ -268,4 +268,26 @@ final class SkillUninstallerTest extends TestCase
             $pluginRepo->cleanup();
         }
     }
+
+    public function testUninstallSkipsLinkedAgentsMdAndWarns(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        try {
+            $managed = AnalyzeAgentsMd::HEADER . "\nold block\n" . AnalyzeAgentsMd::FOOTER . "\n";
+            $outside->writeFile('agents.md', $managed);
+            $this->project->writeFile('.claude/skills/adapter-cache/SKILL.md', 'x');
+            self::assertTrue(symlink($outside->path('agents.md'), $this->project->path('AGENTS.md')));
+
+            $report = (new SkillUninstaller())($this->project->root);
+
+            self::assertSame(AgentsMdUninstallAction::SkippedLink, $report->agentsMdAction());
+            self::assertSame($managed, file_get_contents($outside->path('agents.md')));
+            self::assertTrue(is_link($this->project->path('AGENTS.md')));
+            self::assertFileDoesNotExist($this->project->path('.claude/skills/adapter-cache/SKILL.md'), 'the rest still ran');
+            self::assertCount(1, $report->warnings());
+            self::assertStringContainsString('AGENTS.md is a link', $report->warnings()[0]);
+        } finally {
+            $outside->cleanup();
+        }
+    }
 }

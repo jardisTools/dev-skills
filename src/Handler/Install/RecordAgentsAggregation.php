@@ -16,5 +16,6 @@ final class RecordAgentsAggregation
         $report->setAgentsMdHealed($result->healedDuplicateBlock);
         $report->setAgentsMdCreated($result->agentsMdCreated);
         $report->addWarningIfAny($result->sizeWarning);
+        $report->addWarningIfAny($result->skippedWarning);
     }
 }
