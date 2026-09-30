@@ -57,7 +57,10 @@ final class SkillInstallerRedirectTest extends TestCase
             }
             self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/' . $oldName));
         }
-        self::assertEqualsCanonicalizing(array_values(RenamedSkills::MAPPING), $report->installedSkills());
+        // Skills added to the bundle after the rename are installed as well, so the installed set
+        // is checked for containing every renamed target and no retired name, not for equalling them.
+        self::assertSame([], array_values(array_diff(array_values(RenamedSkills::MAPPING), $report->installedSkills())));
+        self::assertSame([], array_values(array_intersect($old, $report->installedSkills())));
     }
 
     public function testFreshProjectGetsNoRedirect(): void
