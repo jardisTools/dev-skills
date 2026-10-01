@@ -6,13 +6,14 @@ namespace JardisTools\DevSkills\Tests\Integration\Docs;
 
 use DOMDocument;
 use DOMElement;
+use DOMNode;
 use DOMXPath;
 use RuntimeException;
 
 /**
  * One overview page of `docs/` loaded for inspection: the raw HTML, the parsed
  * document and the read-only views the page tests compare (skill names, tool
- * coverage matrix, element skeleton, `<code>` literals, style block).
+ * coverage matrix, element skeleton, `<code>` literals, style block, text slots).
  */
 final class OverviewPage
 {
@@ -159,6 +160,29 @@ final class OverviewPage
     }
 
     /**
+     * The visible text of the body cut into slots, in document order: one slot for the text between two
+     * neighbouring tags. Text below `<code>` and below an element of class `mono` is left out, but its
+     * slots stay, so two pages with the same element skeleton have the same number of slots and slot i of
+     * one page is the counterpart of slot i of the other. Whitespace is collapsed, empty slots stay.
+     *
+     * @return list<string>
+     */
+    public function textSlots(): array
+    {
+        $body = $this->xpath->query('//body')?->item(0);
+        if ($body === null) {
+            return [];
+        }
+
+        $slots   = [];
+        $current = '';
+        $this->collectSlots($body, false, $current, $slots);
+        $slots[] = $this->collapse($current);
+
+        return $slots;
+    }
+
+    /**
      * The text of the subtitle under the page title (`p.sub`).
      */
     public function subtitle(): string
@@ -189,6 +213,34 @@ final class OverviewPage
     public function styleBlock(): string
     {
         return preg_match('~<style>.*?</style>~s', $this->html, $match) === 1 ? $match[0] : '';
+    }
+
+    /**
+     * @param list<string> $slots
+     */
+    private function collectSlots(DOMNode $node, bool $skipText, string &$current, array &$slots): void
+    {
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof DOMElement) {
+                $slots[] = $this->collapse($current);
+                $current = '';
+
+                $literal = $skipText
+                    || $child->nodeName === 'code'
+                    || str_contains(' ' . $child->getAttribute('class') . ' ', ' mono ');
+                $this->collectSlots($child, $literal, $current, $slots);
+
+                $slots[] = $this->collapse($current);
+                $current = '';
+            } elseif (!$skipText && $child->nodeType === XML_TEXT_NODE) {
+                $current .= $child->textContent;
+            }
+        }
+    }
+
+    private function collapse(string $text): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', $text));
     }
 
     private function matrix(): string

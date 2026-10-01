@@ -127,11 +127,11 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <ul>
 <li>33 mitgelieferte Skills in neun Bereichen, dazu die Skills jedes Jardis-Vendor-Packages</li>
 <li>Skills landen in <code>.claude/skills</code> und <code>.agents/skills</code>; ein verwalteter Block landet in <code>AGENTS.md</code></li>
-<li>Branch, Commit und Merge sind Tore des Menschen; kein Commit trägt eine Werkzeug-Attribution</li>
+<li>Branch, Commit und Merge sind Gates des Menschen; kein Commit trägt eine Werkzeug-Attribution</li>
 <li>19 Prüfer-Rollen werden als Agent-Dateien für fünf Werkzeuge geschrieben</li>
 <li>Nur Claude Code ist getestet; Codex, Cursor, GitHub Copilot und Gemini CLI sind aus Doku belegt, nicht getestet</li>
 <li>Die Gruppen <code>foundation-*</code> und <code>process-*</code> werden immer installiert</li>
-<li>Der Schalter <code>process-docs</code> hält die Prozessdokumente im Commit (<code>committed</code>) oder außerhalb davon (<code>local</code>)</li>
+<li>Der Schalter <code>process-docs</code> hält die Prozess-Arbeitsunterlagen im Commit (<code>committed</code>) oder außerhalb davon (<code>local</code>)</li>
 </ul></div>
 
 <div class="legend">
@@ -147,9 +147,9 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <h2>Prozess-Landkarte</h2>
 
 <div class="tiers">
-  <div class="entry">Auftrag<small>jede Anfrage</small><span class="mono" style="color:var(--new);margin-top:4px">process-choose-tier</span></div>
+  <div class="entry">Aufgabe<small>jede Anfrage</small><span class="mono" style="color:var(--new);margin-top:4px">process-choose-tier</span></div>
   <div class="tier"><b>0 Antwort</b>Frage, Erklärung, Tippfehler<div class="how">kein Prozess, direkte Antwort</div></div>
-  <div class="tier"><b>1 Handgriff</b>eine Sache, ein Ort, kein offener Entscheid<div class="how">die Hauptsession macht es selbst · Hygiene: Doku mitziehen, Tests für geänderte Logik, nur die Tore laufen lassen, die die Änderung berührt, Diff gegenlesen</div></div>
+  <div class="tier"><b>1 Handgriff</b>eine Sache, ein Ort, kein offener Entscheid<div class="how">die Hauptsession macht es selbst · Hygiene: Doku aktualisieren, Tests für geänderte Logik, nur die Gates ausführen, die die Änderung berührt, Diff gegenlesen</div></div>
   <div class="tier"><b>2 Kleinauftrag</b>groß, laut oder isoliert <i>oder</i> mehrere Teilaufgaben<div class="how">ein Sub-Agent je Teilaufgabe · die Hauptsession führt die Aufgabenliste und prüft gegen Ground Truth, sie setzt nicht selbst um · Hygiene wie bei 1</div></div>
   <div class="tier t3"><b>3 Vorhaben</b>offener Entscheid, abhängige Schritte, neue Architektur, öffentliche API, Daten, Security<div class="how">Stadien unten · im Zweifel die niedrigere Stufe · taucht ein Kriterium von Stufe 3 auf, entscheidet es für Stufe 3</div></div>
 </div>
@@ -173,10 +173,10 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-hum">Jeder Befund wird beschieden; <b>jede Gabel geht an den Menschen</b>, auch kleine</div>
   <div class="r-hum"><b>gibt den Plan frei</b></div>
   <div class="r-hum">Jeder Befund wird beschieden; <b>jede Gabel geht an den Menschen</b></div>
-  <div class="r-hum">Höchstens 2 Rückfrage-Punkte je Etappe · <b>Commit und Merge sind Tore des Menschen</b></div>
-  <div class="r-hum"><b>Sicht-Tor</b>, wo eine Oberfläche gebaut wird: Zielbild neben Screenshot, blockiert immer</div>
-  <div class="r-hum"><b>Nimmt ab:</b> das Verdikt des Tores</div>
-  <div class="r-hum">Jeder offene Punkt erhält einen von vier Entscheiden · <b>beschließt</b> Prozessänderungen aus der Retro</div>
+  <div class="r-hum">Höchstens 2 Rückfrage-Punkte je Etappe · <b>Commit und Merge sind Gates des Menschen</b></div>
+  <div class="r-hum"><b>Sicht-Gate</b>, wo eine Oberfläche gebaut wird: Zielbild neben Screenshot, blockiert immer</div>
+  <div class="r-hum"><b>Nimmt ab:</b> das Verdikt des Gates</div>
+  <div class="r-hum">Jeder offene Punkt erhält einen von vier Entscheiden · <b>entscheidet</b> über Prozessänderungen aus der Retro</div>
 
   <div class="rl r-chk">Prüfer</div>
   <div class="r-chk">Vor allem Neuen: was das Umfeld schon leistet<br><span class="mono">existing-capability-check</span></div>
@@ -184,14 +184,14 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-chk">Skeptiker immer, weitere Rollen nur mit Grund (Domäne, DDD-Strategie, Frontend-UX) · blind, parallel · eine zusammengeführte Liste</div>
   <div class="r-chk none">—</div>
   <div class="r-chk">Standard zwei Rollen: Architektur, Teststrategie · Packages nur bei neuen Package-APIs · weitere nur mit Grund</div>
-  <div class="r-chk">Code-Review je Phase (<span class="mono">code-review-change</span>) · Rückfrage-Tor · Fehlerdiagnose</div>
-  <div class="r-chk">Verifier der Etappe, blind, einmal je Etappe, Umsetzer ≠ Prüfer · QA-Tore einmal je Etappe durch die Hauptsession</div>
-  <div class="r-chk">Akzeptanz-Tor, Ende-zu-Ende gegen das ganze PRD, einmal</div>
+  <div class="r-chk">Code-Review je Phase (<span class="mono">code-review-change</span>) · Rückfrage-Gate · Fehlerdiagnose</div>
+  <div class="r-chk">Verifier der Etappe, blind, einmal je Etappe, Umsetzer ≠ Prüfer · QA-Gates einmal je Etappe durch die Hauptsession</div>
+  <div class="r-chk">Akzeptanz-Gate, Ende-zu-Ende gegen das ganze PRD, einmal</div>
   <div class="r-chk none">—</div>
 
   <div class="rl r-art">Artefakt</div>
   <div class="r-art"><span class="mono">KONZEPT.html</span> (+ <span class="mono">KONZEPT.png</span> bei der Abnahme) · <span class="mono">PROGRESS.md</span> mit Kopf: Phase, Stage, Next step, Open decisions</div>
-  <div class="r-art"><span class="mono">PRD.md</span> ergänzt das Bild um Fehlerfälle, Zustände, Grenzen und Datenwege</div>
+  <div class="r-art"><span class="mono">PRD.md</span> ergänzt das Bild um Fehlerfälle, Zustände, Grenzen und Datenpfade</div>
   <div class="r-art">Eine Befundliste, jeder Befund gelöst oder verworfen</div>
   <div class="r-art"><span class="mono">PLAN.md</span>: Etappen → Phasen, Datei-Scope, Akzeptanzkriterien je Phase</div>
   <div class="r-art">Befunde in den Plan eingearbeitet</div>
@@ -201,8 +201,8 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-art">Digest <span class="mono">docs/digests/…</span> · Ordner gelöscht · einmalige Auslieferung</div>
 </div>
 
-<div class="band"><div class="bl">Etappen-Schleife</div><div>Je Phase: Brief → Umsetzer (frische Session) → Commit. Je Etappe: Verifier → QA-Tore → Sicht-Tor → Kopf aktualisieren → Merge. Nach RED: <b>ein</b> Fix-Lauf und <b>ein</b> Nachlauf des Verifiers, dann <span class="mono">STOPP:</span> im Kopf der Fortschrittsdatei.</div></div>
-<div class="band"><div class="bl" style="color:#b91c1c">Fehlerpfad</div><div><b>A</b> erholbar → ein frischer Wiederholungslauf · <b>B</b> beantwortbare Frage → Rückfrage-Tor (<span class="mono">open-question-gate</span>; die Antwort wird aus PRD, Zielbild, Verfassung und Code hergeleitet) · Diagnose durch <span class="mono">failure-diagnosis</span> · nie delegiert: destruktive Operationen, Änderungen an der öffentlichen API, Scope über das PRD hinaus, Veröffentlichung, Kosten, Dritte</div></div>
+<div class="band"><div class="bl">Etappen-Schleife</div><div>Je Phase: Brief → Umsetzer (frische Session) → Commit. Je Etappe: Verifier → QA-Gates → Sicht-Gate → Kopf aktualisieren → Merge. Nach RED: <b>ein</b> Fix-Lauf und <b>ein</b> Nachlauf des Verifiers, dann <span class="mono">STOPP:</span> im Kopf der Fortschrittsdatei.</div></div>
+<div class="band"><div class="bl" style="color:#b91c1c">Fehlerpfad</div><div><b>A</b> erholbar → ein frischer Wiederholungslauf · <b>B</b> beantwortbare Frage → Rückfrage-Gate (<span class="mono">open-question-gate</span>; die Antwort wird aus PRD, Zielbild, Verfassung und Code hergeleitet) · Diagnose durch <span class="mono">failure-diagnosis</span> · nie delegiert: destruktive Operationen, Änderungen an der öffentlichen API, Scope über das PRD hinaus, Veröffentlichung, Kosten, Dritte</div></div>
 <div class="band"><div class="bl" style="color:var(--new)">Wissen</div><div><span class="mono">knowledge-*</span> · vor einem Format-, Architektur- oder Emissions-Entscheid den Pool lesen · jeder Commit mit <span class="mono">feat:</span> oder <span class="mono">fix:</span> trägt eine Vermerkzeile <span class="mono">Wissen:</span></div></div>
 <div class="band"><div class="bl">Wiederanlauf</div><div><span class="mono">process-resume</span> · eine frische Session findet die aktive <span class="mono">PROGRESS.md</span> (höchstens 60 Zeilen, nur die Hauptsession schreibt sie), beachtet <span class="mono">STOPP:</span>, führt den Preflight aus und nimmt genau einen nächsten Schritt auf · jede Etappe läuft in einer frischen Agent-Session</div></div>
 <div class="band"><div class="bl">Rollen</div><div>Hauptsession = Orchestrator: schreibt Briefe, beobachtet, prüft gegen Ground Truth, baut nichts · Umsetzer = Sub-Agent je Phase, schreibt keine Fortschrittsdatei und keinen Git-Befehl, der den Zustand ändert · Prüfer = eigener Sub-Agent, der nur das Ziel-Artefakt, die Akzeptanzkriterien und den Code sieht · ohne Sub-Agenten: ein frischer Headless-Lauf je Rolle (<span class="mono">claude -p</span>, <span class="mono">codex exec</span>, <span class="mono">agent -p</span>, <span class="mono">copilot -p</span>, <span class="mono">gemini -p</span>)</div></div>
@@ -219,7 +219,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <span class="chip" style="background:var(--art);color:#fff;border-color:var(--art)">D Rechenschaft (docs/)</span>
 </div>
 
-<div class="layers"><b>Drei Schichten:</b> Schicht 1 <b>Chat</b> (Rohmaterial, nie die Quelle der Wahrheit) → Schicht 2 <b>Arbeitsunterlagen</b> <code>docs/vorhaben/&lt;name&gt;/</code> → Schicht 3 <b>Wissen</b> <code>.claude/wissen/</code>. Die Richtung ist fest: Chat, dann Arbeitsunterlagen, dann Wissen.</div>
+<div class="layers"><b>Drei Schichten:</b> Schicht 1 <b>Chat</b> (Rohmaterial, nie die Quelle der Wahrheit) → Schicht 2 <b>Projekt-Arbeitsunterlagen</b> <code>docs/vorhaben/&lt;name&gt;/</code> → Schicht 3 <b>Wissen</b> <code>.claude/wissen/</code>. Die Richtung ist fest: Chat, dann Projekt-Arbeitsunterlagen, dann Wissen.</div>
 
 <div class="places">
   <div class="place"><h4>WO · Wissenspool (Warum und Fallen)</h4>
@@ -253,7 +253,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="tn">B · Feature<small>Handgriff oder Vorhaben</small></div>
   <div class="steps">
     <div class="step"><span class="k r">R</span>Vor einem Format-, Architektur- oder Emissions-Entscheid die zuständige Themenseite lesen<span class="o">INDEX.md → &lt;topic&gt;.md</span></div>
-    <div class="step"><span class="k w">W</span><code>feat:</code> erweitert <i>Stand</i> oder <i>Entscheide</i>; ein ersetzter Sachverhalt wandert nach <i>Ersetzt</i></div>
+    <div class="step"><span class="k w">W</span><code>feat:</code> erweitert <i>Stand</i> oder <i>Entscheide</i>; ein ersetzter Fakt wandert nach <i>Ersetzt</i></div>
     <div class="step"><span class="k w">W</span>Eine Themenseite, der die Änderung widerspricht, wird im <b>selben</b> Commit korrigiert</div>
     <div class="step"><span class="k g">G</span><b>commit-msg-Hook:</b> ein Commit mit <code>feat:</code> oder <code>fix:</code> ohne den Vermerk erzeugt eine Warnung, der Commit geht durch<span class="o">Wissen: &lt;page&gt;#&lt;section&gt; | Wissen: keins – &lt;reason&gt;</span></div>
     <div class="step"><span class="k g">G</span><b>Pool-Prüfung:</b> Abschnitte, Links, Pfadverweise und Größen-Deckel<span class="o">pool-check.php</span></div>
@@ -274,12 +274,12 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 </div>
 
 <div class="band"><div class="bl" style="color:#b91c1c">Prüfungen</div><div><span class="k g" style="display:inline-block;font-size:10px;font-weight:700;border-radius:3px;padding:0 4px;color:#fff;background:#b91c1c">G</span> <span class="mono">pool-check.php</span> liest nur; Exit-Code 0 sauber, 1 Verstöße, 2 Aufruffehler oder kein Pool · der Hook <span class="mono">commit-msg</span> warnt nur und endet immer mit Exit-Code 0 · <span class="mono">check-commit-messages &lt;from&gt;..&lt;to&gt;</span> führt dieselbe Prüfung über einen Commit-Bereich aus, zum Beispiel in der CI · <span class="mono">install-commit-msg-hook</span> schreibt den Hook, <span class="mono">git-setup-repository</span> führt ihn aus</div></div>
-<h3>Was das Paket für den Kreislauf bereitstellt</h3>
+<h3>Was das Package für den Kreislauf bereitstellt</h3>
 <div class="three">
 <div class="vcard ok"><b>Pool-Verweis im Router</b> — der verwaltete Block in <code>AGENTS.md</code> trägt die Zeile „Wissenspool: <code>.claude/wissen/INDEX.md</code> — vor Entscheiden lesen, Vermerk-Pflicht“, damit eine Session den Pool ohne private Einstellung findet.</div>
-<div class="vcard ok"><b>Mit dem Paket gelieferte Werkzeuge</b> — der <code>commit-msg</code>-Hook, sein Installer <code>install-commit-msg-hook</code> und die Pool-Prüfung <code>pool-check.php</code> kommen mit <code>jardis/dev-skills</code> unter <code>scripts/</code>.</div>
-<div class="vcard ok"><b>Gerüst beim ersten Vorhaben</b> — <code>process-concept</code> kopiert nur <code>INDEX.md</code> nach <code>.claude/wissen/</code>, und nur wenn der Ordner fehlt; ein vorhandener Pool wird nie verändert.</div>
-<div class="vcard ok"><b>Angebot am Ende eines Chats</b> — ein Chat, der mehr als eine Antwort ergeben hat, endet mit zwei Angeboten: einen Vorhabensordner (<code>docs/vorhaben/&lt;name&gt;/</code>) anlegen und Wissen in den Pool übernehmen. Die Regel steht in <code>process-choose-tier</code>; ohne ein Ja wird nichts angelegt.</div>
+<div class="vcard ok"><b>Mit dem Package gelieferte Werkzeuge</b> — der <code>commit-msg</code>-Hook, sein Installer <code>install-commit-msg-hook</code> und die Pool-Prüfung <code>pool-check.php</code> kommen mit <code>jardis/dev-skills</code> unter <code>scripts/</code>.</div>
+<div class="vcard ok"><b>Gerüst beim ersten Vorhaben</b> — <code>process-concept</code> kopiert nur <code>INDEX.md</code> nach <code>.claude/wissen/</code>, und nur wenn der Ordner fehlt; ein vorhandener Pool wird nie geändert.</div>
+<div class="vcard ok"><b>Angebot am Ende eines Chats</b> — ein Chat, der mehr als eine Antwort erzeugt hat, endet mit zwei Angeboten: einen Projektordner (<code>docs/vorhaben/&lt;name&gt;/</code>) anlegen und Wissen in den Pool übernehmen. Die Regel steht in <code>process-choose-tier</code>; ohne ein Ja wird nichts angelegt.</div>
 <div class="vcard ok"><b><code>PROGRESS.md</code> mit festem Kopf</b> — <code>## Kopf</code> ist die erste Überschrift, mit vier Zeilen in dieser Reihenfolge: <code>Phase</code>, <code>Stage</code>, <code>Next step</code>, <code>Open decisions</code>.</div>
 <div class="vcard ok"><b>Frische Session je Etappe</b> — jede Etappe und jede Umsetzer-Session darin läuft in einer frischen Agent-Session; der Kopf der Fortschrittsdatei und der Brief sind die einzige Übergabe. Die Regel steht in <code>process-run-stage</code>.</div>
 </div>
@@ -292,31 +292,31 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 
 <div class="rule ok">
 <div class="big">Namensschema: <code>&lt;area&gt;-&lt;what-it-does&gt;</code> · Englisch · kebab-case</div>
-Der Bereich sagt, wo im Lebenszyklus ein Skill zum Einsatz kommt: <code>start</code>, <code>packages</code>, <code>process</code>, <code>knowledge</code>, <code>git</code>, <code>design</code>, <code>generated-code</code>, <code>foundation</code>; der Review-Skill trägt <code>code-review</code>. Skills der Jardis-Packages (<code>adapter-*</code>, <code>core-*</code>, <code>support-*</code>, <code>tools-*</code>) gehören zu diesen Packages und kommen zusätzlich dazu.
+Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code>, <code>packages</code>, <code>process</code>, <code>knowledge</code>, <code>git</code>, <code>design</code>, <code>generated-code</code>, <code>foundation</code>; der Review-Skill trägt <code>code-review</code>. Skills der Jardis-Packages (<code>adapter-*</code>, <code>core-*</code>, <code>support-*</code>, <code>tools-*</code>) gehören zu diesen Packages und kommen zusätzlich dazu.
 </div>
 
 <div class="areas">
   <div class="area"><h4>start · packages <span>Einstieg</span></h4>
-    <div class="sk"><div class="n">start-orientation</div><div class="d">Einstiegspunkt: führt durch die Phasen des Lebenszyklus und verweist auf jeden anderen Skill</div></div>
+    <div class="sk"><div class="n">start-orientation</div><div class="d">Einstieg: führt durch die Phasen des Lebenszyklus und verweist auf jeden anderen Skill</div></div>
     <div class="sk"><div class="n">packages-find-existing</div><div class="d">Vor dem Handbau einer wiederverwendbaren Komponente prüfen, welches Jardis-Package sie schon liefert, dann <code>composer require</code></div></div>
   </div>
 
   <div class="area" style="grid-column:span 2"><h4>process <span>immer installiert · Stufenwahl, Stadien 0 bis 4, Review</span></h4>
     <div class="two" style="gap:4px 14px">
       <div>
-        <div class="sk"><div class="n">process-choose-tier</div><div class="d">Entscheiden, wie viel Prozess ein Auftrag braucht: Antwort, Handgriff, Kleinauftrag oder Vorhaben</div></div>
+        <div class="sk"><div class="n">process-choose-tier</div><div class="d">Entscheiden, wie viel Prozess eine Aufgabe braucht: Antwort, Handgriff, Kleinauftrag oder Vorhaben</div></div>
         <div class="sk"><div class="n">process-check-existing</div><div class="d">Vor etwas Neuem fragen, was das Umfeld schon leistet, über einen blinden Prüfer</div></div>
-        <div class="sk"><div class="n">process-concept</div><div class="d">Stadium 0: Konzept-Interview, abgenommenes Zielbild, Vorhabensordner mit Fortschrittsdatei</div></div>
-        <div class="sk"><div class="n">process-write-prd</div><div class="d">Stadium 1: das PRD ergänzt Fehlerfälle, Zustände, Grenzen und Datenwege; WAS-Gremium einmal</div></div>
+        <div class="sk"><div class="n">process-concept</div><div class="d">Stadium 0: Konzept-Interview, abgenommenes Zielbild, Projektordner mit Fortschrittsdatei</div></div>
+        <div class="sk"><div class="n">process-write-prd</div><div class="d">Stadium 1: das PRD ergänzt Fehlerfälle, Zustände, Grenzen und Datenpfade; WAS-Gremium einmal</div></div>
         <div class="sk"><div class="n">process-write-plan</div><div class="d">Stadium 2: in Etappen und Phasen schneiden, mit Datei-Scope und Akzeptanzkriterien; WIE-Gremium einmal</div></div>
-        <div class="sk"><div class="n">process-review-board</div><div class="d">Rollen mit Begründung wählen, blind laufen lassen, eine Liste zusammenführen, jeden Befund bescheiden</div></div>
+        <div class="sk"><div class="n">process-review-board</div><div class="d">Rollen mit Grund wählen, blind ausführen, eine Liste zusammenführen, jeden Befund bescheiden</div></div>
       </div>
       <div>
-        <div class="sk"><div class="n">process-run-stage</div><div class="d">Ein Brief je Phase, ein frischer Umsetzer, Commit, blinde Verifikation, QA-Tore, Merge</div></div>
-        <div class="sk"><div class="n">process-verify</div><div class="d">Ein blinder Verifier je Etappe und am Ende ein Ende-zu-Ende-Akzeptanz-Tor</div></div>
+        <div class="sk"><div class="n">process-run-stage</div><div class="d">Ein Brief je Phase, ein frischer Umsetzer, Commit, blinde Verifikation, QA-Gates, Merge</div></div>
+        <div class="sk"><div class="n">process-verify</div><div class="d">Ein blinder Verifier je Etappe und am Ende ein Ende-zu-Ende-Akzeptanz-Gate</div></div>
         <div class="sk"><div class="n">process-close</div><div class="d">Offene Punkte sichten, Lehren in den Pool übernehmen, den Digest schreiben, den Ordner löschen, einmal ausliefern</div></div>
         <div class="sk"><div class="n">process-resume</div><div class="d">Ein laufendes Vorhaben in einer frischen Session anhand seiner Fortschrittsdatei fortsetzen</div></div>
-        <div class="sk"><div class="n">code-review-change</div><div class="d">Nach jeder Codierung und vor jedem Commit: Befunde nach Blocker, Major oder Minor eingestuft, ändert nie Code</div></div>
+        <div class="sk"><div class="n">code-review-change</div><div class="d">Nach jeder Codieraufgabe und vor jedem Commit: Befunde nach Blocker, Major oder Minor eingestuft, ändert nie Code</div></div>
       </div>
     </div>
   </div>
@@ -330,7 +330,7 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill zum Einsatz kommt: <code>start</c
     <div class="sk"><div class="n">git-setup-repository</div><div class="d">Einmalige Gitflow-Einrichtung: develop-Branch, Repository-Einstellungen, Branch-Ruleset, Git-Hooks</div></div>
     <div class="sk"><div class="n">git-start-branch</div><div class="d">Einen Gitflow-Branch anlegen, mit Issue-Nummer und Typ-Erkennung</div></div>
     <div class="sk"><div class="n">git-commit-change</div><div class="d">Conventional Commit aus den aktuellen Änderungen, nach dem Review</div></div>
-    <div class="sk"><div class="n">git-push-and-open-pr</div><div class="d">Pushen mit dem Qualitäts-Tor und einen Pull Request öffnen</div></div>
+    <div class="sk"><div class="n">git-push-and-open-pr</div><div class="d">Pushen mit dem Quality-Gate und einen Pull Request öffnen</div></div>
     <div class="sk"><div class="n">git-check-compliance</div><div class="d">Prüfen, ob das Repository den Gitflow-Konventionen folgt</div></div>
   </div>
 
@@ -360,12 +360,12 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill zum Einsatz kommt: <code>start</c
 <h3>Ketten <code>prerequisites</code> / <code>next</code> aus dem Skill-Frontmatter</h3>
 <div class="two">
   <div class="layers" style="margin:0"><b>Vorhaben:</b> <span class="mono">process-choose-tier → process-concept → process-write-prd → process-write-plan → process-run-stage → process-verify → process-close → knowledge-record-decision</span></div>
-  <div class="layers" style="margin:0"><b>Weitere Ketten:</b> <span class="mono">git-start-branch → git-commit-change → git-push-and-open-pr</span> · <span class="mono">design-draft-schema → generated-code-extend → generated-code-*</span> · <span class="mono">foundation-working-principles → knowledge-maintain-pool → knowledge-record-decision</span> · <span class="mono">code-review-change → git-commit-change</span></div>
+  <div class="layers" style="margin:0"><b>Andere Ketten:</b> <span class="mono">git-start-branch → git-commit-change → git-push-and-open-pr</span> · <span class="mono">design-draft-schema → generated-code-extend → generated-code-*</span> · <span class="mono">foundation-working-principles → knowledge-maintain-pool → knowledge-record-decision</span> · <span class="mono">code-review-change → git-commit-change</span></div>
 </div>
 
 <h3>Prüfer-Rollen (Sub-Agent-Definitionen in <code>process-review-board/reviewers/</code>)</h3>
 <table>
-<tr><th style="width:250px">Rolle</th><th style="width:200px">Eingesetzt von</th><th>Gewählt, wenn</th></tr>
+<tr><th style="width:250px">Rolle</th><th style="width:200px">Verwendet von</th><th>Gewählt, wenn</th></tr>
 <tr><td><code>prd-review-skeptic</code></td><td>WAS-Gremium</td><td>immer</td></tr>
 <tr><td><code>prd-review-domain-expert</code></td><td>WAS-Gremium</td><td>das PRD eine Domäne modelliert oder ein Domänen-Entscheid offen ist</td></tr>
 <tr><td><code>prd-review-ddd-strategy</code></td><td>WAS-Gremium</td><td>Kontexte, Domänensprache oder eine öffentliche API geschnitten oder geändert werden</td></tr>
@@ -377,9 +377,9 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill zum Einsatz kommt: <code>start</c
 <tr><td><code>plan-review-php</code></td><td>WIE-Gremium</td><td>der Plan überwiegend aus PHP-Code besteht und Fehlerbehandlung und Randfälle zählen</td></tr>
 <tr><td><code>plan-review-frontend-architecture</code></td><td>WIE-Gremium</td><td>der Plan eine Benutzeroberfläche hat</td></tr>
 <tr><td><code>plan-review-frontend-tests</code></td><td>WIE-Gremium</td><td>der Plan eine Benutzeroberfläche hat</td></tr>
-<tr><td><code>plan-review-frontend-a11y</code></td><td>WIE-Gremium</td><td>eine Phase eine Oberfläche erzeugt, die Menschen bedienen</td></tr>
+<tr><td><code>plan-review-frontend-a11y</code></td><td>WIE-Gremium</td><td>eine Phase eine Benutzeroberfläche erzeugt, die Menschen bedienen</td></tr>
 <tr><td><code>plan-review-frontend-types</code></td><td>WIE-Gremium</td><td>eine Phase Typen oder den Datenfluss im Frontend berührt</td></tr>
-<tr><td><code>plan-review-frontend-ux</code></td><td>WIE-Gremium</td><td>der Plan Zustände und Interaktionen der Oberfläche ausführt</td></tr>
+<tr><td><code>plan-review-frontend-ux</code></td><td>WIE-Gremium</td><td>der Plan Zustände und Interaktionen der Benutzeroberfläche ausführt</td></tr>
 <tr><td><code>stage-verifier</code></td><td><code>process-verify</code></td><td>einmal je Etappe</td></tr>
 <tr><td><code>acceptance-gate</code></td><td><code>process-verify</code></td><td>einmal je Vorhaben, nach der letzten Etappe</td></tr>
 <tr><td><code>existing-capability-check</code></td><td><code>process-check-existing</code></td><td>bevor etwas Neues eingeführt wird</td></tr>
@@ -403,7 +403,7 @@ your-project/
 │   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 mitgelieferte Skills + Vendor-Skills · Claude Code, Copilot</span>
 │   ├── skills/.jardis-managed.json     <span class="t-c">Manifest: jeder Skill-Ordner, den das Plugin installiert hat</span>
 │   ├── <span class="t-now">agents/&lt;role&gt;.md</span>                <span class="t-c">Prüfer-Agent-Dateien (Claude Code)</span>
-│   └── .jardis-backup/                 <span class="t-c">Kopien von Ordnern, die vom verwalteten Stand abwichen</span>
+│   └── .jardis-backup/                 <span class="t-c">Kopien von Ordnern, die vom verwalteten Zustand abwichen</span>
 ├── <span class="t-now">.agents/skills/&lt;name&gt;/SKILL.md</span>     <span class="t-c">dieselben Skills für Codex, Cursor, Copilot, Gemini CLI</span>
 ├── <span class="t-now">.codex/agents/&lt;role&gt;.toml</span>          <span class="t-c">Prüfer-Agent-Dateien (Codex)</span>
 ├── <span class="t-now">.cursor/agents/&lt;role&gt;.md</span>           <span class="t-c">Prüfer-Agent-Dateien (Cursor)</span>
@@ -459,19 +459,19 @@ your-project/
 <table class="mx">
 <tr><th style="width:250px">Prozess-Baustein</th><th>Claude Code</th><th>Codex CLI/IDE</th><th>Cursor</th><th>GitHub Copilot</th><th>Gemini CLI</th><th style="width:340px">Ersatzweg, wo ◐ / ✘ / ?</th></tr>
 <tr><td>Router (<code>AGENTS.md</code>) wird gelesen</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="p">◐</td><td class="alt">Gemini CLI: <code>context.fileName</code> in <code>settings.json</code> auf <code>AGENTS.md</code> gesetzt</td></tr>
-<tr><td>Phasen-Skills (<code>SKILL.md</code>) werden geladen</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Gemini CLI: lädt einen Skill über das Werkzeug <code>activate_skill</code> und verlangt vorher eine Bestätigung</td></tr>
+<tr><td>Phasen-Skills (<code>SKILL.md</code>) werden geladen</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Gemini CLI: lädt einen Skill über das Werkzeug <code>activate_skill</code> und fragt vorher nach einer Bestätigung</td></tr>
 <tr><td>Unabhängiger Prüfer (Sub-Agent, frischer Kontext)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
 <tr><td>Modell je Prüfer</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
-<tr><td>Gremium aus Prüfern parallel</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="q">?</td><td class="alt">Gemini CLI: vom Hersteller nicht dokumentiert</td></tr>
-<tr><td>Fortschritts- und Aufgabenliste</td><td class="p">◐</td><td class="q">?</td><td class="q">?</td><td class="q">?</td><td class="y">✔</td><td class="alt">Claude Code: bei Modellen, die die Dokumentation nicht nennt, mit <code>CLAUDE_CODE_ENABLE_TODO_TOOLS=1</code> einschalten · Codex, Cursor, Copilot: vom Hersteller nicht dokumentiert</td></tr>
-<tr><td>Plan-Modus ohne Schreibzugriff</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="y">✔</td><td class="alt">Claude Code: Änderungen bleiben gesperrt, bis der Plan genehmigt ist, außer in interaktiven Terminal-Sessions, in denen Bypass-Berechtigungen verfügbar sind · Codex, Cursor: ein Plan vor der Umsetzung, keine Schreibsperre angegeben · Copilot: in Visual Studio nicht verfügbar</td></tr>
+<tr><td>Gremium aus Prüfern parallel</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="q">?</td><td class="alt">Gemini CLI: vom Hersteller nicht belegt</td></tr>
+<tr><td>Fortschritts- und Aufgabenliste</td><td class="p">◐</td><td class="q">?</td><td class="q">?</td><td class="q">?</td><td class="y">✔</td><td class="alt">Claude Code: bei Modellen, die die Dokumentation nicht nennt, mit <code>CLAUDE_CODE_ENABLE_TODO_TOOLS=1</code> einschalten · Codex, Cursor, Copilot: vom Hersteller nicht belegt</td></tr>
+<tr><td>Plan-Modus ohne Schreibzugriff</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="y">✔</td><td class="alt">Claude Code: Änderungen bleiben gesperrt, bis der Plan abgenommen ist, außer in interaktiven Terminal-Sessions, in denen Bypass-Berechtigungen verfügbar sind · Codex, Cursor: ein Plan vor der Umsetzung, keine Schreibsperre angegeben · Copilot: in Visual Studio nicht verfügbar</td></tr>
 <tr><td>Headless-Lauf</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"><code>claude -p</code> · <code>codex exec</code> · <code>agent -p</code> · <code>copilot -p</code> · <code>gemini -p</code></td></tr>
 <tr><td>MCP (<code>jardis mcp</code>)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
 <tr><td><code>commit-msg</code>-Hook mit dem Vermerk <code>Wissen:</code></td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">ein Git-Hook, unabhängig vom Werkzeug; er warnt und weist einen Commit nie zurück</td></tr>
-<tr class="guar"><th>Garantiestufe</th><td style="background:#dcfce7"><b>getestet</b><br>Claude Code 2.1.286</td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td class="alt">getestet: der Prozess lief mit dem Werkzeug und jede aufgeführte Prüfung bestand · aus Doku belegt, nicht getestet: die Herstellerdokumentation sagt, dass das Werkzeug den Baustein bietet</td></tr>
+<tr class="guar"><th>Garantiestufe</th><td style="background:#dcfce7"><b>getestet</b><br>Claude Code 2.1.286</td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td style="background:#fef9c3"><b>aus Doku belegt, nicht getestet</b></td><td class="alt">getestet: der Prozess wurde mit dem Werkzeug ausgeführt und jede aufgeführte Prüfung bestand · aus Doku belegt, nicht getestet: die Herstellerdokumentation sagt, dass das Werkzeug den Baustein bietet</td></tr>
 </table>
 <div class="band"><div class="bl">Nicht abgedeckt</div><div>Aider und Continue werden nicht bedient. Codex Cloud und der Copilot-Cloud-Agent liegen außerhalb der Garantie, auch für die oben genannten Werkzeuge.</div></div>
-<p class="src">✔ ohne Einschränkung dokumentiert · ◐ mit Einschränkung dokumentiert · ✘ die Dokumentation verneint es · ? in der Herstellerdokumentation nicht gefunden. Quelle: Herstellerdokumentation, abgerufen am 2026-10-01; was das Plugin für jedes Werkzeug schreibt, steht im README-Abschnitt Supported tools.</p>
+<p class="src">✔ ohne Einschränkung belegt · ◐ mit Einschränkung belegt · ✘ die Dokumentation verneint es · ? in der Herstellerdokumentation nicht gefunden. Quelle: Herstellerdokumentation, abgerufen am 2026-10-01; was das Plugin für jedes Werkzeug schreibt, steht im README-Abschnitt Supported tools.</p>
 </section>
 
 </div>
