@@ -118,6 +118,18 @@ Installs all bundled skills except `rules-patterns` (missing `include` = all).
 
 **Invalid config** (e.g. `bundled-skills: 42`): console warning, falls back to the default (no bundled skills). No abort.
 
+**Git rules in the router (`git-rules`):** by default the process router in `AGENTS.md` states the git rules — branch, commit and merge are gates of the human, no tool attribution in commits, Git flow (`feature/*` and `fix/*` from `develop`, hotfixes from `main`). `"git-rules": false` takes these sentences out of the router; the git skills stay installed. Any other value than `true` or `false` keeps the rules on and prints a warning. The key is independent of `bundled-skills` and `process-docs`, and it enforces nothing: no hook rejects a commit and no `settings.json` rule is written.
+
+```json
+{
+    "extra": {
+        "jardis/dev-skills": {
+            "git-rules": false
+        }
+    }
+}
+```
+
 > **Upgrade notes:**
 > - **Bundle grown to 13 skills (2026-07-06).** Two new default-on skills were added: `jardis-start-here` (the lifecycle master entry point, routing to every other skill) and `jardis-mcp-consumer` (headless MCP-workflow guide via `jardis mcp`). Default-on install now brings three skills instead of one (`jardis-catalog` plus these two); opt out via `"bundled-skills": false` as before.
 > - **Bundle grown to 10 skills (2026-06-28).** `rules-frontend` was added — a stack-agnostic frontend review constitution (component boundaries, state discipline, an e2e-heavy test pyramid, an accessibility minimum bar, type-safety at the data boundary). Opt-in like the rest; a `["rules-*"]` whitelist now installs all four rules skills. The concrete UI framework arrives via the assignment, never from the skill.

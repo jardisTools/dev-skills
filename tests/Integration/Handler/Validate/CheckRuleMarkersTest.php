@@ -22,7 +22,7 @@ final class CheckRuleMarkersTest extends TestCase
         $this->project->cleanup();
     }
 
-    public function testTableCoversTheSevenMarkersOfTheProcessRules(): void
+    public function testTableCoversTheMarkersOfTheProcessRules(): void
     {
         $markers = [];
         foreach (CheckRuleMarkers::RULES as $skill => $rules) {
@@ -34,14 +34,20 @@ final class CheckRuleMarkersTest extends TestCase
 
         self::assertSame([
             'process-choose-tier:chat-end-offer',
+            'process-choose-tier:decide-yourself-no-tier-drop',
             'process-choose-tier:tier-escalate',
+            'process-close:close-lessons-via-skill',
+            'process-close:close-pool-check-after-delete',
+            'process-concept:decide-yourself-no-gate-waiver',
             'process-concept:pool-scaffold',
             'process-concept:project-profile',
             'process-review-board:question-points',
+            'process-run-stage:commit-is-human-gate',
             'process-run-stage:failure-path',
             'process-run-stage:fresh-session-per-stage',
             'process-run-stage:question-points',
-        ], $markers); // seven rules, question-points lives in two skills
+            'process-write-prd:decide-yourself-no-gate-waiver',
+        ], $markers); // fourteen entries counted per skill (thirteen before E7 P7.3 fix 3 added close-pool-check-after-delete); question-points lives in two skills, decide-yourself-no-gate-waiver in two
     }
 
     public function testKeywordsAreTheEnglishPhrasesOfTheFormatDoc(): void
@@ -51,11 +57,13 @@ final class CheckRuleMarkersTest extends TestCase
             'process-choose-tier' => [
                 'chat-end-offer' => ['create a project folder?', 'docs/vorhaben/', 'carry knowledge into the pool?'],
                 'tier-escalate' => ['only with a named reason', 'the lower tier', 'two or more subtasks are never'],
+                'decide-yourself-no-tier-drop' => ['lowers no tier', 'waives no gate'],
             ],
             'process-run-stage' => [
                 'fresh-session-per-stage' => ['fresh agent session'],
-                'failure-path' => ['fix run', 'follow-up run', 'STOPP:'],
+                'failure-path' => ['fix run', 'follow-up run', 'STOPP:', 'without a question to the human', 'never changes the plan on its own decision'],
                 'question-points' => ['at most 2 question points', 'STOPP:'],
+                'commit-is-human-gate' => ['gate of the human', 'git log', 'working tree is clean', 'exactly one git step', 'git-rules'],
             ],
             'process-review-board' => [
                 'question-points' => ['at most 2 roles'],
@@ -63,6 +71,14 @@ final class CheckRuleMarkersTest extends TestCase
             'process-concept' => [
                 'pool-scaffold' => ['.claude/wissen/', 'is missing'],
                 'project-profile' => ['.claude/PROJECT_PROFILE.md', 'is missing'],
+                'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+            ],
+            'process-write-prd' => [
+                'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+            ],
+            'process-close' => [
+                'close-lessons-via-skill' => ['before the first write', 'never from memory'],
+                'close-pool-check-after-delete' => ['commit hash or the digest', 'after the delete'],
             ],
         ], CheckRuleMarkers::RULES);
     }
@@ -164,7 +180,7 @@ final class CheckRuleMarkersTest extends TestCase
         $result = (new CheckRuleMarkers())($this->project->path('skills'));
 
         self::assertEqualsCanonicalizing(
-            ['process-choose-tier', 'process-concept', 'process-run-stage', 'process-review-board', 'process-write-plan', 'process-verify'],
+            ['process-choose-tier', 'process-concept', 'process-run-stage', 'process-review-board', 'process-write-plan', 'process-verify', 'process-write-prd', 'process-close'],
             array_keys($result),
         );
     }

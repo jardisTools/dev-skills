@@ -227,4 +227,64 @@ final class ReadPluginConfigTest extends TestCase
         self::assertSame(self::MANDATORY_WARNING, $config->warning);
         self::assertSame(ProcessDocsMode::Local, $config->processDocs);
     }
+
+    public function testGitRulesDefaultToOnWhenTheKeyIsAbsent(): void
+    {
+        foreach ([[], ['jardis/dev-skills' => []], ['jardis/dev-skills' => ['bundled-skills' => false]]] as $extra) {
+            $config = (new ReadPluginConfig())($extra);
+
+            self::assertTrue($config->gitRules);
+            self::assertNull($config->gitRulesWarning);
+        }
+    }
+
+    public function testGitRulesTrueIsOn(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => true]]);
+
+        self::assertTrue($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+    }
+
+    public function testGitRulesFalseIsTheOptOut(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => false]]);
+
+        self::assertFalse($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+    }
+
+    public function testInvalidGitRulesStayOnAndWarn(): void
+    {
+        foreach (['false', 'off', 0, 1, ['false'], null] as $raw) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => $raw]]);
+
+            self::assertTrue($config->gitRules, 'an invalid value never switches the rules off');
+            self::assertStringContainsString('git-rules', (string) $config->gitRulesWarning);
+            self::assertStringContainsString('git-rules=true', (string) $config->gitRulesWarning);
+        }
+    }
+
+    public function testGitRulesAreIndependentOfBundledSkillsAndProcessDocs(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => false, 'process-docs' => 'nonsense', 'git-rules' => false],
+        ]);
+
+        self::assertFalse($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNotNull($config->processDocsWarning);
+
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => ['plan-*'], 'process-docs' => 'local', 'git-rules' => 'nonsense'],
+        ]);
+
+        self::assertTrue($config->gitRules);
+        self::assertNotNull($config->gitRulesWarning);
+        self::assertSame(['plan-*'], $config->includeGlobs);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNull($config->processDocsWarning);
+    }
 }

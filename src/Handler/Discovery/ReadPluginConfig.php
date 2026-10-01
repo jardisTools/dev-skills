@@ -13,6 +13,7 @@ final class ReadPluginConfig
     private const ROOT_KEY = 'jardis/dev-skills';
     private const BUNDLED_KEY = 'bundled-skills';
     private const PROCESS_DOCS_KEY = 'process-docs';
+    private const GIT_RULES_KEY = 'git-rules';
 
     /**
      * @param array<string, mixed> $extra the value returned by
@@ -27,7 +28,36 @@ final class ReadPluginConfig
 
         [$mode, $modeWarning] = $this->readProcessDocs($root);
 
-        return $this->readBundledSkills($root)->withProcessDocs($mode, $modeWarning);
+        [$gitRules, $gitRulesWarning] = $this->readGitRules($root);
+
+        return $this->readBundledSkills($root)
+            ->withProcessDocs($mode, $modeWarning)
+            ->withGitRules($gitRules, $gitRulesWarning);
+    }
+
+    /**
+     * `git-rules` is the opt-out of the git rules in the router and independent of the other keys.
+     * An absent key and `true` mean on; only `false` switches off. Any other value is reported and
+     * treated as on, so a typo never removes the rules.
+     *
+     * @param array<array-key, mixed> $root
+     * @return array{bool, ?string}
+     */
+    private function readGitRules(array $root): array
+    {
+        if (!array_key_exists(self::GIT_RULES_KEY, $root)) {
+            return [true, null];
+        }
+
+        $raw = $root[self::GIT_RULES_KEY];
+        if (is_bool($raw)) {
+            return [$raw, null];
+        }
+
+        return [true, sprintf(
+            'git-rules must be true or false; got %s. Treated as git-rules=true.',
+            is_string($raw) ? '"' . $raw . '"' : get_debug_type($raw),
+        )];
     }
 
     /**

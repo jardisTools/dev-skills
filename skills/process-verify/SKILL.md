@@ -50,7 +50,7 @@ The verdict is one of `GREEN` or `RED`. Read it against the files: check the nam
 ### 4. After the verdict
 
 - `GREEN`: continue with the QA gates of the stage in `process-run-stage`.
-- `RED`: the main session does not debug. The failure path of `process-run-stage` applies unchanged: one fix run, then exactly one follow-up run of this verifier, then a `STOPP:` entry in the progress head and the human. The follow-up run is a fresh blind session as well, never the first one continued.
+- `RED`: the main session does not debug. Before the fix run, load `process-run-stage`: its failure path applies unchanged and the fix run starts without a question to the human. One fix run, then exactly one follow-up run of this verifier, then a `STOPP:` entry in the progress head and the human. The follow-up run is a fresh blind session as well, never the first one continued. The commit after a fix run is a human gate (`process-run-stage`), never the session's own.
 
 ### 5. The acceptance gate
 

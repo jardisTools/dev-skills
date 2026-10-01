@@ -51,6 +51,9 @@ Roles:
 3. A finding that names a fork or an open decision goes to the human, even when it is minor. Do not decide it yourself.
 4. The board does not run a second time. The rulings are the gate; there is no re-check round.
 
+<!-- rule:decide-yourself-no-gate-waiver -->
+A human's "decide open points yourself" or "proceed autonomously" waives no gate. A question the human left open and the project cannot answer (code, knowledge pool, target artefact) is never settled by the main session, neither in the concept, nor in the PRD, nor by ruling a board finding on it as resolved. It goes to the open-question gate (`open-question-gate`, see `process-run-stage`); what the gate cannot decide stays in the progress head as `STOPP: <YYYY-MM-DD> · <question>` and is put to the human at the next approval.
+
 ### 5. Confirmation
 
 Show the human the PRD with the list of findings and their rulings. The human confirms; no one else does. A change request goes back into the PRD and the affected rulings, without a new board run.

@@ -23,6 +23,8 @@ final readonly class PluginConfig
         public ?string $warning,
         public ProcessDocsMode $processDocs = ProcessDocsMode::Committed,
         public ?string $processDocsWarning = null,
+        public bool $gitRules = true,
+        public ?string $gitRulesWarning = null,
     ) {
     }
 
@@ -38,6 +40,27 @@ final readonly class PluginConfig
             $this->excludeGlobs,
             $this->warning,
             $mode,
+            $warning,
+            $this->gitRules,
+            $this->gitRulesWarning,
+        );
+    }
+
+    /**
+     * The same configuration with the `git-rules` switch (`true` = the router states the git rules)
+     * and the warning about its raw value.
+     */
+    public function withGitRules(bool $gitRules, ?string $warning): self
+    {
+        return new self(
+            $this->installAll,
+            $this->mandatoryOnly,
+            $this->includeGlobs,
+            $this->excludeGlobs,
+            $this->warning,
+            $this->processDocs,
+            $this->processDocsWarning,
+            $gitRules,
             $warning,
         );
     }

@@ -9,7 +9,7 @@ next: [process-verify]
 
 ## Scope
 
-A stage is built phase by phase. Each phase has one brief and one implementer; the main session commits, verifies, runs the QA gates and merges. The main session is the orchestrator: it writes briefs, watches, checks against ground truth and does not build. No stage is green on the word of the one who built it.
+A stage is built phase by phase. Each phase has one brief and one implementer; the main session prepares commit and merge for the human, verifies and runs the QA gates. The main session is the orchestrator: it writes briefs, watches, checks against ground truth and does not build. No stage is green on the word of the one who built it.
 
 ### 1. Entry
 
@@ -21,7 +21,7 @@ For each phase of the stage, in plan order:
 
 1. **Brief.** Write one brief from `templates/brief.md` (section 3).
 2. **Implementer.** Start a fresh agent session with that brief (sections 4 and 5).
-3. **Commit.** When the report says `green`, the main session checks the files against the phase scope, then commits with the commit message from the report, following the commit conventions of the project (`git-commit-change`).
+3. **Commit.** When the report says `green`, the main session checks the files against the phase scope, names the commit message from the report and asks the human to commit it with `git-commit-change`: a human gate, see below.
 4. Next phase. Independent phases may run in parallel; see section 4.
 
 After the last phase of the stage:
@@ -29,7 +29,11 @@ After the last phase of the stage:
 5. **Verifier**, once per stage (section 6).
 6. **QA gates**, once per stage (section 7).
 7. **Sight gate** where the stage builds a surface (section 9).
-8. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`). Then shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage (`E<n+1>/<total>`) or to phase `acceptance`.
+8. **Head update.** Write the head of the progress file forward with the green verdict (first run or follow-up run), the green gates and the sight gate. The head update is a commit of its own, a human gate as in step 3. This halt names only the commit: its final message does not mention the merge (step 9), neither as a request nor as a second gate in a list, until the commit stands in `git log` and `git status` is empty.
+9. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`): a human gate, see below. Name the target from the existing branches (read-only, for example `git branch -a`); when the branch the git flow names is missing, say so at the gate instead of naming a branch that does not exist. Once the human reports it done, shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage (`E<n+1>/<total>`) or to phase `acceptance`.
+
+<!-- rule:commit-is-human-gate -->
+Creating the branch, the commit (steps 3 and 8) and the merge (step 9) are a gate of the human: the git skills are started by the human, because the session cannot call them. One halt, one gate: at each gate the main session checks the changed files against the phase scope, names the commit message from the report (or the merge target), stops and asks the human for exactly one git step. It names the next gate only once the step before stands in `git log`, and never asks for the merge while `git status` shows an uncommitted change: the working tree is clean before the merge gate, the head update being a commit like any other. It reports no commit it has not seen in `git log`. The order stays: commit first, then the verifier. The gates lapse only when the router of the project does not name them because of the `git-rules` opt-out in `composer.json`; the session then follows the git rules of the project. In every other case, also when unsure, they apply.
 
 ### 3. The brief
 
@@ -56,7 +60,7 @@ A brief contains, in this order:
 
 ### 4. The implementer
 
-The implementer builds exactly its phase. It runs the quick gates of its scope and the code review (`code-review-change`), and returns the report. It does **not** write to the progress file, does **not** run any Git operation that changes state and does **not** run the full QA entry: commit, state and QA belong to the main session.
+The implementer builds exactly its phase. It runs the quick gates of its scope and the code review (`code-review-change`), and returns the report. It does **not** write to the progress file, does **not** run any Git operation that changes state and does **not** run the full QA entry: state and QA belong to the main session, the commit to the human (section 2).
 
 A sub-agent that writes in parallel with another gets its own `git worktree`. Parallel writers are allowed only for disjoint files, disjoint contracts and separate QA infrastructure, and never at the same time as a QA run in the same working tree. Containers of the project are never started by parallel agents; gates that use them run one after another, in the foreground.
 
@@ -72,7 +76,7 @@ Every stage is run in a fresh agent session, and so is every implementer session
 The verifier runs once per stage, blind, and is never the one who built: doer and checker are two sessions. Give it exactly the acceptance criteria of the stage, the stage diff, the target artefact and the knowledge pages the briefs name. Never hand it the implementer's report. Its source is the stage verifier role under `../process-review-board/reviewers/`. Its assignment carries the line "prove the red-ability": red evidence is taken only at the central comparison test of the stage, mutations only with a backup outside the working tree, never by reverting files through Git. It returns `GREEN` or `RED` with its evidence, each item as file and line, test name or real output.
 
 <!-- rule:failure-path -->
-After `RED` the main session does not debug. It classifies the finding. The report's own feedback comes first; where it does not explain the cause, one read-only agent runs as the failure-diagnosis role, and a second diagnosis for the same failure never runs. Exactly one fix run follows, then exactly one follow-up run of the verifier; a third round does not exist. If the follow-up run is red too, write `STOPP: <YYYY-MM-DD> · <what is red and what was tried>` into the progress head under `Open decisions` and take it to the human. This limit is never dosed away.
+After `RED` the main session does not debug. It classifies the finding. The report's own feedback comes first; where it does not explain the cause, one read-only agent runs as the failure-diagnosis role, and a second diagnosis for the same failure never runs. Exactly one fix run follows, then exactly one follow-up run of the verifier; a third round does not exist. If the follow-up run is red too, write `STOPP: <YYYY-MM-DD> · <what is red and what was tried>` into the progress head under `Open decisions` and take it to the human. This limit is never dosed away. The one fix run starts without a question to the human: a `RED` is no question point. If the verifier shows a deviation from the plan (class B), it goes through the open-question gate (section 8) before the fix brief; the main session never changes the plan on its own decision; it corrects the plan only with the answer of the gate (section 8) and logs under `Decisions delegated` only what the gate decided.
 
 Classes of a blocked or refuted step:
 

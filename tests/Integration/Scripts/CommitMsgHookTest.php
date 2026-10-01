@@ -35,22 +35,21 @@ final class CommitMsgHookTest extends TestCase
         $this->project->cleanup();
     }
 
-    public function testFeatWithoutNoteIsRejected(): void
+    public function testFeatWithoutNoteWarns(): void
     {
         $result = $this->runHook("feat: add a thing\n\nSome body text.\n");
 
-        self::assertNotSame(0, $result['exit']);
-        self::assertStringContainsString('commit-msg:', $result['stderr']);
+        $this->assertWarned($result, "feat/fix commit without a 'Wissen:' note");
         self::assertSame('', $result['stdout']);
-        self::assertNotSame(0, $this->runHook("fix: repair a thing\n")['exit']);
+        $this->assertWarned($this->runHook("fix: repair a thing\n"), "without a 'Wissen:' note");
     }
 
-    public function testScopedAndBangFeatFixWithoutNoteAreRejected(): void
+    public function testScopedAndBangFeatFixWithoutNoteWarn(): void
     {
         foreach (['feat(hooks): x', 'fix(core): x', 'feat!: x', 'fix!: x', 'feat(api)!: x'] as $subject) {
             $result = $this->runHook($subject . "\n");
 
-            self::assertNotSame(0, $result['exit'], $subject);
+            $this->assertWarned($result, "without a 'Wissen:' note", $subject);
             self::assertStringContainsString("'Wissen: <page>#<section>'", $result['stderr'], $subject);
             self::assertStringContainsString("'Wissen: keins " . self::DASH . " <reason>'", $result['stderr'], $subject);
         }
@@ -77,7 +76,7 @@ final class CommitMsgHookTest extends TestCase
         self::assertSame(0, $this->runHook("fix: x\n\nWissen:   keins  {$dash}  typo in a comment  \n")['exit']);
     }
 
-    public function testKeinsWithoutReasonIsRejected(): void
+    public function testKeinsWithoutReasonWarns(): void
     {
         $dash = self::DASH;
 
@@ -85,8 +84,7 @@ final class CommitMsgHookTest extends TestCase
             "Wissen: keins \u{2014} em dash", 'Wissen: keins because'] as $note) {
             $result = $this->runHook("feat: x\n\n{$note}\n");
 
-            self::assertNotSame(0, $result['exit'], $note);
-            self::assertStringContainsString('reason', $result['stderr'], $note);
+            $this->assertWarned($result, 'reason', $note);
         }
     }
 
@@ -96,39 +94,37 @@ final class CommitMsgHookTest extends TestCase
             $result = $this->runHook($subject . "\n\nBody.\n");
 
             self::assertSame(0, $result['exit'], $subject . ': ' . $result['stderr']);
+            self::assertSame('', $result['stderr'], $subject);
         }
     }
 
-    public function testMalformedNoteIsRejectedForAnyType(): void
+    public function testMalformedNoteWarnsForAnyType(): void
     {
         foreach (['chore', 'docs', 'feat', 'fix'] as $type) {
             foreach (['Wissen:', 'Wissen: Not A Page', 'Wissen: page', 'Wissen: page#', 'Wissen: Page#stand', 'Wissen: page##stand'] as $note) {
                 $result = $this->runHook("{$type}: x\n\n{$note}\n");
 
-                self::assertNotSame(0, $result['exit'], $type . ' / ' . $note);
-                self::assertStringContainsString('commit-msg:', $result['stderr']);
+                $this->assertWarned($result, 'Wissen:', $type . ' / ' . $note);
             }
         }
     }
 
-    public function testUnknownSectionIsRejected(): void
+    public function testUnknownSectionWarns(): void
     {
         foreach (['docs', 'feat'] as $type) {
             $result = $this->runHook("{$type}: x\n\nWissen: page#unknown\n");
 
-            self::assertNotSame(0, $result['exit'], $type);
-            self::assertStringContainsString("'#unknown' is not a known section", $result['stderr']);
+            $this->assertWarned($result, "'#unknown' is not a known section", $type);
         }
-        self::assertNotSame(0, $this->runHook("chore: x\n\nWissen: page#Stand\n")['exit']);
+        $this->assertWarned($this->runHook("chore: x\n\nWissen: page#Stand\n"), "'#Stand' is not a known section");
     }
 
-    public function testSpaceBeforeHashIsRejected(): void
+    public function testSpaceBeforeHashWarns(): void
     {
         foreach (['docs', 'fix'] as $type) {
             $result = $this->runHook("{$type}: x\n\nWissen: page #stand\n");
 
-            self::assertNotSame(0, $result['exit'], $type);
-            self::assertStringContainsString('no space allowed before', $result['stderr']);
+            $this->assertWarned($result, 'no space allowed before', $type);
         }
     }
 
@@ -147,10 +143,9 @@ final class CommitMsgHookTest extends TestCase
     public function testHashCommentedNoteDoesNotCount(): void
     {
         $result = $this->runHook("feat: x\n\n# Wissen: page#stand\n");
-        self::assertNotSame(0, $result['exit']);
-        self::assertStringContainsString("without a 'Wissen:' note", $result['stderr']);
+        $this->assertWarned($result, "without a 'Wissen:' note");
 
-        self::assertNotSame(0, $this->runHook("fix: x\n\n#Wissen: keins {$this->dash()} reason\n")['exit']);
+        $this->assertWarned($this->runHook("fix: x\n\n#Wissen: keins {$this->dash()} reason\n"), "without a 'Wissen:' note");
     }
 
     public function testMergeRevertFixupSquashMessagesPass(): void
@@ -170,6 +165,7 @@ final class CommitMsgHookTest extends TestCase
             $result = $this->runHook($message);
 
             self::assertSame(0, $result['exit'], $message . $result['stderr']);
+            self::assertSame('', $result['stderr'], $message);
         }
     }
 
@@ -177,10 +173,10 @@ final class CommitMsgHookTest extends TestCase
     {
         $result = $this->runHook("feat: undo the thing\n\nThis reverts commit 0123abc.\n");
 
-        self::assertNotSame(0, $result['exit']);
+        $this->assertWarned($result, "without a 'Wissen:' note");
     }
 
-    public function testRealGitCommitIsRejectedAndAccepted(): void
+    public function testRealGitCommitWithoutNoteSucceeds(): void
     {
         $repo = $this->project->mkdir('repo');
         GitRepo::init($repo);
@@ -189,21 +185,18 @@ final class CommitMsgHookTest extends TestCase
         copy($this->hook, $target);
         chmod($target, 0o755);
 
-        try {
-            GitRepo::run($repo, 'commit', '-q', '--allow-empty', '-m', 'feat: without a note');
-            self::fail('The hook must reject the commit.');
-        } catch (\RuntimeException $e) {
-            self::assertStringContainsString('commit-msg:', $e->getMessage());
-        }
-        self::assertSame('0', trim(GitRepo::run($repo, 'rev-list', '--all', '--count')));
+        // The hook never stops a commit. GitRepo::run discards stderr on success, so the warning itself
+        // is proved by the hook-run tests above; here only the outcome is counted.
+        GitRepo::run($repo, 'commit', '-q', '--allow-empty', '-m', 'feat: without a note');
+        self::assertSame('1', trim(GitRepo::run($repo, 'rev-list', '--count', 'HEAD')));
 
         GitRepo::run($repo, 'commit', '-q', '--allow-empty', '-m', "feat: with a note\n\nWissen: commit-hooks#stand");
         GitRepo::run($repo, 'commit', '-q', '--allow-empty', '-m', 'chore: no note needed');
 
-        self::assertSame('2', trim(GitRepo::run($repo, 'rev-list', '--count', 'HEAD')));
+        self::assertSame('3', trim(GitRepo::run($repo, 'rev-list', '--count', 'HEAD')));
     }
 
-    public function testRangeChecksEveryMessageAndFailsOnViolation(): void
+    public function testRangeChecksEveryMessageAndWarnsOnViolation(): void
     {
         $repo = $this->newRepo();
         $base = $this->commit($repo, 'chore: base');
@@ -214,11 +207,13 @@ final class CommitMsgHookTest extends TestCase
 
         $result = $this->runCheck($repo, $base . '..HEAD');
 
-        self::assertSame(1, $result['exit']);
+        self::assertSame(0, $result['exit'], $result['stderr']);
         self::assertStringContainsString('fix: bad one', $result['stderr']);
         self::assertStringContainsString('docs: bad form', $result['stderr']);
         self::assertStringNotContainsString('feat: good', $result['stderr']);
-        self::assertStringContainsString('2 of 4 commit message(s) rejected', $result['stderr']);
+        self::assertStringContainsString('commit-msg: warning:', $result['stderr']);
+        self::assertStringContainsString('2 of 4 commit message(s) warned', $result['stderr']);
+        self::assertStringNotContainsString('rejected', $result['stderr']);
     }
 
     public function testPassesWhenEveryMessageIsValid(): void
@@ -232,7 +227,8 @@ final class CommitMsgHookTest extends TestCase
         $result = $this->runCheck($repo, $base . '..HEAD');
 
         self::assertSame(0, $result['exit'], $result['stderr']);
-        self::assertStringContainsString('3 commit message(s) checked', $result['stdout']);
+        self::assertStringContainsString('3 commit message(s) checked, all accepted', $result['stdout']);
+        self::assertSame('', $result['stderr']);
         self::assertSame(0, $this->runCheck($repo, 'HEAD..HEAD')['exit']);
         self::assertSame(2, $this->runCheck($repo, 'no-such-ref..HEAD')['exit']);
         self::assertSame(2, $this->runCheck($repo, 'HEAD')['exit']);
@@ -270,13 +266,18 @@ final class CommitMsgHookTest extends TestCase
         $scripts = $this->project->mkdir('stub/scripts');
         copy($this->check, $scripts . '/check-commit-messages');
 
-        $this->project->writeFile('stub/scripts/commit-msg', "#!/bin/sh\necho stub says no >&2\nexit 1\n");
-        $rejecting = $this->runCheck($repo, $base . '..HEAD', $scripts . '/check-commit-messages');
-        self::assertSame(1, $rejecting['exit']);
-        self::assertStringContainsString('stub says no', $rejecting['stderr']);
+        // A stub that speaks counts as warned, a silent one as accepted; the exit code carries no verdict.
+        $this->project->writeFile('stub/scripts/commit-msg', "#!/bin/sh\necho stub says no >&2\nexit 0\n");
+        $warning = $this->runCheck($repo, $base . '..HEAD', $scripts . '/check-commit-messages');
+        self::assertSame(0, $warning['exit'], $warning['stderr']);
+        self::assertStringContainsString('stub says no', $warning['stderr']);
+        self::assertStringContainsString('1 of 1 commit message(s) warned', $warning['stderr']);
 
         $this->project->writeFile('stub/scripts/commit-msg', "#!/bin/sh\nexit 0\n");
-        self::assertSame(0, $this->runCheck($repo, $base . '..HEAD', $scripts . '/check-commit-messages')['exit']);
+        $silent = $this->runCheck($repo, $base . '..HEAD', $scripts . '/check-commit-messages');
+        self::assertSame(0, $silent['exit']);
+        self::assertStringContainsString('all accepted', $silent['stdout']);
+        self::assertSame('', $silent['stderr']);
     }
 
     public function testScriptsPassShSyntaxCheck(): void
@@ -286,6 +287,17 @@ final class CommitMsgHookTest extends TestCase
 
             self::assertSame(0, $result['exit'], $script . ': ' . $result['stderr']);
         }
+    }
+
+    public function testScriptsNeverRejectAndNeverExitOneForAVerdict(): void
+    {
+        foreach ([$this->hook, $this->check] as $script) {
+            $source = (string) file_get_contents($script);
+
+            self::assertStringNotContainsString('reject', $source, $script);
+            self::assertStringNotContainsString('exit 1', $source, $script);
+        }
+        self::assertStringContainsString('warns', (string) file_get_contents($this->hook));
     }
 
     public function testScriptsUseNoBashisms(): void
@@ -308,9 +320,13 @@ final class CommitMsgHookTest extends TestCase
         }
 
         $file = $this->project->writeFile('msg', "feat: x\n");
-        self::assertSame(1, $this->runProcess([$dash, $this->hook, $file], $this->project->root)['exit']);
+        $warned = $this->runProcess([$dash, $this->hook, $file], $this->project->root);
+        self::assertSame(0, $warned['exit']);
+        self::assertStringContainsString('commit-msg: warning:', $warned['stderr']);
         $file = $this->project->writeFile('msg', "feat: x\n\nWissen: page#stand\n");
-        self::assertSame(0, $this->runProcess([$dash, $this->hook, $file], $this->project->root)['exit']);
+        $accepted = $this->runProcess([$dash, $this->hook, $file], $this->project->root);
+        self::assertSame(0, $accepted['exit']);
+        self::assertSame('', $accepted['stderr']);
         self::assertSame(0, $this->runProcess([$dash, '-n', $this->check], $this->project->root)['exit']);
     }
 
@@ -318,6 +334,20 @@ final class CommitMsgHookTest extends TestCase
     {
         self::assertSame(2, $this->runProcess(['sh', $this->hook], $this->project->root)['exit']);
         self::assertSame(2, $this->runProcess(['sh', $this->hook, $this->project->path('none')], $this->project->root)['exit']);
+    }
+
+    /**
+     * The hook never rejects: exit 0, a warning on stderr that names the reason, nothing on stdout.
+     *
+     * @param array{exit: int, stdout: string, stderr: string} $result
+     */
+    private function assertWarned(array $result, string $reason, string $context = ''): void
+    {
+        self::assertSame(0, $result['exit'], $context . ': ' . $result['stderr']);
+        self::assertStringContainsString('commit-msg: warning:', $result['stderr'], $context);
+        self::assertStringContainsString($reason, $result['stderr'], $context);
+        self::assertStringContainsString('; allowed: ', $result['stderr'], $context);
+        self::assertSame('', $result['stdout'], $context);
     }
 
     private function dash(): string

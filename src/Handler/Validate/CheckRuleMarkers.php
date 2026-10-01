@@ -33,11 +33,25 @@ final class CheckRuleMarkers
                 'the lower tier',
                 'two or more subtasks are never',
             ],
+            'decide-yourself-no-tier-drop' => ['lowers no tier', 'waives no gate'],
         ],
         'process-run-stage' => [
             'fresh-session-per-stage' => ['fresh agent session'],
-            'failure-path' => ['fix run', 'follow-up run', 'STOPP:'],
+            'failure-path' => [
+                'fix run',
+                'follow-up run',
+                'STOPP:',
+                'without a question to the human',
+                'never changes the plan on its own decision',
+            ],
             'question-points' => ['at most 2 question points', 'STOPP:'],
+            'commit-is-human-gate' => [
+                'gate of the human',
+                'git log',
+                'working tree is clean',
+                'exactly one git step',
+                'git-rules',
+            ],
         ],
         'process-review-board' => [
             'question-points' => ['at most 2 roles'],
@@ -45,6 +59,14 @@ final class CheckRuleMarkers
         'process-concept' => [
             'pool-scaffold' => ['.claude/wissen/', 'is missing'],
             'project-profile' => ['.claude/PROJECT_PROFILE.md', 'is missing'],
+            'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+        ],
+        'process-write-prd' => [
+            'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+        ],
+        'process-close' => [
+            'close-lessons-via-skill' => ['before the first write', 'never from memory'],
+            'close-pool-check-after-delete' => ['commit hash or the digest', 'after the delete'],
         ],
     ];
 

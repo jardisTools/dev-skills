@@ -24,5 +24,5 @@ schema_version: 1.0.0
 
 ## Verweise
 
-- [[related-page]]
+- Link to a related page as `[[page-id]]`, written without backticks and only for a page that exists
 - Path to a source outside the pool

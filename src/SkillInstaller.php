@@ -63,6 +63,10 @@ final class SkillInstaller
 
     private readonly ?string $processDocsWarning;
 
+    private readonly ?string $gitRulesWarning;
+
+    private readonly bool $gitRules;
+
     /** @var Closure(string, string, Closure(): void): ?string */
     private readonly Closure $guardManifestVersion;
 
@@ -72,7 +76,7 @@ final class SkillInstaller
     /** @var Closure(list<SkillDescriptor>): bool */
     private readonly Closure $isCatalogInstalled;
 
-    /** @var Closure(string): string */
+    /** @var Closure(string, bool): string */
     private readonly Closure $loadRouterText;
 
     /** @var Closure(list<AgentsDescriptor>, string, bool, string): AggregateAgentsResult */
@@ -90,6 +94,8 @@ final class SkillInstaller
         $fs = $filesystem ?? new Filesystem();
         $this->pluginRoot = $pluginRoot ?? dirname(__DIR__);
         $this->processDocsWarning = $config?->processDocsWarning;
+        $this->gitRulesWarning = $config?->gitRulesWarning;
+        $this->gitRules = $config->gitRules ?? true;
 
         $this->installSkills = new InstallSkills(
             $config ?? PluginConfig::all(),
@@ -191,6 +197,7 @@ final class SkillInstaller
     {
         $report = new InstallReport();
         $report->addWarningIfAny($this->processDocsWarning);
+        $report->addWarningIfAny($this->gitRulesWarning);
 
         $report->addWarningIfAny(($this->guardManifestVersion)(
             $projectRoot,
@@ -211,7 +218,7 @@ final class SkillInstaller
             ($this->scanAgentsFiles)($vendorDir),
             $projectRoot,
             ($this->isCatalogInstalled)($keptBundled),
-            ($this->loadRouterText)($this->pluginRoot),
+            ($this->loadRouterText)($this->pluginRoot, $this->gitRules),
         );
         ($this->recordAgentsAggregation)($report, $result);
 

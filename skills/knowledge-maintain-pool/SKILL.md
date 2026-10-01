@@ -20,12 +20,12 @@ The knowledge pool is the project's memory of what holds, what was decided and w
 ```
 
 - `INDEX.md` is the only entry point. It lists every topic page as `[[page]] — one-line description`. Start here, then open only the pages the task touches.
-- A topic page holds one subject: what holds today, the decisions behind it, the traps. Use `templates/themenseite.md` as the starting point, `templates/INDEX.md` for the index.
+- A topic page holds one subject: what holds today, the decisions behind it, the traps. Use `templates/themenseite.md` as the starting point for each new page, `templates/INDEX.md` for the index.
 - Pages link to each other as `[[page]]`. A link names a page id, not a path.
 
 ### 2. The scaffold is created by the agent, never by the plugin
 
-If `.claude/wissen/` is missing, the agent creates it through `process-concept`: an empty `INDEX.md` and the topic-page template. The plugin never writes the scaffold. An existing `.claude/wissen/` is never overwritten or reformatted on install or update; it belongs to the project.
+If `.claude/wissen/` is missing, the agent creates it through `process-concept`: only `INDEX.md`, empty. `templates/themenseite.md` stays a template in the skill, copied for the first real topic page. The plugin never writes the scaffold. An existing `.claude/wissen/` is never overwritten or reformatted on install or update; it belongs to the project.
 
 ### 3. Topic page shape
 

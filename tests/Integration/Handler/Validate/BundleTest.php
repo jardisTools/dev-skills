@@ -267,6 +267,337 @@ final class BundleTest extends TestCase
         }
     }
 
+    public function testChooseTierCarriesThePresentCriterionAndDecideYourselfRules(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-choose-tier'));
+
+        // Doubt concerns size and risk, never a criterion that is present.
+        self::assertStringContainsString('never a criterion that is present', $content);
+        self::assertStringContainsString('decides for tier 3, whatever the size', $content);
+
+        $marker = strpos($content, '<!-- rule:decide-yourself-no-tier-drop -->');
+        self::assertIsInt($marker, 'Marker rule:decide-yourself-no-tier-drop is missing.');
+        $rule = substr($content, $marker, 700);
+        foreach (['decide open points yourself', 'proceed autonomously', 'lowers no tier', 'waives no gate', 'open-question gate'] as $keyword) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+    }
+
+    public function testGateWaiverIsStatedWhereTheTierThreePathNeverLoadsChooseTier(): void
+    {
+        // E7 rauchlauf 2: the sentence stood only in process-choose-tier, which the tier-3 path does not load.
+        $paragraphs = [];
+        foreach (['process-concept', 'process-write-prd'] as $skill) {
+            $content = (string) file_get_contents($this->skillFile($skill));
+            $marker  = strpos($content, '<!-- rule:decide-yourself-no-gate-waiver -->');
+            self::assertIsInt($marker, $skill . ' lacks the marker rule:decide-yourself-no-gate-waiver.');
+            $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+            foreach (
+                [
+                    'decide open points yourself',
+                    'proceed autonomously',
+                    'waives no gate',
+                    'never settled by the main session',
+                    'open-question gate',
+                    '`open-question-gate`',
+                    '`process-run-stage`',
+                    'STOPP: <YYYY-MM-DD> · <question>',
+                    'at the next approval',
+                ] as $keyword
+            ) {
+                self::assertStringContainsString($keyword, $rule, $skill . ': ' . $keyword);
+            }
+            $paragraphs[$skill] = $rule;
+        }
+
+        self::assertSame($paragraphs['process-concept'], $paragraphs['process-write-prd'], 'one marker, one wording in both skills');
+    }
+
+    public function testCloseLoadsTheRecordSkillBeforeTheFirstPoolWrite(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-close'));
+        $marker  = strpos($content, '<!-- rule:close-lessons-via-skill -->');
+        self::assertIsInt($marker, 'Marker rule:close-lessons-via-skill is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (['Load `knowledge-record-decision`', 'before the first write', 'topic page', 'never from memory'] as $keyword) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        // the marker sits in section 3 (lessons), before the docs sync of section 4
+        self::assertLessThan((int) strpos($content, '### 4. Docs sync'), $marker);
+        self::assertGreaterThan((int) strpos($content, '### 3. Lessons into the pool'), $marker);
+    }
+
+    public function testMaintainPoolDescribesTheScaffoldAsTheIndexAlone(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('knowledge-maintain-pool'));
+        $start   = (int) strpos($content, '### 2. The scaffold');
+        $section = substr($content, $start, (int) strpos($content, '### 3.', $start) - $start);
+
+        self::assertStringContainsString('only `INDEX.md`', $section);
+        self::assertStringContainsString('`templates/themenseite.md`', $section);
+        self::assertStringNotContainsString('and the topic-page template', $section);
+    }
+
+    public function testVerifyAndResumePointAtTheCommitGateInTheirFixAndResumeStep(): void
+    {
+        // E7 rauchlauf 3: after a fix run the session committed itself; the gate stood only in process-run-stage.
+        foreach (['process-verify' => '### 4. After the verdict', 'process-resume' => '### 4. Take up one step'] as $skill => $heading) {
+            $content = (string) file_get_contents($this->skillFile($skill));
+            $start   = strpos($content, $heading);
+            self::assertIsInt($start, $skill);
+            $section = substr($content, $start, (int) strpos($content, "\n### 5.", $start) - $start);
+
+            self::assertStringContainsString('human gate (`process-run-stage`)', $section, $skill);
+            self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $content, $skill . ': a reference, no second wording');
+        }
+    }
+
+    public function testClosePoolCheckRunsAfterTheDeleteAndSourcesLeaveTheFolder(): void
+    {
+        // E7 rauchlauf 3: pool-check ran before the folder was deleted, so sources into it passed.
+        $content = (string) file_get_contents($this->skillFile('process-close'));
+        $marker  = strpos($content, '<!-- rule:close-pool-check-after-delete -->');
+        self::assertIsInt($marker, 'Marker rule:close-pool-check-after-delete is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'no source of a pool page',
+                '`docs/vorhaben/<name>/`',
+                'commit hash or the digest',
+                'after the delete',
+                'pool-check.php',
+                'only from this run',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        // the marker sits in section 6, after the delete order and before the delivery of section 7
+        self::assertGreaterThan((int) strpos($content, '### 6. Delete the folder'), $marker);
+        self::assertLessThan((int) strpos($content, '### 7. Delivery'), $marker);
+        self::assertGreaterThan((int) strpos($content, '**delete** `docs/vorhaben/<name>/`'), $marker);
+    }
+
+    public function testReviewBoardSendsAnOpenQuestionToTheGateBeforeAStop(): void
+    {
+        // E7 rauchlauf 3: the board paragraph sent the open question straight to the human, against process-run-stage.
+        $content = (string) file_get_contents($this->skillFile('process-review-board'));
+        $marker  = strpos($content, '<!-- rule:question-points -->');
+        self::assertIsInt($marker);
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        self::assertStringContainsString('at most 2 roles', $rule);
+        foreach (
+            [
+                'goes first to the open-question gate',
+                '`open-question-gate`',
+                '`process-run-stage`',
+                'only when the gate cannot decide',
+                'STOPP: <YYYY-MM-DD> · <question>',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        self::assertLessThan(
+            (int) strpos($rule, 'STOPP: <YYYY-MM-DD>'),
+            (int) strpos($rule, 'open-question gate'),
+            'The gate comes before the stop.',
+        );
+    }
+
+    public function testConceptShowsTheOneLineFormForSeveralOpenQuestionsAndPoolCheckTakesIt(): void
+    {
+        // E7 rauchlauf 3: with several open questions the session invented a form that pool-check rejected.
+        $root    = dirname(__DIR__, 4);
+        $content = (string) file_get_contents($this->skillFile('process-concept'));
+        $start   = (int) strpos($content, '### 7. Progress file rules');
+        $section = substr($content, $start, (int) strpos($content, '### 8.', $start) - $start);
+
+        self::assertSame(
+            1,
+            preg_match('/`(STOPP: \d{4}-\d{2}-\d{2} · \(1\) [^`]*\(2\) [^`]*)`/u', $section, $form),
+            'Section 7 shows one line with two numbered questions.',
+        );
+        self::assertStringNotContainsString("\n", $form[1]);
+
+        $template = (string) file_get_contents($root . '/skills/process-concept/templates/PROGRESS.md');
+        $head     = str_replace("- **Open decisions:** \u{2014}\n", '- **Open decisions:** ' . $form[1] . "\n", $template);
+        self::assertNotSame($template, $head);
+
+        $project = new TempProject();
+        try {
+            $project->writeFile('.claude/wissen/INDEX.md', "# Knowledge pool\n");
+            $project->writeFile('docs/vorhaben/demo/PROGRESS.md', $head);
+
+            $result = RunScript::run($root . '/scripts/pool-check.php', $project->root, ['--root=' . $project->root]);
+
+            self::assertSame(0, $result['exit'], $result['stdout'] . $result['stderr']);
+        } finally {
+            $project->cleanup();
+        }
+    }
+
+    public function testCommitAndMergeAreAHumanGateInTheProcessSkills(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $marker  = strpos($content, '<!-- rule:commit-is-human-gate -->');
+        self::assertIsInt($marker, 'Marker rule:commit-is-human-gate is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'gate of the human',
+                'branch',
+                'commit',
+                'merge',
+                'started by the human',
+                'against the phase scope',
+                'commit message from the report',
+                'asks the human',
+                '`git log`',
+                // E7 fix 4: the head update is a commit gate of its own; no merge request over an unclean tree
+                'working tree is clean',
+                'head update',
+                'uncommitted',
+                '`git status`',
+                'never asks for the merge',
+                // E7 fix 5: one halt names exactly one gate; the next gate is named only once the step before stands in `git log`
+                'One halt, one gate',
+                'exactly one git step',
+                'names the next gate only once',
+                // E7 P7.4: the opt-out lifts the gates only when the router names them no more; in doubt they apply
+                'git-rules',
+                'only when the router of the project does not name them',
+                'follows the git rules of the project',
+                'also when unsure',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+
+        // the loop steps point at the gate instead of telling the session to commit or merge itself
+        self::assertStringNotContainsString('the main session commits', $content);
+        self::assertStringNotContainsString('then commits with', $content);
+        // three names since E7 fix 4: steps 3 (commit), 8 (head update, commit gate of its own) and 9 (merge) of the loop name the gate
+        self::assertSame(3, substr_count($content, 'human gate'), 'steps 3, 8 and 9 of the loop name the gate');
+
+        $loopStart = strpos($content, '### 2. The stage loop');
+        self::assertIsInt($loopStart);
+        $loop = substr($content, $loopStart, (int) strpos($content, '### 3.', $loopStart) - $loopStart);
+        foreach (
+            [
+                '8. **Head update.**',
+                'working tree is clean',
+                '`git-commit-change`',
+                '9. **Merge**',
+                '`git status`',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $loop, $keyword);
+        }
+        self::assertLessThan(strpos($loop, '9. **Merge**'), strpos($loop, '8. **Head update.**'), 'head update comes before the merge step');
+
+        // the delivery step of process-close points at the same gate, with no second wording of the rule
+        $close = (string) file_get_contents($this->skillFile('process-close'));
+        self::assertStringContainsString('human gate (`process-run-stage`)', $close);
+        self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $close);
+    }
+
+    public function testHeadUpdateHaltNamesOnlyTheCommit(): void
+    {
+        // E7 mini run 5: the halt at the head-update commit listed the commit and the merge as two gates.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $start   = strpos($content, '8. **Head update.**');
+        self::assertIsInt($start);
+        $step = substr($content, $start, (int) strpos($content, "\n9. **Merge**", $start) - $start);
+
+        foreach (
+            [
+                'names only the commit',
+                'does not mention the merge (step 9)',
+                'neither as a request nor as a second gate in a list',
+                'stands in `git log`',
+                '`git status` is empty',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $step, $keyword);
+        }
+    }
+
+    public function testMergeTargetIsNamedFromExistingBranchesNeverInvented(): void
+    {
+        // E7 mini run git gates: the session named `develop` as merge target, the project had none.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $start   = strpos($content, '9. **Merge**');
+        self::assertIsInt($start);
+        $step = substr($content, $start, (int) strpos($content, "\n\n", $start) - $start);
+
+        foreach (
+            [
+                'existing branches',
+                '`git branch -a`',
+                'git flow of the project',
+                'is missing',
+                'at the gate',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $step, $keyword);
+        }
+    }
+
+    public function testFailurePathStartsTheFixRunWithoutQuestionAndNeverEditsThePlanItself(): void
+    {
+        // E7 mini run git gates: after RED the session asked "start the fix run?"; a plan deviation was corrected
+        // in the plan by the session itself and logged without the open-question gate.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $marker  = strpos($content, '<!-- rule:failure-path -->');
+        self::assertIsInt($marker);
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'without a question to the human',
+                'no question point',
+                'deviation from the plan',
+                'before the fix brief',
+                'open-question gate',
+                'never changes the plan on its own decision',
+                '`Decisions delegated`',
+                'decided',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+
+        // the question-point paragraph keeps its sentence about the plan correction after the gate's answer
+        self::assertStringContainsString('corrects the plan where the answer deviates', $content);
+        // E7-fix-minors: section 6 must not read against section 8; the old absolute wording is gone
+        self::assertStringNotContainsString('never changes the plan itself', $content);
+    }
+
+    public function testVerifyRedPointsAtTheFailurePathWithoutSecondWording(): void
+    {
+        // E7 mini run git gates: only process-verify was loaded after RED, so the session asked before the fix run.
+        $content = (string) file_get_contents($this->skillFile('process-verify'));
+        $start   = strpos($content, '### 4. After the verdict');
+        self::assertIsInt($start);
+        $section = substr($content, $start, (int) strpos($content, "\n### 5.", $start) - $start);
+
+        foreach (
+            [
+                'load `process-run-stage`',
+                'its failure path applies',
+                'without a question to the human',
+                'human gate (`process-run-stage`)',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $section, $keyword);
+        }
+        self::assertStringNotContainsString('<!-- rule:failure-path -->', $content, 'a reference, no second wording');
+        self::assertStringNotContainsString('never changes the plan on its own decision', $content, 'a reference, no second wording');
+    }
+
     public function testChooseTierNamesFourTiersAndBothMarkers(): void
     {
         $content = (string) file_get_contents($this->skillFile('process-choose-tier'));
@@ -386,6 +717,11 @@ final class BundleTest extends TestCase
         foreach (['.claude/wissen/', 'is missing'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $scaffold, $profile - $scaffold));
         }
+        // E7 P7.3 fix 3 (PRD R16): the scaffold is the index alone; the topic page stays a template in the skill.
+        $scaffoldRule = substr($content, $scaffold, $profile - $scaffold);
+        self::assertStringContainsString('only `INDEX.md`', $scaffoldRule);
+        self::assertStringContainsString('`themenseite.md` stays a template', $scaffoldRule);
+        self::assertStringNotContainsString('`INDEX.md` and `themenseite.md`', $scaffoldRule);
         foreach (['.claude/PROJECT_PROFILE.md', 'is missing', 'never overwritten'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $profile));
         }
