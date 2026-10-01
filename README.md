@@ -164,7 +164,7 @@ The plugin acts on `composer install` and `composer update` (Composer's post-ins
 
 ## Update and downgrade
 
-**No downgrade.** A downgrade below 1.4.0 is not supported. Version 1.3.x does not know the manifest `.claude/skills/.jardis-managed.json`; it manages skill folders by name prefix (`adapter-`, `core-`, `support-`, `tools-`, `schema-`, `plan-`, `platform-`, `rules-`). From 1.4.0 on, a guard applies: if the manifest was written by a newer plugin version (or a newer manifest schema), an older plugin changes nothing and prints a warning. This holds for install and uninstall. A manifest the plugin cannot read is ignored with a warning.
+**No downgrade.** A downgrade below 1.4.0 is not supported. Version 1.3.x does not know the manifest `.claude/skills/.jardis-managed.json`; on uninstall it removes skill folders by name prefix (`adapter-`, `core-`, `support-`, `tools-`, `schema-`, `plan-`, `platform-`, `rules-`). From 1.4.0 on, a guard applies: if the manifest was written by a newer plugin version (or a newer manifest schema), an older plugin changes nothing and prints a warning. This holds for install and uninstall. A manifest the plugin cannot read is ignored with a warning.
 
 **Update from 1.3.x.** Version 1.4.0 renamed 18 bundle skills to a scheme of area prefixes (for example `rules-architecture` is now `foundation-architecture`; `RenamedSkills` lists all 18). The update migrates as follows:
 
