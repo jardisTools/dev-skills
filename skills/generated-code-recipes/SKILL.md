@@ -1,13 +1,13 @@
 ---
 name: generated-code-recipes
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariante als Zustand (uniqueness invariant via a first-writing Torwächter node + CAS-UPDATE instead of check-then-act, Statusaggregat/Fakturierung and Nummernkreis/Reservierung-with-Retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 prerequisites: [generated-code-extend]
 next: []
 ---
 
-> **Layout context.** The aggregate tree `{BC}/Model/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); developer code lands only in the BC-level Process scope `{BC}/Process/{Name}/`, reached via `$bc->process()`. `$bc->{agg}()` reaches only the read facade `{Agg}Read` (Außentür); the write facade `{Agg}` is family-internal via the Kernel-Naht `$this->handle({Agg}::class)`. Canonical layout + Vokabular-Glossar (Aggregat-Fassade / Lese-Fassade / Außentür / Kernel-Naht / Context-Familie): `generated-code-extend` §1–§2.
+> **Layout context.** The aggregate tree `{BC}/Model/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); developer code lands only in the BC-level Process scope `{BC}/Process/{Name}/`, reached via `$bc->process()`. `$bc->{agg}()` reaches only the read facade `{Agg}Read` (the BC facade's public surface); the write facade `{Agg}` is family-internal via the kernel seam `$this->handle({Agg}::class)`. Canonical layout + vocabulary glossary (aggregate facade / read facade / public surface / kernel seam / Context family): `generated-code-extend` §1–§2.
 
 ### 1. Event transport — authored in a Process node
 
@@ -22,7 +22,7 @@ protected function eventDispatcher(): EventDispatcherInterface|false|null
 }
 ```
 
-**The router is hermetic** (ForceOverwrite) — you never fill its bodies; the next build truncates them (V1). Transport is therefore authored where developer code is allowed: a **Process node**. Model a Process whose orchestrator runs the aggregate command, then publish the events it produced from a downstream custom node. The aggregate command records its events on the response (`$this->result()->addEvent($event, EventScope::Internal)` in the generated handler) — the handler **only collects, it does not dispatch** — so the node reads `$response->getEvents()` and hands each to a transport via `handle()`. Note `getEvents(?EventScope)` is **context-keyed** (`array<string, array<int, object>>`), so flatten it before iterating: `array_merge(...array_values($response->getEvents()))` (or a nested `foreach`). (All aggregate events are `Internal`; `EventScope::Domain` + a „verkünden" switch are planned, not yet emitted.)
+**The router is hermetic** (ForceOverwrite) — you never fill its bodies; the next build truncates them (V1). Transport is therefore authored where developer code is allowed: a **Process node**. Model a Process whose orchestrator runs the aggregate command, then publish the events it produced from a downstream custom node. The aggregate command records its events on the response (`$this->result()->addEvent($event, EventScope::Internal)` in the generated handler) — the handler **only collects, it does not dispatch** — so the node reads `$response->getEvents()` and hands each to a transport via `handle()`. Note `getEvents(?EventScope)` is **context-keyed** (`array<string, array<int, object>>`), so flatten it before iterating: `array_merge(...array_values($response->getEvents()))` (or a nested `foreach`). (All aggregate events are `Internal`; `EventScope::Domain` + an "announce" switch are planned, not yet emitted.)
 
 **Event payload identity (X-3).** `<Agg>{ChildEntity}Added` events carry the affected child's business identifier (`<childIdentifier>`) when G4 is satisfied — otherwise the internal PK (same rule as the Command response, see Recipe 6). Wire your listener against the business key whenever you can; the internal PK is meaningful only inside the aggregate and changes on rebuild scenarios where data is reseeded.
 
@@ -134,11 +134,11 @@ Call it from a custom-node body via `$this->handle(ResolveMeterLocationName::cla
 
 There is no hand-edit slot on the aggregate; the route depends on *what kind* of operation it is.
 
-**Case A — a new aggregate command or query** (mutates/reads this one aggregate's state). Re-model it in the **Aggregate Designer** (`Aggregate.json`) and rebuild. The Generator regenerates the Command/Query DTO + handler + validator tree and exposes the operation **inline on the matching facade** — a query on the read facade `{Agg}Read.php` (Außentür), a command on the write facade `{Agg}.php` (family-internal only):
+**Case A — a new aggregate command or query** (mutates/reads this one aggregate's state). Re-model it in the **Aggregate Designer** (`Aggregate.json`) and rebuild. The Generator regenerates the Command/Query DTO + handler + validator tree and exposes the operation **inline on the matching facade** — a query on the read facade `{Agg}Read.php` (the BC facade's public surface), a command on the write facade `{Agg}.php` (family-internal only):
 
 ```php
-$bc->counter()->getCounterByIdentifier($dto);               // query — generated, reached via $bc->{agg}() (Außentür)
-$this->handle(Counter::class)->deactivateCounter($dto);     // command — generated, family-internal via the Kernel-Naht
+$bc->counter()->getCounterByIdentifier($dto);               // query — generated, reached via $bc->{agg}() (public surface)
+$this->handle(Counter::class)->deactivateCounter($dto);     // command — generated, family-internal via the kernel seam
 ```
 
 No method is hand-written and nothing under `{Agg}/` is edited — both facades are fully regenerated (no `@flow-id`, no body merge). A new command has **no** external caller by itself (G6, the aggregate is not writable from outside without a Process) — wrap it in a Process (Case B) to expose it via `$bc->process()`.
@@ -216,13 +216,13 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) for
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap. The projected Akte therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected Akte only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap. The projected aggregate record therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected aggregate record only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the identifier(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
 **Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a response, run the aggregate query/command from a **Process node**, then add fields in the node body before returning (`$this->result()->addData('extra', $value)` — Decorator at process level, see `generated-code-extend` §4).
 
-**Recipe 7 — Bulk read: list → keys/ids → full Akten**
+**Recipe 7 — Bulk read: list → keys/ids → full aggregate records**
 
 Every aggregate facade carries the uniform read base `get{Agg}ById` / `get{Agg}ByIds` / `get{Agg}By{UniqueKey}` (catalog: `generated-code-extend` §1). An aggregate WITH a public unique key additionally carries the bulk variant `get{Agg}By{PluralKey}` (e.g. `getOrderByOrderNumbers`), and its auto-list items lead with that key column instead of `id` — so the recipe forks:
 
@@ -242,7 +242,7 @@ $ids   = array_values(array_unique(array_column($list['items'], 'id')));
 $akten = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids));  // ['counter' => list<Akte>]
 ```
 
-Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one Akte · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every Akte carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (Außentür/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
+Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one aggregate record · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every aggregate record carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (public surface/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
 
 **Recipe 8 — Sub-process node: calling another process synchronously**
 
@@ -257,8 +257,8 @@ A sub-process node is a **typed Dev-Stub** (`CreateIfNotExists` + `@node-id` bod
 protected function logic(WorkflowContextInterface $context): array
 {
     $in = new SendOpsNotification(
-        counterId: $this->counterId($context),  // werfender Resolver
-        reason:    $this->reason($context),     // werfender Resolver
+        counterId: $this->counterId($context),  // throwing resolver
+        reason:    $this->reason($context),     // throwing resolver
     );
 
     $res = $this->context(SendOpsNotificationHandler::class, $in)();
@@ -276,7 +276,7 @@ protected function logic(WorkflowContextInterface $context): array
     ];
 }
 
-// --- werfende Resolver (Dev füllt die Werte) ---
+// --- throwing resolvers (dev fills in the values) ---
 
 protected function counterId(WorkflowContextInterface $context): mixed
 {
@@ -289,11 +289,11 @@ protected function reason(WorkflowContextInterface $context): mixed
 }
 ```
 
-**What the developer does:** replace each werfenden Resolver with the real value from `$context` (e.g. `return $this->payload()->counterId;`). The `$in` constructor call, the `$res = $this->context(…)()` call, the status mapping, and the event bubbling are generated — do not touch them.
+**What the developer does:** replace each throwing resolver with the real value from `$context` (e.g. `return $this->payload()->counterId;`). The `$in` constructor call, the `$res = $this->context(…)()` call, the status mapping, and the event bubbling are generated — do not touch them.
 
 **Event bubbling (flat, Domain-scope only):** `EventScope::Domain` events from the sub-`DomainResponse` are collected flat into the `data` return array. The main-process orchestrator harvests them identically to events from any other node (`getChain()` → `$data[EventScope::Domain->value]` → `addEvent(…, Domain)`). `Internal` events of the sub-process stay sub-process-internal (they are not returned).
 
-**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a fachliches Verdikt (true/false) is data and is routed via a downstream decision node.
+**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a business verdict (true/false) is data and is routed via a downstream decision node.
 
 **`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
@@ -304,7 +304,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Recipe 9 — Cross-BC write: translate → foreign `process()` → map response (G7)**
 
-A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no Prozess-Zwang). The generated Service (`{Domain}/Service/<Name>.php`, `generated-code-extend` §1) is the ACL — it never passes the caller's DTO through unchanged.
+A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no process mandate). The generated Service (`{Domain}/Service/<Name>.php`, `generated-code-extend` §1) is the ACL — it never passes the caller's DTO through unchanged.
 
 ```php
 // {Domain}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
@@ -318,7 +318,7 @@ final class CheckStockInCatalog extends EcommerceContext
         /** @var Catalog $catalog */
         $catalog = $this->handle(Catalog::class);          // the foreign BC facade
 
-        // 1) read the foreign Ist-Stand via the foreign READ facade
+        // 1) read the foreign current state via the foreign READ facade
         $read = $catalog->product()->getProductByIdentifier(
             new QueryProductByIdentifier(identifier: $cmd->productIdentifier)
         );
@@ -328,7 +328,7 @@ final class CheckStockInCatalog extends EcommerceContext
         $current = $read->getData()['GetProductByIdentifierHandler']['product'];
 
         // 2) translate the own input into the foreign PROCESS input DTO (ACL) —
-        //    only the changed field is overridden, the rest mirrors the Ist-Stand
+        //    only the changed field is overridden, the rest mirrors the current state
         $update = new UpdateProductInCatalog(new UpdateProduct(
             productIdentifier: $current->identifier,
             /* … remaining fields copied from $current … */
@@ -348,13 +348,13 @@ final class CheckStockInCatalog extends EcommerceContext
 }
 ```
 
-**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own Außentür, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the Kernel-Naht (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
+**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 
-A Rule is a synchronous, endpoint-bound Ja/Nein-Wächter — for a bestand-check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Closures.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
+A Rule is a synchronous, endpoint-bound yes/no guard — for an existing-data check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Closures.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
 
-**Where the catalog entry comes from.** You author it in the Closure-Editor (`…/closures/{name}/{closure|code}`, reached from the Model-Liste's "Neu ▾" or the "Closure andocken ▾" guard-chain menu on the Aggregate's "API" tab) or headless via MCP `save_closures` — never by hand-editing `Closures.json`. Before writing `__invoke()`, pull the ready-composed work package: the MCP Resource template `jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` (same JSON over `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work`) hands you the free-text task, the contract/signature, `uses`/`reads` call recipes, the generated test's path, and `body: "offen"`/`"geschrieben"` telling you whether the stub still throws `Not implemented`.
+**Where the catalog entry comes from.** You author it in the Closure-Editor (`…/closures/{name}/{closure|code}`, reached from the model list's "Neu ▾" or the "Closure andocken ▾" guard-chain menu on the Aggregate's "API" tab) or headless via MCP `save_closures` — never by hand-editing `Closures.json`. Before writing `__invoke()`, pull the ready-composed work package: the MCP Resource template `jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` (same JSON over `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work`) hands you the free-text task, the contract/signature, `uses`/`reads` call recipes, the generated test's path, and `body: "offen"`/`"geschrieben"` telling you whether the stub still throws `Not implemented`.
 
 ```php
 // {BC}/Closure/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
@@ -384,111 +384,111 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **What's generated, what's yours:** the Generator emits the stub signature + the `Closure/Data/RuleResult.php` VO + a hermetic `Closure/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. Your only job is the `__invoke()` body above.
 
-**Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a Katalog-Referenz (matrix-ineligible, like a sub-process node), the generated adapter maps `passed → ON_SUCCESS` / `rejected → ON_FAIL`. This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time Warnung, not an Error: possible double-execution / inconsistent bestand-reads between the two runs).
+**Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a catalog reference (matrix-ineligible, like a sub-process node), the generated adapter maps `passed → ON_SUCCESS` / `rejected → ON_FAIL`. This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time warning, not an Error: possible double-execution / inconsistent existing-data reads between the two runs).
 
 **Rules:**
-- Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-fähig, `Closure/v{N}/`).
-- Read bestand only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the Kernel-Naht (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC bestand-check is Prozess-Territorium, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "Kunde hat offene Rechnungen" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-capable, `Closure/v{N}/`).
+- Read existing data only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the kernel seam (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC existing-data check is process territory, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "customer has open invoices" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `generated-code-versioning`).
 - TOCTOU is a known v1 boundary (`generated-code-extend` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
 
-**Recipe 11 — Invariante als Zustand: eine Eindeutigkeits-Invariante über Prozessgrenzen sichern**
+**Recipe 11 — Invariant as state: securing a uniqueness invariant across process boundaries**
 
-Ein Decision-Knoten, der per Query auf Abwesenheit prüft ("gibt es schon eine Rechnung für diese
-Bestellung?") und danach schreibt, ist Check-then-Act — racy unter Nebenläufigkeit, zwei
-gleichzeitige Läufe können beide die Prüfung bestehen. Die Ablösung: die Eindeutigkeit wird nicht
-geprüft, sondern **als Zustand einer existierenden Zeile modelliert**, die per bedingtem Schreiben
-(CAS-UPDATE, `generated-code-extend` Persist-Layer emittiert `$expected` = alte Werte der
-geänderten Felder automatisch) umgesetzt wird. Zwei gleichzeitige Läufe können nie beide gewinnen
-— kein neuer Mechanismus, keine Sperrtabelle, kein DB-UNIQUE-Regelträger.
+A decision node that checks for absence via a query ("is there already an invoice for this
+order?") and writes afterwards is check-then-act — racy under concurrency, two
+simultaneous runs can both pass the check. The replacement: uniqueness is not
+checked but **modelled as the state of an existing row**, implemented by a conditional write
+(CAS-UPDATE, the `generated-code-extend` Persist-Layer emits `$expected` = old values of the
+changed fields automatically). Two simultaneous runs can never both win
+— no new mechanism, no lock table, no DB-UNIQUE rule carrier.
 
-**Grundregel:** der Torwächter (der Knoten mit dem bedingten Schreiben) ist der **erste
-schreibende Knoten** des Prozesses. Vor ihm darf nichts Ungewolltes geschrieben worden sein — der
-Savepoint (siehe Konflikt-Kaskade unten) sichert danach nur noch die Atomarität des abgebrochenen
-Einzel-Persists, nicht die Reihenfolge.
+**Basic rule:** the gatekeeper (the node with the conditional write) is the **first
+writing node** of the process. Nothing unwanted may have been written before it — the
+savepoint (see conflict cascade below) afterwards only secures the atomicity of the aborted
+single persist, not the order.
 
-**Fall A — Torwächter/Statusaggregat** (z. B. "eine Rechnung je Bestellung"). Ein eigenes
-Zustandsaggregat trägt ein Flag (`fakturiert: bool`). Die Zeile entsteht **vorab** (z. B. per
-Domain-Event bei "Bestellung ausgeliefert"), nicht erst beim Fakturieren selbst — sonst kehrt das
-Rennen als Erstanlage-Rennen zurück. Prozessablauf:
-
-```
-K1 „MarkInvoiced"          — bedingtes UPDATE fakturiert: false → true
-   ON_SUCCESS → K2 „CreateCustomerInvoice"   (unbedingter INSERT)
-   ON_FAIL    → deklarierte 409-Kante (Reject-Terminal)
-```
-
-Ein konvergenter Abweis — mehrere fachlich verschiedene Vorknoten (nicht gefunden / bereits
-fakturiert / Validierung) münden auf denselben Reject-Terminal-Knoten — ist der **Normalfall**,
-kein Sonderfall, und braucht keine eigene Behandlung.
-
-**Fall B — Nummernkreis/Reservierung mit Retry** (das System vergibt den Schlüssel). Ein kleines
-Zähler-Aggregat (`lastNumber: int`):
+**Case A — gatekeeper/status aggregate** (e.g. "one invoice per order"). A dedicated
+status aggregate carries a flag (`fakturiert: bool`). The row is created **in advance** (e.g. via
+domain event on "order delivered"), not only when invoicing itself — otherwise the
+race returns as an initial-creation race. Process flow:
 
 ```
-K1 „ReserveInvoiceNumber"  — bedingtes UPDATE lastNumber: n → n+1
-   ON_SUCCESS → K2 nutzt den neuen Wert (Weitergabe via WorkflowContext::getLatest() im
-                Knoten-Body — es gibt dafür keinen deklarativen Weg im Korpus, Dev-Fläche)
+N1 „MarkInvoiced"          — conditional UPDATE fakturiert: false → true
+   ON_SUCCESS → N2 „CreateCustomerInvoice"   (unconditional INSERT)
+   ON_FAIL    → declared 409 edge (reject terminal)
+```
+
+A convergent rejection — several functionally different predecessor nodes (not found / already
+invoiced / validation) lead into the same reject-terminal node — is the **normal case**,
+not a special case, and needs no handling of its own.
+
+**Case B — number range/reservation with retry** (the system assigns the key). A small
+counter aggregate (`lastNumber: int`):
+
+```
+N1 „ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
+   ON_SUCCESS → N2 uses the new value (passed on via WorkflowContext::getLatest() in the
+                node body — there is no declarative way for this in the corpus, dev surface)
    ON_FAIL    → 409
 ```
 
-**Retry ist Komfort, nicht Korrektheit** und braucht zwei Pflichten: eine **Obergrenze**
-(Versuchszähler, die Engine hat keine eingebaute Schleifenbremse) und — der belegte Fehler dieser
-Klasse — der Zielwert MUSS **pro Versuch neu berechnet** werden, aus dem frisch gelesenen
-`current`-Stand. Ein fest verdrahteter Zielwert (`lastNumber: 1` bei jedem Versuch) erzeugt beim
-zweiten Versuch ein No-Op-UPDATE, dessen `rowCount()`-Interpretation treiberabhängig unterschiedlich
-ausfällt (MySQL liest es zufällig richtig als Konflikt, Postgres fälschlich als Erfolg → Doppel-
-vergabe).
+**Retry is convenience, not correctness** and needs two obligations: an **upper bound**
+(attempt counter, the engine has no built-in loop brake) and — the documented defect of this
+class — the target value MUST be **recomputed per attempt**, from the freshly read
+`current` state. A hard-wired target value (`lastNumber: 1` on every attempt) produces on the
+second attempt a no-op UPDATE whose `rowCount()` interpretation turns out
+differently depending on the driver (MySQL accidentally reads it correctly as a conflict, Postgres wrongly as success → double
+assignment).
 
-**Statusverhalten am Prozessende.** Ein Torwächter-Konflikt muss als 409 nach außen sichtbar
-werden, nicht nur intern routen. Ohne diese Verfeinerung meldet ein geheilter Retry fälschlich 409 trotz tatsächlichem Erfolg
-samt Seiteneffekt (belegt, Postgres-Nummernkreis, s. u.).
+**Status behaviour at process end.** A gatekeeper conflict must become visible outwardly as 409,
+not merely route internally. Without this refinement a healed retry wrongly reports 409 despite actual success
+including the side effect (documented, Postgres number range, see below).
 
-Das ist die Drei-Ebenen-Trennung aus `generated-code-workflow-api` §1: **Verzweigung** (ON_SUCCESS/ON_FAIL
-= true/false, reine Wegwahl) · **Antwort-Status** (immer aus der tatsächlichen `DomainResponse`
-des zuletzt maßgeblichen Knotens, NIE aus der Kanten-Deklaration) · **Transaktion** (der Nein-Pfad
-committet weiter — ein deklarierter 409-Terminal ist kein Rollback-Grund, nur ein geworfener
-technischer Fehler rollt zurück).
+This is the three-level separation from `generated-code-workflow-api` §1: **branching** (ON_SUCCESS/ON_FAIL
+= true/false, pure path selection) · **response status** (always from the actual `DomainResponse`
+of the last decisive node, NEVER from the edge declaration) · **transaction** (the no path
+keeps committing — a declared 409 terminal is no reason to roll back, only a thrown
+technical error rolls back).
 
-**Kollisionsverlauf (Fall A):** beide Läufe laden `fakturiert=false`. Der erste K1 gewinnt. Der
-zweite K1 wartet an der Zeilensperre, wertet nach dem Warten den aktuellen Stand neu (das UPDATE
-ist ein Current-Read), trifft 0 Zeilen → 409 → K2 wird nie erreicht. Die Klammer rollt dabei
-NICHT zurück, sie committet leer — der Nein-Pfad ist ein legitimer Abschluss, kein Abbruch.
+**Collision sequence (Case A):** both runs load `fakturiert=false`. The first N1 wins. The
+second N1 waits on the row lock, re-evaluates the current state after waiting (the UPDATE
+is a current read), hits 0 rows → 409 → N2 is never reached. The bracket does
+NOT roll back in that case, it commits empty — the no path is a legitimate completion, not an abort.
 
-**Grenzen:**
+**Limits:**
 
-- **Nur über `runInTransaction`-Prozesse.** Der direkte BC-Weg (Command ohne Prozess) bleibt
-  ungeschützt.
-- **SQLite:** ohne `busy_timeout` wartet SQLite nicht an der Sperre, sondern wirft sofort
-  `SQLITE_BUSY` — der Verlierer endet über den Throwable-Pfad als **500 mit Rollback**, nicht als
-  409. Die Invariante hält (er schreibt nichts), aber Status und Warteverhalten sind falsch.
-  Bekannter eigener Posten am dbConnection-Adapter, hier nicht gelöst.
-- **Retry heilt unter MySQL `REPEATABLE READ` innerhalb derselben Transaktion strukturell nie** —
-  jeder Snapshot des Verlierers sieht denselben `current` wie sein erster Read, nie den
-  zwischenzeitlich committeten Gewinner-Wert. Unter Postgres `READ COMMITTED` sieht der Retry nach
-  dem Warten den committeten Stand und kann gewinnen. Beide Bilder sind korrekt — ein reales
-  Treiber-Delta, kein Bug.
-- **rowCount()-Falle als Warnung:** der generierte CAS-Persist-Layer prüft Erfolg über
-  `rowCount() > 0` — treiberabhängig unzuverlässig bei No-Op-Updates. Betrifft jeden Torwächter, dessen Zielwert
-  zufällig mit dem Ist-Zustand übereinstimmen kann — bei Fall A (bool-Flag) ebenso relevant wie bei
-  Fall B (Zähler).
+- **Only via `runInTransaction` processes.** The direct BC path (Command without a process) stays
+  unprotected.
+- **SQLite:** without `busy_timeout` SQLite does not wait on the lock but throws
+  `SQLITE_BUSY` immediately — the loser ends up via the Throwable path as a **500 with rollback**, not as
+  409. The invariant holds (it writes nothing), but status and waiting behaviour are wrong.
+  A known item of its own on the dbConnection adapter, not solved here.
+- **Under MySQL `REPEATABLE READ` a retry structurally never heals within the same transaction** —
+  every snapshot of the loser sees the same `current` as its first read, never the
+  winner value committed in the meantime. Under Postgres `READ COMMITTED` the retry sees the committed state after
+  waiting and can win. Both pictures are correct — a real
+  driver delta, not a bug.
+- **rowCount() trap as a warning:** the generated CAS persist layer checks success via
+  `rowCount() > 0` — unreliable depending on the driver for no-op updates. Affects every gatekeeper whose target value
+  may happen to match the actual state — just as relevant for Case A (bool flag) as for
+  Case B (counter).
 
-**Event-Erstanlage bleibt Konzept, kein fertiger Weg.** Die Statuszeile in Fall A soll idealerweise
-per Domain-Event entstehen ("Bestellung ausgeliefert" → Zeile anlegen), aber der generierte
-`<Agg>EventRouter.php` ist ein reiner Registrierungs-Stub (§1 oben) — die Zustellung über einen
-echten Transport (Kafka/HTTP/in-process, §1) ist offenes Wiring, kein fertiger Baustein. Bis dahin:
-Erstanlage per Fixture-Seed / einmaligem Migrations-Schritt, dokumentiert als bewusste Lücke, nicht
-stillschweigend übergangen.
+**Event initial creation remains a concept, not a finished path.** The status row in Case A should ideally
+arise via domain event ("order delivered" → create row), but the generated
+`<Agg>EventRouter.php` is a pure registration stub (§1 above) — delivery via a
+real transport (Kafka/HTTP/in-process, §1) is open wiring, not a finished building block. Until then:
+initial creation via fixture seed / a one-off migration step, documented as a deliberate gap, not
+silently passed over.
 
-**Den realen Prozess umstellen.** Ein bestehender Check-then-Act-Decision-Knoten (liest per Query
-auf Abwesenheit) wird im Designer abgelöst, nicht daneben gebaut: das Zustandsaggregat modellieren
-(neue Tabelle, ein Flag- oder Zähler-Feld), den Torwächter-Knoten als ersten schreibenden Knoten
-vor die bisherige Schreiblogik setzen, die racy Lese-Prüfung entfernen, die 409-Kante als Terminal
-deklarieren. Die fachliche Vorprüfung ("ausgeliefert?", "gibt es die Bestellung überhaupt?") bleibt
-als Lese-Decision VOR dem Torwächter bestehen — nur die Eindeutigkeits-Hälfte wandert in den
-Torwächter.
+**Converting the real process.** An existing check-then-act decision node (reads via query
+for absence) is replaced in the Designer, not built alongside it: model the status aggregate
+(new table, a flag or counter field), put the gatekeeper node as the first writing node
+in front of the previous write logic, remove the racy read check, declare the 409 edge
+as terminal. The business pre-check ("delivered?", "does the order exist at all?") remains
+in place as a read decision BEFORE the gatekeeper — only the uniqueness half moves into the
+gatekeeper.
 
 ### 3. Troubleshooting
 
@@ -506,15 +506,15 @@ Torwächter.
 | `getData()` empty after `addData()` in a node | The node returned before augmenting `$this->result()`, or replaced the payload | Read aggregate data, then `addData(...)`/`setData(...)`, then return |
 | Process node throws → whole process fails | Default: an uncaught node exception routes to `ON_FAIL` (or bubbles to 500 if unrouted) | Wrap the node body in `try/catch` only if its failure must not fail the process; otherwise add the `ON_FAIL` transition — §1, `generated-code-workflow-api` §5 |
 | Sub-process node body overwritten after rebuild | Sub-process node lost its `@node-id` marker, or the file was built with an older Generator version (formerly ForceOverwrite No-Op) | Keep the `@node-id` DocBlock marker intact; if the file is an old No-Op, delete it — the next build emits the typed Dev-Stub fresh (Recipe 8) |
-| Sub-process werfender Resolver throws at runtime | Expected — the resolver is a placeholder until the developer fills in the real value from `$context` | Replace `throw new \RuntimeException(…)` in each resolver with the real value (e.g. `return $this->payload()->counterId;`) |
+| Sub-process throwing resolver throws at runtime | Expected — the resolver is a placeholder until the developer fills in the real value from `$context` | Replace `throw new \RuntimeException(…)` in each resolver with the real value (e.g. `return $this->payload()->counterId;`) |
 | Sub-process `Domain` events missing in main response | The sub-process node returned `Internal` events under `EventScope::Domain->value` by mistake, or the orchestrator loop wasn't updated | The stub returns `[EventScope::Domain->value => $events]`; the orchestrator harvests `$data[EventScope::Domain->value]` — both use the enum value string; check that `EventScope` is imported in both files |
 | Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
-| Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your bestand-check |
-| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the bestand genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
+| Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your existing-data check |
+| Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the existing data genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`generated-code-workflow-api` §5) |
-| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent bestand between them; drop the node binding if redundant |
+| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent existing data between them; drop the node binding if redundant |
 
 ### Anchors
 
