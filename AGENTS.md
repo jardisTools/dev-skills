@@ -1,39 +1,46 @@
 # jardis/dev-skills — Agent Notes
 
-Composer plugin that distributes Jardis skills (`<vendor>/.claude/skills/<name>/SKILL.md`) and aggregates `AGENTS.md` from Jardis vendor packages into the consumer project.
+Composer plugin that distributes Jardis skills (into `.claude/skills` and `.agents/skills` of the consumer project) and aggregates `AGENTS.md` from Jardis vendor packages into the consumer project.
 
 ## What this package contributes
 
 - **Discovery** of skills from `vendor/jardis*/*/.claude/skills/*/SKILL.md` and from this repo's own `skills/` directory.
-- **Bundle skills** (opt-in via `extra."jardis/dev-skills"."bundled-skills"`) covering Jardis methodology:
-  - `schema-authoring` — pre-Designer Schema.yaml authoring (companion `examples/Schema.yaml`)
-  - `platform-implementation` — extending Designer-generated PHP code (Extensions/ layout, ClassVersion v2 override mechanics, V1–V12 prohibitions)
-  - `platform-usage` — wiring Designer-generated Commands/Queries into a transport (HTTP / CLI / queue / worker), DomainResponse mapping
-  - `platform-versioning` — ClassVersion resolution chain + the Versionierungs-Modell for Designer-generated code
-  - `platform-workflow` — Workflow-Engine API consumed by FlowDesigner-generated Use-Case orchestrators
-  - `platform-cookbook` — Phase-3 recipes, troubleshooting, and event transport for Designer-generated code
-  - `rules-architecture` / `rules-frontend` / `rules-patterns` / `rules-testing` — cross-cutting rules (`rules-frontend` = stack-agnostic FE review constitution)
-- **Managed prefixes:** `adapter-`, `core-`, `support-`, `tools-`, `schema-`, `plan-`, `platform-`, `rules-`. Skills with these prefixes are installed/removed by the plugin; skills without them belong to the user.
-- **AGENTS.md aggregation** between markers `<!-- BEGIN jardis/dev-skills ... -->` / `<!-- END jardis/dev-skills -->`. User content outside the markers is preserved. A source package's own managed block is stripped before embedding (`Handler/Install/StripManagedBlock`), so the result is always a single, non-nested block. `*.backup` skill directories are skipped during discovery and never re-backed-up.
+- **Bundle skills** — 33 folders in `skills/`, listed in `src/Data/BundleSkills.php`. All are installed unless `extra."jardis/dev-skills"."bundled-skills"` narrows them (`false` or `[]` keeps only the mandatory groups `foundation-*` and `process-*`). By area prefix:
+  - `start-orientation` — entry point and routing into the other skills
+  - `packages-find-existing` — package catalog; generated from `catalog/manifest.json` (`make generate-catalog`), never edited by hand
+  - `design-draft-schema`, `design-headless-mcp` — drafting a Schema.json; driving the Designer through `jardis mcp`
+  - `generated-code-extend`, `-wire-transport`, `-versioning`, `-workflow-api`, `-recipes` — working with Designer-generated PHP code
+  - `foundation-architecture`, `-patterns`, `-testing`, `-frontend-review`, `-php`, `-working-principles` — cross-cutting rules
+  - `git-setup-repository`, `-start-branch`, `-commit-change`, `-push-and-open-pr`, `-check-compliance` — Gitflow workflow
+  - `knowledge-maintain-pool`, `knowledge-record-decision` — the decision pool of a project
+  - `process-*` (ten skills, reviewer sources in `skills/process-review-board/reviewers/`) and `code-review-change` — the development process
+  - The 18 names of 1.3.x (`src/Data/RenamedSkills.php`) live on as redirect skills until 2.0.0.
+- **Managed skills via manifest:** the plugin installs and removes only the skill folders listed in `.claude/skills/.jardis-managed.json` (`src/Data/Manifest.php`); folders of the user are never touched. Without a manifest, `BundleSkills::NAMES` plus the old names govern, never a name prefix. Locally changed folders are backed up to `.claude/.jardis-backup/`.
+- **AGENTS.md aggregation** between markers `<!-- BEGIN jardis/dev-skills ... -->` / `<!-- END jardis/dev-skills -->`; the router text (`router/AGENTS-router.md`) opens the block. User content outside the markers is preserved. A source package's own managed block is stripped before embedding (`Handler/Install/StripManagedBlock`), so the result is always a single, non-nested block. An `AGENTS.md` that is a link, or lies behind one, is not written; a pre-existing `AGENTS.md` without markers is moved to `AGENTS.md.backup`.
+- **Add-ons** (each one only warns on failure): `CLAUDE.md` import block, `.gemini/settings.json` context entry, reviewer shells for five tools (`src/Data/ShellFormat.php`), Git exclude block (`process-docs`). The git rules of the router can be switched off with `extra."jardis/dev-skills"."git-rules": false`.
+- **Tools for consumers:** `scripts/pool-check.php` (knowledge pool checker, linked as `vendor/bin/pool-check.php`), `scripts/commit-msg` and `scripts/install-commit-msg-hook` (the hook warns, it never rejects a commit), `scripts/check-commit-messages` (CI range check).
 
 ## Working in this repo
 
-- **Architecture:** Closure-Orchestrator — `src/SkillInstaller.php` and `src/SkillUninstaller.php` compose handlers from `src/Handler/`. Data classes under `src/Data/`. No business logic in orchestrators.
+- **Architecture:** Closure-Orchestrator — `src/SkillInstaller.php` and `src/SkillUninstaller.php` compose the sub-orchestrators `src/InstallSkills.php`, `src/InstallAddons.php` and `src/UninstallAddons.php` and the handlers in `src/Handler/`. Data classes under `src/Data/`. No business logic in orchestrators.
 - **Plugin entry:** `src/Plugin.php` (`Composer\Plugin\PluginInterface` + `EventSubscriberInterface`) wires `post-install-cmd`, `post-update-cmd`, `pre-package-uninstall`.
 - **Tests:** Integration > Unit. New tests go under `tests/Integration/<area>/<ClassName>Test.php`. Use `tests/Support/TempProject` for filesystem fixtures.
-- **Quality gates:** `make phpunit` (150+ tests), `make phpstan` (Level 8), `make phpcs` (PSR-12). All three must be green.
-- **Skill authoring:** Every bundled `SKILL.md` follows `docs/SKILL-FORMAT.md` v3 — frontmatter `zone`/`prerequisites`/`next`, single-line description (≤60 words), topical numbered body sections (`### 1. …`), per-zone line budget (`post-active` = 550). Long working artefacts live in a sibling `skills/<name>/examples/` directory and do not count against the body budget. Reshape rationale in `docs/PRD-skill-overhaul.md`.
+- **Quality gates:** `make phpunit`, `make phpstan` (Level 8), `make phpcs` (PSR-12), `make validate-skills`, `make generate-catalog-check`, `make check-public-text`. All must be green. Before a release tag: `make check-changelog-top VERSION=<x.y.z>`.
+- **Skill authoring:** Every bundled `SKILL.md` follows `docs/SKILL-FORMAT.md` v6 — frontmatter `name`/`description`/`zone`/`persona`/`prerequisites`/`next`, single-line description (≤175 words hard limit, new skills ≤45), topical numbered body sections (`### 1. …`), per-zone line budget (`crosscut` 225, `pre`/`post-reference` 250, `process` 250, `discovery` 150, `post-active` 700). Long working artefacts live in a sibling `skills/<name>/examples/` directory and do not count against the body budget.
 
 ## Don'ts
 
-- Do not introduce a new top-level skill prefix without updating `RemoveJardisSkills::MANAGED_PREFIXES` and `docs/SKILL-FORMAT.md` §2.
+- Do not add, rename or remove a bundle skill without updating `src/Data/BundleSkills.php` (and `src/Data/RenamedSkills.php` for a rename). Do not introduce a new area prefix without updating `docs/SKILL-FORMAT.md` §2.
 - Do not edit a generated AGENTS.md block in a consumer project — the plugin overwrites it on next install.
 - Do not bypass `TempProject` in tests with raw `tempnam()` / hardcoded paths.
-- Do not duplicate content across bundle skills. Patterns live only in `rules-patterns`, architecture only in `rules-architecture`, frontend review rules only in `rules-frontend`, test rules only in `rules-testing`, generated-code layout only in `platform-implementation` §1, transport wiring only in `platform-usage`. Other skills link.
+- Do not duplicate content across bundle skills. Patterns live only in `foundation-patterns`, architecture only in `foundation-architecture`, frontend review rules only in `foundation-frontend-review`, test rules only in `foundation-testing`, generated-code layout only in `generated-code-extend` §1, transport wiring only in `generated-code-wire-transport`. Other skills link.
+- Do not let the commit-msg hook or any other dev-skills tool block a commit: they warn and exit 0.
 
 ## Pointers
 
 - README (consumer-facing): `README.md`
 - Skill format spec: `docs/SKILL-FORMAT.md`
 - Skill format validator: `bin/validate-skills.php` (run via `make validate-skills`)
-- Bundle overhaul rationale: `docs/PRD-skill-overhaul.md`, `docs/PLAN-skill-overhaul.md`
+- Router text of the managed block: `router/AGENTS-router.md`
+- Package catalog source: `catalog/manifest.json`
+- Release notes: `CHANGELOG.md`
