@@ -16,7 +16,7 @@ This document is the single source of truth for **how to write** a bundled skill
 
 ## 1. Why this standard exists
 
-Skills are loaded by AI agents (Claude Code, Cursor, Aider, …) based on their **frontmatter description**. A weak description means the skill never fires. A bloated body means the AI loses focus. A duplicated rule across skills means the AI gets contradictory guidance.
+Skills are loaded by AI agents (Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI) based on their **frontmatter description**. A weak description means the skill never fires. A bloated body means the AI loses focus. A duplicated rule across skills means the AI gets contradictory guidance.
 
 This format optimises for three things:
 
@@ -99,7 +99,7 @@ Every skill belongs to exactly one zone. Zone determines when the skill should f
 |---|---|---|
 | `pre` | Before the developer enters the Jardis Designer. AI helps prepare Designer input. | `design-draft-schema` |
 | `post-active` | After Designer-generated code exists. AI actively guides implementation or wiring. | `generated-code-extend`, `generated-code-wire-transport` |
-| `post-reference` | After Designer-generated code exists. AI is consulted to interpret artefacts. | `tools-definition` |
+| `post-reference` | After Designer-generated code exists. AI is consulted to interpret artefacts. | none in the bundle at present |
 | `crosscut` | Universal rules that apply across phases. | `foundation-architecture`, `foundation-patterns`, `foundation-testing` |
 | `discovery` | Cross-phase capability discovery *before* building a reusable component. AI consults this skill to learn which Jardis package already covers the need and can recommend `composer require`. | `packages-find-existing` |
 | `process` | Orchestrating a development process: which tier a task needs, writing concept, PRD and plan, running and verifying stages, closing. The skill tells the agent what to do next and which role to hand off to. | `process-*` skills |

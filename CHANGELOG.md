@@ -4,7 +4,32 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] - 2026-10-01
+
+### Added
+- **33 bundle skills under a new naming scheme.** Names start with the prefix of their area: `start-`, `packages-`, `design-`, `generated-code-`, `foundation-`, `git-`, `knowledge-`, `process-` and `code-review-`. 18 skills are renamed; 15 are new: ten `process-*` skills (tier choice, concept, PRD, plan, review board, stage run, verification, closing, resume, existing-capability check), `code-review-change`, `foundation-php`, `foundation-working-principles`, `knowledge-maintain-pool` and `knowledge-record-decision`.
+- **Redirect skills for the 18 old names.** An update from 1.3.x installs one small skill per old name that points to the new name; old `bundled-skills` globs (for example `platform-*`) keep selecting the renamed skills.
+- **Manifest** `.claude/skills/.jardis-managed.json`: the plugin records every skill folder it installs and removes only those on update and uninstall. Skill folders of the user are never touched. A manifest written by a newer plugin version is left alone. Locally changed skill folders are moved to `.claude/.jardis-backup/` before they are replaced; a symlinked skill folder is neither backed up nor removed and ends up as a warning.
+- **Second skill target** `.agents/skills`, next to `.claude/skills`.
+- **Reviewer shells for five tools.** The 19 reviewer sources of `process-review-board` are written as agent files for Claude Code (`.claude/agents`), Codex (`.codex/agents`), Cursor (`.cursor/agents`), GitHub Copilot (`.github/agents`) and Gemini (`.gemini/agents`). A file the plugin did not write is never overwritten.
+- **Router text in the managed `AGENTS.md` block**: the process tiers and the phase-to-skill table. The block warns when `AGENTS.md` grows past 32 KiB, the limit up to which Codex reads the file.
+- **`CLAUDE.md` import and Gemini context entry.** A managed block in `CLAUDE.md` imports `@AGENTS.md`; `.gemini/settings.json` lists `AGENTS.md` in `context.fileName`.
+- **Knowledge pool tools.** `scripts/pool-check.php` (linked as `vendor/bin/pool-check.php`) checks the page layout, links, path references and size caps of the pool in `.claude/wissen/` and the progress head and plan caps of the work folders in `docs/vorhaben/`; it only reads. The `commit-msg` hook (`scripts/commit-msg`) warns when a `feat:` or `fix:` commit carries no `Wissen:` note or a malformed one. **The hook only warns and never rejects a commit.** `git-setup-repository` installs it through `scripts/install-commit-msg-hook`; `scripts/check-commit-messages` runs the same check over a commit range in CI.
+- **Switch `extra."jardis/dev-skills"."git-rules"`.** The git rules of the router are on by default; `false` switches them off.
+- **Switch `extra."jardis/dev-skills"."process-docs"`.** `committed` (default) leaves everything to the commit; `local` writes a managed block to the Git exclude file (`.git/info/exclude`) that keeps the process document folders, the files the plugin installs and the manifest out of the commit. The backup folder is excluded in both modes.
+- **Validator** (`SKILL-FORMAT` v6): zone `process` (250 lines), persona `O`, area prefixes, a link check for `prerequisites` and `next`, and a check of the rule markers with their cap figures.
+- **Release gates:** `make check-public-text` (local home paths and private terms in shipped text; also in CI) and `make check-changelog-top VERSION=x.y.z` (the top version heading of this file is the version to tag).
+
+### Changed
+- `AGENTS.md` that is a symlink, or lies behind one, is no longer written. The plugin leaves the file unchanged and warns; to keep the managed block, make `AGENTS.md` a regular file and let `CLAUDE.md` import it with `@AGENTS.md`.
+- An update from 1.3.x migrates only in the second Composer run: the update run is still driven by the old plugin code. Run `composer install` once more after the update.
+- Without a manifest (first run after an update from 1.3.x), the fixed list of the old and new bundle skill names decides what is installed and removed, no longer a name prefix. Backups of locally changed skill folders moved from `<name>.backup` next to the skill to `.claude/.jardis-backup/`.
+- The bodies of the generated-code and headless-MCP skills are English.
+- **`bundled-skills` defaults.** Without the key, all 33 bundle skills are installed (1.3.x: only the catalog, start and MCP skills). `false`, an empty list and an invalid value install only the mandatory groups `foundation-*` and `process-*` (an invalid value also warns); a glob list or an `{include, exclude}` object still selects, and the mandatory groups are always added.
+- Diff emission follows in a later version; `generated-code-versioning` does not describe it yet.
+
+### Removed
+- Nothing is removed in this version. The 18 redirect skills for the old names are removed in 2.0.0; switch to the new names before then.
 
 ## [1.3.6] - 2026-09-29
 

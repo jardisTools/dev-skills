@@ -197,6 +197,16 @@ final class CheckRuleMarkersTest extends TestCase
         );
     }
 
+    public function testTheCheckTakesOnlyTheSkillsRootAndTheOnlyFilterNoTransitionFlag(): void
+    {
+        $parameters = array_map(
+            static fn(\ReflectionParameter $parameter): string => $parameter->getName(),
+            (new \ReflectionMethod(CheckRuleMarkers::class, '__invoke'))->getParameters(),
+        );
+
+        self::assertSame(['skillsRoot', 'only'], $parameters);
+    }
+
     public function testSkillOutsideTheTablesIsNeverChecked(): void
     {
         $this->writeSkillText('git-commit-change', "no markers here\n");

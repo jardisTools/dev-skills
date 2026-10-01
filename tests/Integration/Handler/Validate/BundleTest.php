@@ -54,6 +54,44 @@ final class BundleTest extends TestCase
         self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
     }
 
+    public function testTheFifteenNewSkillsAreExactlyTheOnesTheDescriptionTestsCover(): void
+    {
+        $covered = [...self::FOUNDATION_SKILLS, ...self::KNOWLEDGE_SKILLS, ...self::PROCESS_SKILLS];
+
+        $new = $this->newSkillNames();
+        sort($covered);
+
+        self::assertCount(15, $new);
+        self::assertSame($covered, $new);
+    }
+
+    public function testEveryNewSkillDescriptionHasAtMostFortyFiveWordsAndTheListingBudgetIsLogged(): void
+    {
+        $new = $this->newSkillNames();
+        $characters = 0;
+        $skills = 0;
+
+        foreach ($this->skillFolderNames() as $name) {
+            $description = $this->description($name);
+            $characters += mb_strlen($description);
+            ++$skills;
+
+            if (!in_array($name, $new, true)) {
+                continue;
+            }
+
+            $words = preg_split('/\s+/', trim($description), -1, PREG_SPLIT_NO_EMPTY);
+            self::assertIsArray($words);
+            self::assertNotEmpty($words, sprintf('Skill %s has no description.', $name));
+            self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
+        }
+
+        // Evidence for the listing budget: every skill description is part of the session listing.
+        fwrite(STDERR, sprintf("\ndescriptions: %d skills, %d characters\n", $skills, $characters));
+
+        self::assertSame(33, $skills);
+    }
+
     public function testSetupSkillKeepsInstallHooksPhaseAndAddsCommitMsgPhase(): void
     {
         $content = (string) file_get_contents($this->skillFile('git-setup-repository'));
@@ -1177,6 +1215,42 @@ final class BundleTest extends TestCase
         }
 
         return $cases;
+    }
+
+    /**
+     * @return list<string> sorted names of all folders below skills/
+     */
+    private function skillFolderNames(): array
+    {
+        $names = [];
+        foreach (scandir(dirname(__DIR__, 4) . '/skills') ?: [] as $entry) {
+            if ($entry !== '.' && $entry !== '..' && is_file($this->skillFile($entry))) {
+                $names[] = $entry;
+            }
+        }
+        sort($names);
+
+        return $names;
+    }
+
+    /**
+     * Skills that are not the renamed ones: every folder minus the values of the renaming table.
+     *
+     * @return list<string>
+     */
+    private function newSkillNames(): array
+    {
+        return array_values(array_diff($this->skillFolderNames(), array_values(RenamedSkills::MAPPING)));
+    }
+
+    private function description(string $name): string
+    {
+        $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
+        self::assertNotNull($document, sprintf('Skill %s has no frontmatter.', $name));
+        $description = $document['fields']['description'] ?? '';
+        self::assertIsString($description);
+
+        return $description;
     }
 
     private function skillFile(string $name): string

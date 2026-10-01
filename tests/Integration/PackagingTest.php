@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration;
 
+use JardisTools\DevSkills\Tests\Support\LegacyFixture;
+use JardisTools\DevSkills\Tests\Support\TempProject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -116,6 +118,38 @@ final class PackagingTest extends TestCase
                 $this->exportIgnore($path),
                 sprintf('"%s" must ship in the dist archive but is export-ignored.', $path),
             );
+        }
+    }
+
+    /**
+     * The archive content, not only the attributes: what a consumer unpacks has the runtime folders
+     * and none of the development folders. Measured is the committed state (`git archive HEAD`),
+     * exactly what Composer downloads as dist.
+     */
+    public function testHeadArchiveCarriesTheRuntimeFoldersAndNoDevelopmentFolder(): void
+    {
+        $project = new TempProject('dev-skills-packaging-');
+        try {
+            LegacyFixture::archiveHead($this->pluginRoot, '9.9.9', $project->root);
+
+            $zip = new \ZipArchive();
+            self::assertTrue($zip->open($project->path('dev-skills-9.9.9.zip')) === true, 'Could not open the HEAD archive.');
+            $entries = [];
+            for ($i = 0; $i < $zip->numFiles; ++$i) {
+                $entries[] = (string) $zip->getNameIndex($i);
+            }
+            $zip->close();
+
+            foreach (['scripts', 'router', 'skills', 'catalog'] as $folder) {
+                $files = array_filter($entries, static fn(string $entry): bool => str_starts_with($entry, $folder . '/') && !str_ends_with($entry, '/'));
+                self::assertNotEmpty($files, sprintf('"%s/" must be delivered with at least one file.', $folder));
+            }
+            foreach (['bin', 'docs', 'tests'] as $folder) {
+                $inside = array_filter($entries, static fn(string $entry): bool => $entry === $folder || str_starts_with($entry, $folder . '/'));
+                self::assertSame([], array_values($inside), sprintf('"%s/" must not be delivered.', $folder));
+            }
+        } finally {
+            $project->cleanup();
         }
     }
 

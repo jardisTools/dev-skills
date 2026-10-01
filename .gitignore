@@ -8,7 +8,9 @@ tests/reports/
 
 # Session-Handover-Doku (PROJECT WORKFLOW) — nie committen
 docs/*
+!docs/index.html
 !docs/overview.html
+!docs/overview.de.html
 !docs/overview.png
 !docs/SKILL-FORMAT.md
 
