@@ -328,6 +328,116 @@ final class BundleTest extends TestCase
         self::assertGreaterThan((int) strpos($content, '### 3. Lessons into the pool'), $marker);
     }
 
+    public function testMaintainPoolDescribesTheScaffoldAsTheIndexAlone(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('knowledge-maintain-pool'));
+        $start   = (int) strpos($content, '### 2. The scaffold');
+        $section = substr($content, $start, (int) strpos($content, '### 3.', $start) - $start);
+
+        self::assertStringContainsString('only `INDEX.md`', $section);
+        self::assertStringContainsString('`templates/themenseite.md`', $section);
+        self::assertStringNotContainsString('and the topic-page template', $section);
+    }
+
+    public function testVerifyAndResumePointAtTheCommitGateInTheirFixAndResumeStep(): void
+    {
+        // E7 rauchlauf 3: after a fix run the session committed itself; the gate stood only in process-run-stage.
+        foreach (['process-verify' => '### 4. After the verdict', 'process-resume' => '### 4. Take up one step'] as $skill => $heading) {
+            $content = (string) file_get_contents($this->skillFile($skill));
+            $start   = strpos($content, $heading);
+            self::assertIsInt($start, $skill);
+            $section = substr($content, $start, (int) strpos($content, "\n### 5.", $start) - $start);
+
+            self::assertStringContainsString('human gate (`process-run-stage`)', $section, $skill);
+            self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $content, $skill . ': a reference, no second wording');
+        }
+    }
+
+    public function testClosePoolCheckRunsAfterTheDeleteAndSourcesLeaveTheFolder(): void
+    {
+        // E7 rauchlauf 3: pool-check ran before the folder was deleted, so sources into it passed.
+        $content = (string) file_get_contents($this->skillFile('process-close'));
+        $marker  = strpos($content, '<!-- rule:close-pool-check-after-delete -->');
+        self::assertIsInt($marker, 'Marker rule:close-pool-check-after-delete is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'no source of a pool page',
+                '`docs/vorhaben/<name>/`',
+                'commit hash or the digest',
+                'after the delete',
+                'pool-check.php',
+                'only from this run',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        // the marker sits in section 6, after the delete order and before the delivery of section 7
+        self::assertGreaterThan((int) strpos($content, '### 6. Delete the folder'), $marker);
+        self::assertLessThan((int) strpos($content, '### 7. Delivery'), $marker);
+        self::assertGreaterThan((int) strpos($content, '**delete** `docs/vorhaben/<name>/`'), $marker);
+    }
+
+    public function testReviewBoardSendsAnOpenQuestionToTheGateBeforeAStop(): void
+    {
+        // E7 rauchlauf 3: the board paragraph sent the open question straight to the human, against process-run-stage.
+        $content = (string) file_get_contents($this->skillFile('process-review-board'));
+        $marker  = strpos($content, '<!-- rule:question-points -->');
+        self::assertIsInt($marker);
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        self::assertStringContainsString('at most 2 roles', $rule);
+        foreach (
+            [
+                'goes first to the open-question gate',
+                '`open-question-gate`',
+                '`process-run-stage`',
+                'only when the gate cannot decide',
+                'STOPP: <YYYY-MM-DD> · <question>',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        self::assertLessThan(
+            (int) strpos($rule, 'STOPP: <YYYY-MM-DD>'),
+            (int) strpos($rule, 'open-question gate'),
+            'The gate comes before the stop.',
+        );
+    }
+
+    public function testConceptShowsTheOneLineFormForSeveralOpenQuestionsAndPoolCheckTakesIt(): void
+    {
+        // E7 rauchlauf 3: with several open questions the session invented a form that pool-check rejected.
+        $root    = dirname(__DIR__, 4);
+        $content = (string) file_get_contents($this->skillFile('process-concept'));
+        $start   = (int) strpos($content, '### 7. Progress file rules');
+        $section = substr($content, $start, (int) strpos($content, '### 8.', $start) - $start);
+
+        self::assertSame(
+            1,
+            preg_match('/`(STOPP: \d{4}-\d{2}-\d{2} · \(1\) [^`]*\(2\) [^`]*)`/u', $section, $form),
+            'Section 7 shows one line with two numbered questions.',
+        );
+        self::assertStringNotContainsString("\n", $form[1]);
+
+        $template = (string) file_get_contents($root . '/skills/process-concept/templates/PROGRESS.md');
+        $head     = str_replace("- **Open decisions:** \u{2014}\n", '- **Open decisions:** ' . $form[1] . "\n", $template);
+        self::assertNotSame($template, $head);
+
+        $project = new TempProject();
+        try {
+            $project->writeFile('.claude/wissen/INDEX.md', "# Knowledge pool\n");
+            $project->writeFile('docs/vorhaben/demo/PROGRESS.md', $head);
+
+            $result = RunScript::run($root . '/scripts/pool-check.php', $project->root, ['--root=' . $project->root]);
+
+            self::assertSame(0, $result['exit'], $result['stdout'] . $result['stderr']);
+        } finally {
+            $project->cleanup();
+        }
+    }
+
     public function testCommitAndMergeAreAHumanGateInTheProcessSkills(): void
     {
         $content = (string) file_get_contents($this->skillFile('process-run-stage'));
@@ -481,6 +591,11 @@ final class BundleTest extends TestCase
         foreach (['.claude/wissen/', 'is missing'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $scaffold, $profile - $scaffold));
         }
+        // E7 P7.3 fix 3 (PRD R16): the scaffold is the index alone; the topic page stays a template in the skill.
+        $scaffoldRule = substr($content, $scaffold, $profile - $scaffold);
+        self::assertStringContainsString('only `INDEX.md`', $scaffoldRule);
+        self::assertStringContainsString('`themenseite.md` stays a template', $scaffoldRule);
+        self::assertStringNotContainsString('`INDEX.md` and `themenseite.md`', $scaffoldRule);
         foreach (['.claude/PROJECT_PROFILE.md', 'is missing', 'never overwritten'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $profile));
         }

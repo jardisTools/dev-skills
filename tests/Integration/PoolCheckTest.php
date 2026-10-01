@@ -127,7 +127,8 @@ final class PoolCheckTest extends TestCase
 
         // Two states of the pool, both must pass the check without a single violation (no placeholder edge):
         // the templates as they ship (page under its example id), and the scaffold exactly as
-        // process-concept creates it: INDEX.md without the example line, themenseite.md copied under its own name.
+        // process-concept creates it (PRD R16, E7 P7.3 fix 3): INDEX.md alone, without the example line;
+        // themenseite.md stays a template in the skill and is copied only for the first real page.
         $scaffoldIndex = implode("\n", array_filter(
             explode("\n", $index),
             static fn (string $line): bool => !str_contains($line, '[[example-topic]]'),
@@ -136,7 +137,7 @@ final class PoolCheckTest extends TestCase
 
         $states = [
             'templates as shipped' => ['example-topic.md' => $page, 'INDEX.md' => $index],
-            'scaffold as created'  => ['themenseite.md' => $page, 'INDEX.md' => $scaffoldIndex],
+            'scaffold as created'  => ['INDEX.md' => $scaffoldIndex],
         ];
 
         $found = [];

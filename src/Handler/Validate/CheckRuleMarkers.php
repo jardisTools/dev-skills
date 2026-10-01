@@ -54,6 +54,7 @@ final class CheckRuleMarkers
         ],
         'process-close' => [
             'close-lessons-via-skill' => ['before the first write', 'never from memory'],
+            'close-pool-check-after-delete' => ['commit hash or the digest', 'after the delete'],
         ],
     ];
 

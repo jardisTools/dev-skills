@@ -420,7 +420,8 @@ final class SkillInstallerTest extends TestCase
     public function testInstalledBlockCarriesTheTierRulesOfTheShippedRouter(): void
     {
         // The real router of this plugin, not a stand-in: the three tier sentences
-        // (tier-3 precedence, load duty, delegation) must reach the project's AGENTS.md.
+        // (tier-3 precedence, load duty, delegation) and the three gate sentences
+        // (full skill load, human gates, record before pool write) must reach the project's AGENTS.md.
         $this->pluginRepo->writeFile(
             'router/AGENTS-router.md',
             (string) file_get_contents(dirname(__DIR__, 2) . '/router/AGENTS-router.md'),
@@ -432,7 +433,7 @@ final class SkillInstallerTest extends TestCase
         $cut = strpos($agents, '## Tiers');
         self::assertIsInt($cut);
         $preface = substr($agents, 0, $cut);
-        foreach (RouterTest::TIER_RULE_KEYWORDS as $label => $keyword) {
+        foreach ([...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS] as $label => $keyword) {
             self::assertStringContainsString($keyword, $preface, sprintf('Installed AGENTS.md lacks the %s rule.', $label));
         }
     }

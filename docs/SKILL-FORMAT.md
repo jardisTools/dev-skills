@@ -314,6 +314,7 @@ Behaviour rules of the `process` skills are stated as literal text, not only as 
 | `process-concept` | `decide-yourself-no-gate-waiver` | `waives no gate`, `open-question gate` |
 | `process-write-prd` | `decide-yourself-no-gate-waiver` | `waives no gate`, `open-question gate` |
 | `process-close` | `close-lessons-via-skill` | `before the first write`, `never from memory` |
+| `process-close` | `close-pool-check-after-delete` | `commit hash or the digest`, `after the delete` |
 
 Keywords are literal, case-sensitive substrings of the skill text (English); write the rule text so that it contains them verbatim.
 

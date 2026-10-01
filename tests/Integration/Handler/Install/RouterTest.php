@@ -32,6 +32,20 @@ final class RouterTest extends TestCase
         'sub-agent' => 'delegates every subtask to a sub-agent',
         'never implements' => 'never implements itself',
     ];
+    /**
+     * Keywords of the three gate sentences (E7 P7.3 fix 3, smoke run 3): the skill of a phase is loaded in full
+     * through the skill mechanism, branch/commit/merge are gates of the human with no tool attribution, and the
+     * record skill is loaded before any write to the knowledge pool. A rule that stands only in a skill the path
+     * of the session never loads does not reach the session, so these stand in the paragraph before "## Tiers".
+     */
+    public const GATE_RULE_KEYWORDS = [
+        'load in full' => 'load its skill in full through the skill mechanism',
+        'shell reading' => 'reading parts of a skill file through the shell does not count',
+        'human gates' => 'Branch, commit and merge are gates of the human',
+        'no own git' => 'never creates a branch, commits or merges on its own',
+        'no attribution' => 'no commit carries a `Co-Authored-By` line or any other tool attribution',
+        'record before write' => 'Before any write to a page of the knowledge pool, load `knowledge-record-decision`',
+    ];
     private const FIRST_32_KIB = 32768;
     private const AREA_PREFIXES = [
         'start-', 'packages-', 'design-', 'generated-code-', 'foundation-', 'git-', 'knowledge-', 'process-', 'code-review-',
@@ -77,6 +91,18 @@ final class RouterTest extends TestCase
         $preface = substr($router, 0, $cut);
 
         foreach (self::TIER_RULE_KEYWORDS as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('Router preface lacks the %s rule.', $label));
+        }
+    }
+
+    public function testRouterStatesTheThreeGateRulesBeforeTheTierTable(): void
+    {
+        $router = $this->router();
+        $cut = strpos($router, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($router, 0, $cut);
+
+        foreach (self::GATE_RULE_KEYWORDS as $label => $keyword) {
             self::assertStringContainsString($keyword, $preface, sprintf('Router preface lacks the %s rule.', $label));
         }
     }

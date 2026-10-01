@@ -65,6 +65,9 @@ If the project keeps its documents out of the commit (switch `process-docs` set 
 
 Bring the project's docs index, if it has one, to the final state. Then **delete** `docs/vorhaben/<name>/`. There is no archive: the git history carries the account and the digest is the history within reach. A folder that stayed local needs no commit for its deletion.
 
+<!-- rule:close-pool-check-after-delete -->
+Before the delete, no source of a pool page may point into `docs/vorhaben/<name>/`: a source names a commit hash or the digest. Run `php vendor/jardis/dev-skills/scripts/pool-check.php` on the final state only after the delete, and report "no errors" only from this run, never from one made before the delete.
+
 ### 7. Delivery
 
 Deliver **once**, at the end, over the release path of the project (`git-push-and-open-pr`, commits per `git-commit-change`); commit and merge are a human gate (`process-run-stage`). No tag or release per phase; several releases only when the plan names release milestones. The protective stops of the release path apply unchanged. A `feat:` or `fix:` commit carries its `Wissen:` note line.

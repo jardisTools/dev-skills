@@ -37,6 +37,7 @@ final class CheckRuleMarkersTest extends TestCase
             'process-choose-tier:decide-yourself-no-tier-drop',
             'process-choose-tier:tier-escalate',
             'process-close:close-lessons-via-skill',
+            'process-close:close-pool-check-after-delete',
             'process-concept:decide-yourself-no-gate-waiver',
             'process-concept:pool-scaffold',
             'process-concept:project-profile',
@@ -46,7 +47,7 @@ final class CheckRuleMarkersTest extends TestCase
             'process-run-stage:fresh-session-per-stage',
             'process-run-stage:question-points',
             'process-write-prd:decide-yourself-no-gate-waiver',
-        ], $markers); // eleven entries: eight rules plus the three of E7 P7.3 fix 2; question-points lives in two skills, decide-yourself-no-gate-waiver in two
+        ], $markers); // fourteen entries counted per skill (thirteen before E7 P7.3 fix 3 added close-pool-check-after-delete); question-points lives in two skills, decide-yourself-no-gate-waiver in two
     }
 
     public function testKeywordsAreTheEnglishPhrasesOfTheFormatDoc(): void
@@ -77,6 +78,7 @@ final class CheckRuleMarkersTest extends TestCase
             ],
             'process-close' => [
                 'close-lessons-via-skill' => ['before the first write', 'never from memory'],
+                'close-pool-check-after-delete' => ['commit hash or the digest', 'after the delete'],
             ],
         ], CheckRuleMarkers::RULES);
     }

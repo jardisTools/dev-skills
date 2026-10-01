@@ -19,7 +19,7 @@ A board is a set of blind reviewers that read one document and return findings. 
 | Design board | the plan | before the human releases the plan | `process-write-plan` |
 
 <!-- rule:question-points -->
-One run per board: the requirements board and the design board each run exactly once per undertaking. A finding is ruled on, never re-checked by a second run. The design board has two roles by default, architecture and test strategy: at most 2 roles, unless the nature of the work gives a named reason for one more. The requirements board has the skeptic and every further role that such a reason calls for. An open question that the ruling of a finding cannot settle goes into the progress head as `STOPP: <YYYY-MM-DD> · <question>` and is taken to the human.
+One run per board: the requirements board and the design board each run exactly once per undertaking. A finding is ruled on, never re-checked by a second run. The design board has two roles by default, architecture and test strategy: at most 2 roles, unless the nature of the work gives a named reason for one more. The requirements board has the skeptic and every further role that such a reason calls for. An open question that the ruling of a finding cannot settle goes first to the open-question gate (`open-question-gate`, see `process-run-stage` section 8); only when the gate cannot decide it goes into the progress head as `STOPP: <YYYY-MM-DD> · <question>` and is taken to the human.
 
 ### 2. Choose the roles, with a reason
 

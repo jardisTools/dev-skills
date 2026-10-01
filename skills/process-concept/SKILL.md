@@ -26,7 +26,7 @@ If the project keeps its documents out of the commit (switch `process-docs` set 
 ### 2. Pool scaffold
 
 <!-- rule:pool-scaffold -->
-Create the knowledge pool scaffold only when `.claude/wissen/` is missing: copy `INDEX.md` and `themenseite.md` from `skills/knowledge-maintain-pool/templates/` into `.claude/wissen/`, the index without the example line. An existing `.claude/wissen/` is never changed, reformatted or filled in; it belongs to the project. Layout and caps: `knowledge-maintain-pool`.
+Create the knowledge pool scaffold only when `.claude/wissen/` is missing: copy only `INDEX.md` from `skills/knowledge-maintain-pool/templates/` into `.claude/wissen/`, without the example line. `themenseite.md` stays a template in the skill; copy it only when the first real topic page is written. An existing `.claude/wissen/` is never changed, reformatted or filled in; it belongs to the project. Layout and caps: `knowledge-maintain-pool`.
 
 ### 3. Project profile
 
@@ -70,6 +70,7 @@ The human accepts the artefact; no one else does. Show it, name what it fixes an
 - `Phase` is one of `concept`, `prd`, `prd-review`, `plan`, `plan-review`, `stage`, `acceptance`, `close`.
 - `Stage` is `—` before phase `stage` and `E<n>/<total>` from phase `stage` on, for example `E1/3`.
 - `Next step` is one action in one line.
+- `Open decisions` is `—` or one line starting `STOPP: <YYYY-MM-DD> · `. With several open questions keep that one line and number them: `STOPP: 2026-10-01 · (1) <first question> (2) <second question>`. Never a second `STOPP:` line; the check reads only the start of the value.
 - The file has at most 60 lines. It holds state, not a chronicle; only the main session writes it.
 - `php vendor/jardis/dev-skills/scripts/pool-check.php` checks head and length.
 
