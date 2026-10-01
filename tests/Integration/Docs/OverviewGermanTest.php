@@ -90,6 +90,47 @@ final class OverviewGermanTest extends TestCase
         }
     }
 
+    public function testSubtitleAndHeadingsNameEachAreaWithTheSameWord(): void
+    {
+        $subtitle = $this->page->subtitle();
+        $headings = $this->page->areaHeadings();
+        $areas    = ['Prozess-Landkarte', 'Wissens-Kreislauf', 'Skill-Karte', 'Installationsbild', 'Werkzeug-Abdeckung'];
+
+        self::assertCount(count($areas), $headings);
+        foreach ($areas as $index => $area) {
+            self::assertStringContainsString($area, $subtitle);
+            self::assertStringStartsWith($area, $headings[$index]);
+        }
+    }
+
+    public function testFallbackColumnIsCalledErsatzweg(): void
+    {
+        $headers = $this->page->matrixHeaders();
+
+        self::assertStringStartsWith('Ersatzweg', $headers[6]);
+    }
+
+    /**
+     * One German word per concept (outside `<code>`): each discarded variant has a
+     * chosen word, so the same thing is never named two ways on the page.
+     */
+    public function testWordingUsesOneWordPerConcept(): void
+    {
+        $text = $this->page->textOutsideCode();
+
+        $discarded = [
+            'Skill-Landkarte' => 'Skill-Karte',
+            'Ausweichweg'     => 'Ersatzweg',
+            'Ausweg'          => 'Ersatzweg',
+            'Retry'           => 'Wiederholungslauf',
+            'Doer'            => 'Umsetzer',
+            'Entscheidung'    => 'Entscheid',
+        ];
+        foreach ($discarded as $variant => $chosen) {
+            self::assertFalse(str_contains($text, $variant), sprintf('use "%s" instead of "%s"', $chosen, $variant));
+        }
+    }
+
     /**
      * @return list<string>
      */

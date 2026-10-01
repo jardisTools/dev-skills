@@ -146,6 +146,44 @@ final class OverviewPage
     }
 
     /**
+     * The visible text of the body without the content of any `<code>` element.
+     */
+    public function textOutsideCode(): string
+    {
+        $text = [];
+        foreach ($this->xpath->query('//body//text()[not(ancestor::code)]') ?: [] as $node) {
+            $text[] = $node->textContent;
+        }
+
+        return implode("\n", $text);
+    }
+
+    /**
+     * The text of the subtitle under the page title (`p.sub`).
+     */
+    public function subtitle(): string
+    {
+        $sub = $this->xpath->query("//p[contains(@class, 'sub')]")?->item(0);
+
+        return $sub === null ? '' : $sub->textContent;
+    }
+
+    /**
+     * The text of every section heading (`h2`), in document order.
+     *
+     * @return list<string>
+     */
+    public function areaHeadings(): array
+    {
+        $headings = [];
+        foreach ($this->xpath->query('//h2') ?: [] as $heading) {
+            $headings[] = trim($heading->textContent);
+        }
+
+        return $headings;
+    }
+
+    /**
      * The `<style>` block with its tags, byte for byte.
      */
     public function styleBlock(): string
