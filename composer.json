@@ -1,7 +1,7 @@
 {
     "name": "jardis/dev-skills",
     "homepage": "https://jardis.io",
-    "description": "Composer plugin that installs Jardis Skills and aggregates AGENTS.md for AI-assisted development (Claude Code, Cursor, Continue, Aider)",
+    "description": "Composer plugin that installs Jardis Skills and aggregates AGENTS.md for AI-assisted development (Claude Code, Codex, Cursor, GitHub Copilot, Gemini CLI)",
     "type": "composer-plugin",
     "license": "MIT",
     "minimum-stability": "stable",
@@ -54,6 +54,10 @@
     "keywords": [
         "composer-plugin",
         "claude-code",
+        "codex",
+        "cursor",
+        "github-copilot",
+        "gemini-cli",
         "agents.md",
         "jardis",
         "skills",
