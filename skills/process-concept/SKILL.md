@@ -42,6 +42,9 @@ Clarify one point at a time.
 3. Cover at least: the goal in one sentence, who uses the result and how, what it must not do, the error and empty cases, what is explicitly out of scope.
 4. Record every settled point in the concept artefact, not in a chat summary.
 
+<!-- rule:decide-yourself-no-gate-waiver -->
+A human's "decide open points yourself" or "proceed autonomously" waives no gate. A question the human left open and the project cannot answer (code, knowledge pool, target artefact) is never settled by the main session, neither in the concept, nor in the PRD, nor by ruling a board finding on it as resolved. It goes to the open-question gate (`open-question-gate`, see `process-run-stage`); what the gate cannot decide stays in the progress head as `STOPP: <YYYY-MM-DD> · <question>` and is put to the human at the next approval.
+
 ### 5. Concept artefact
 
 The artefact is a picture or an executable example, never prose.

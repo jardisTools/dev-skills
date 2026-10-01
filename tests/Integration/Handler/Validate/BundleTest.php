@@ -283,6 +283,85 @@ final class BundleTest extends TestCase
         }
     }
 
+    public function testGateWaiverIsStatedWhereTheTierThreePathNeverLoadsChooseTier(): void
+    {
+        // E7 rauchlauf 2: the sentence stood only in process-choose-tier, which the tier-3 path does not load.
+        $paragraphs = [];
+        foreach (['process-concept', 'process-write-prd'] as $skill) {
+            $content = (string) file_get_contents($this->skillFile($skill));
+            $marker  = strpos($content, '<!-- rule:decide-yourself-no-gate-waiver -->');
+            self::assertIsInt($marker, $skill . ' lacks the marker rule:decide-yourself-no-gate-waiver.');
+            $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+            foreach (
+                [
+                    'decide open points yourself',
+                    'proceed autonomously',
+                    'waives no gate',
+                    'never settled by the main session',
+                    'open-question gate',
+                    '`open-question-gate`',
+                    '`process-run-stage`',
+                    'STOPP: <YYYY-MM-DD> · <question>',
+                    'at the next approval',
+                ] as $keyword
+            ) {
+                self::assertStringContainsString($keyword, $rule, $skill . ': ' . $keyword);
+            }
+            $paragraphs[$skill] = $rule;
+        }
+
+        self::assertSame($paragraphs['process-concept'], $paragraphs['process-write-prd'], 'one marker, one wording in both skills');
+    }
+
+    public function testCloseLoadsTheRecordSkillBeforeTheFirstPoolWrite(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-close'));
+        $marker  = strpos($content, '<!-- rule:close-lessons-via-skill -->');
+        self::assertIsInt($marker, 'Marker rule:close-lessons-via-skill is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (['Load `knowledge-record-decision`', 'before the first write', 'topic page', 'never from memory'] as $keyword) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+        // the marker sits in section 3 (lessons), before the docs sync of section 4
+        self::assertLessThan((int) strpos($content, '### 4. Docs sync'), $marker);
+        self::assertGreaterThan((int) strpos($content, '### 3. Lessons into the pool'), $marker);
+    }
+
+    public function testCommitAndMergeAreAHumanGateInTheProcessSkills(): void
+    {
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $marker  = strpos($content, '<!-- rule:commit-is-human-gate -->');
+        self::assertIsInt($marker, 'Marker rule:commit-is-human-gate is missing.');
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'gate of the human',
+                'branch',
+                'commit',
+                'merge',
+                'started by the human',
+                'against the phase scope',
+                'commit message from the report',
+                'asks the human',
+                '`git log`',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+
+        // the loop steps point at the gate instead of telling the session to commit or merge itself
+        self::assertStringNotContainsString('the main session commits', $content);
+        self::assertStringNotContainsString('then commits with', $content);
+        self::assertSame(2, substr_count($content, 'human gate'), 'steps 3 and 8 of the loop name the gate');
+
+        // the delivery step of process-close points at the same gate, with no second wording of the rule
+        $close = (string) file_get_contents($this->skillFile('process-close'));
+        self::assertStringContainsString('human gate (`process-run-stage`)', $close);
+        self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $close);
+    }
+
     public function testChooseTierNamesFourTiersAndBothMarkers(): void
     {
         $content = (string) file_get_contents($this->skillFile('process-choose-tier'));

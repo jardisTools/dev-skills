@@ -9,7 +9,7 @@ next: [process-verify]
 
 ## Scope
 
-A stage is built phase by phase. Each phase has one brief and one implementer; the main session commits, verifies, runs the QA gates and merges. The main session is the orchestrator: it writes briefs, watches, checks against ground truth and does not build. No stage is green on the word of the one who built it.
+A stage is built phase by phase. Each phase has one brief and one implementer; the main session prepares commit and merge for the human, verifies and runs the QA gates. The main session is the orchestrator: it writes briefs, watches, checks against ground truth and does not build. No stage is green on the word of the one who built it.
 
 ### 1. Entry
 
@@ -21,7 +21,7 @@ For each phase of the stage, in plan order:
 
 1. **Brief.** Write one brief from `templates/brief.md` (section 3).
 2. **Implementer.** Start a fresh agent session with that brief (sections 4 and 5).
-3. **Commit.** When the report says `green`, the main session checks the files against the phase scope, then commits with the commit message from the report, following the commit conventions of the project (`git-commit-change`).
+3. **Commit.** When the report says `green`, the main session checks the files against the phase scope, names the commit message from the report and asks the human to commit it with `git-commit-change`: a human gate, see below.
 4. Next phase. Independent phases may run in parallel; see section 4.
 
 After the last phase of the stage:
@@ -29,7 +29,10 @@ After the last phase of the stage:
 5. **Verifier**, once per stage (section 6).
 6. **QA gates**, once per stage (section 7).
 7. **Sight gate** where the stage builds a surface (section 9).
-8. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`). Then shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage (`E<n+1>/<total>`) or to phase `acceptance`.
+8. **Merge** of the stage, following the git flow of the project (`git-push-and-open-pr`): a human gate, see below. Once the human reports it done, shrink the stage in the progress file to `E<n> done <commit>` and move the head to the next stage (`E<n+1>/<total>`) or to phase `acceptance`.
+
+<!-- rule:commit-is-human-gate -->
+Creating the branch, the commit (step 3) and the merge (step 8) are a gate of the human: the git skills are started by the human, because the session cannot call them. At each of them the main session checks the changed files against the phase scope, names the commit message from the report (or the merge target), stops and asks the human to run the git skill. It reports no commit it has not seen in `git log`. The order stays: commit first, then the verifier.
 
 ### 3. The brief
 
@@ -56,7 +59,7 @@ A brief contains, in this order:
 
 ### 4. The implementer
 
-The implementer builds exactly its phase. It runs the quick gates of its scope and the code review (`code-review-change`), and returns the report. It does **not** write to the progress file, does **not** run any Git operation that changes state and does **not** run the full QA entry: commit, state and QA belong to the main session.
+The implementer builds exactly its phase. It runs the quick gates of its scope and the code review (`code-review-change`), and returns the report. It does **not** write to the progress file, does **not** run any Git operation that changes state and does **not** run the full QA entry: state and QA belong to the main session, the commit to the human (section 2).
 
 A sub-agent that writes in parallel with another gets its own `git worktree`. Parallel writers are allowed only for disjoint files, disjoint contracts and separate QA infrastructure, and never at the same time as a QA run in the same working tree. Containers of the project are never started by parallel agents; gates that use them run one after another, in the foreground.
 

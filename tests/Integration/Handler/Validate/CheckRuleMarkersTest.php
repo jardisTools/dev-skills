@@ -36,13 +36,17 @@ final class CheckRuleMarkersTest extends TestCase
             'process-choose-tier:chat-end-offer',
             'process-choose-tier:decide-yourself-no-tier-drop',
             'process-choose-tier:tier-escalate',
+            'process-close:close-lessons-via-skill',
+            'process-concept:decide-yourself-no-gate-waiver',
             'process-concept:pool-scaffold',
             'process-concept:project-profile',
             'process-review-board:question-points',
+            'process-run-stage:commit-is-human-gate',
             'process-run-stage:failure-path',
             'process-run-stage:fresh-session-per-stage',
             'process-run-stage:question-points',
-        ], $markers); // eight rules (E7 P7.3 added decide-yourself-no-tier-drop), question-points lives in two skills
+            'process-write-prd:decide-yourself-no-gate-waiver',
+        ], $markers); // eleven entries: eight rules plus the three of E7 P7.3 fix 2; question-points lives in two skills, decide-yourself-no-gate-waiver in two
     }
 
     public function testKeywordsAreTheEnglishPhrasesOfTheFormatDoc(): void
@@ -58,6 +62,7 @@ final class CheckRuleMarkersTest extends TestCase
                 'fresh-session-per-stage' => ['fresh agent session'],
                 'failure-path' => ['fix run', 'follow-up run', 'STOPP:'],
                 'question-points' => ['at most 2 question points', 'STOPP:'],
+                'commit-is-human-gate' => ['gate of the human', 'git log'],
             ],
             'process-review-board' => [
                 'question-points' => ['at most 2 roles'],
@@ -65,6 +70,13 @@ final class CheckRuleMarkersTest extends TestCase
             'process-concept' => [
                 'pool-scaffold' => ['.claude/wissen/', 'is missing'],
                 'project-profile' => ['.claude/PROJECT_PROFILE.md', 'is missing'],
+                'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+            ],
+            'process-write-prd' => [
+                'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+            ],
+            'process-close' => [
+                'close-lessons-via-skill' => ['before the first write', 'never from memory'],
             ],
         ], CheckRuleMarkers::RULES);
     }
@@ -166,7 +178,7 @@ final class CheckRuleMarkersTest extends TestCase
         $result = (new CheckRuleMarkers())($this->project->path('skills'));
 
         self::assertEqualsCanonicalizing(
-            ['process-choose-tier', 'process-concept', 'process-run-stage', 'process-review-board', 'process-write-plan', 'process-verify'],
+            ['process-choose-tier', 'process-concept', 'process-run-stage', 'process-review-board', 'process-write-plan', 'process-verify', 'process-write-prd', 'process-close'],
             array_keys($result),
         );
     }

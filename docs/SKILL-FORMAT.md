@@ -307,9 +307,13 @@ Behaviour rules of the `process` skills are stated as literal text, not only as 
 | `process-run-stage` | `fresh-session-per-stage` | `fresh agent session` |
 | `process-run-stage` | `failure-path` | `fix run`, `follow-up run`, `STOPP:` |
 | `process-run-stage` | `question-points` | `at most 2 question points`, `STOPP:` |
+| `process-run-stage` | `commit-is-human-gate` | `gate of the human`, `git log` |
 | `process-review-board` | `question-points` | `at most 2 roles` |
 | `process-concept` | `pool-scaffold` | `.claude/wissen/`, `is missing` |
 | `process-concept` | `project-profile` | `.claude/PROJECT_PROFILE.md`, `is missing` |
+| `process-concept` | `decide-yourself-no-gate-waiver` | `waives no gate`, `open-question gate` |
+| `process-write-prd` | `decide-yourself-no-gate-waiver` | `waives no gate`, `open-question gate` |
+| `process-close` | `close-lessons-via-skill` | `before the first write`, `never from memory` |
 
 Keywords are literal, case-sensitive substrings of the skill text (English); write the rule text so that it contains them verbatim.
 

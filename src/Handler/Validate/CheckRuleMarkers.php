@@ -39,6 +39,7 @@ final class CheckRuleMarkers
             'fresh-session-per-stage' => ['fresh agent session'],
             'failure-path' => ['fix run', 'follow-up run', 'STOPP:'],
             'question-points' => ['at most 2 question points', 'STOPP:'],
+            'commit-is-human-gate' => ['gate of the human', 'git log'],
         ],
         'process-review-board' => [
             'question-points' => ['at most 2 roles'],
@@ -46,6 +47,13 @@ final class CheckRuleMarkers
         'process-concept' => [
             'pool-scaffold' => ['.claude/wissen/', 'is missing'],
             'project-profile' => ['.claude/PROJECT_PROFILE.md', 'is missing'],
+            'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+        ],
+        'process-write-prd' => [
+            'decide-yourself-no-gate-waiver' => ['waives no gate', 'open-question gate'],
+        ],
+        'process-close' => [
+            'close-lessons-via-skill' => ['before the first write', 'never from memory'],
         ],
     ];
 

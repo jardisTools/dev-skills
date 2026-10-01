@@ -121,25 +121,44 @@ final class PoolCheckTest extends TestCase
 
     public function testPageTemplateKeepsTheFiveSectionsAndTheCaps(): void
     {
-        $this->project->writeFile(
-            '.claude/wissen/example-topic.md',
-            (string) file_get_contents(__DIR__ . '/../../skills/knowledge-maintain-pool/templates/themenseite.md'),
-        );
-        $this->project->writeFile(
-            '.claude/wissen/INDEX.md',
-            (string) file_get_contents(__DIR__ . '/../../skills/knowledge-maintain-pool/templates/INDEX.md'),
-        );
+        $templates = __DIR__ . '/../../skills/knowledge-maintain-pool/templates/';
+        $page      = (string) file_get_contents($templates . 'themenseite.md');
+        $index     = (string) file_get_contents($templates . 'INDEX.md');
 
-        $rules = array_map(
-            static fn ($v): string => $v->rule . ':' . $v->message,
-            (new PoolCheck())($this->project->root, true)->violations,
-        );
+        // Two states of the pool, both must pass the check without a single violation (no placeholder edge):
+        // the templates as they ship (page under its example id), and the scaffold exactly as
+        // process-concept creates it: INDEX.md without the example line, themenseite.md copied under its own name.
+        $scaffoldIndex = implode("\n", array_filter(
+            explode("\n", $index),
+            static fn (string $line): bool => !str_contains($line, '[[example-topic]]'),
+        ));
+        self::assertNotSame($index, $scaffoldIndex, 'the index template carries the example line the scaffold drops');
 
-        // the template names placeholders (`[[related-page]]`) on purpose; structure and caps must hold
-        self::assertSame([], array_values(array_filter(
-            $rules,
-            static fn (string $r): bool => !str_starts_with($r, 'link-dead:') && !str_starts_with($r, 'edge-dead:'),
-        )), implode("\n", $rules));
+        $states = [
+            'templates as shipped' => ['example-topic.md' => $page, 'INDEX.md' => $index],
+            'scaffold as created'  => ['themenseite.md' => $page, 'INDEX.md' => $scaffoldIndex],
+        ];
+
+        $found = [];
+        foreach ($states as $label => $files) {
+            $project = new TempProject();
+            try {
+                foreach ($files as $name => $content) {
+                    $project->writeFile('.claude/wissen/' . $name, $content);
+                }
+
+                $rules = array_map(
+                    static fn ($v): string => $v->file . ':' . $v->line . ' ' . $v->rule . ':' . $v->message,
+                    (new PoolCheck())($project->root, true)->violations,
+                );
+
+                $found[$label] = $rules;
+            } finally {
+                $project->cleanup();
+            }
+        }
+
+        self::assertSame(['templates as shipped' => [], 'scaffold as created' => []], $found);
     }
 
     public function testNoVorhabenFolderIsNoViolation(): void
