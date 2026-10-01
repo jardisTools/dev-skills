@@ -4,6 +4,10 @@
 
 > Part of **[Jardis](https://jardis.io)** — the Domain-Driven Design platform for PHP. You model your domain; Jardis generates the production-ready hexagonal code (DTOs, Command/Query handlers, repositories, persistence). This plugin keeps your AI agent in sync with the rules and APIs that generated code follows.
 
+[![Overview of jardis/dev-skills: process map, knowledge cycle, skill map, installation picture and tool coverage](docs/overview.png)](https://jardistools.github.io/dev-skills/overview.html)
+
+The same overview as a web page: [overview.html](https://jardistools.github.io/dev-skills/overview.html).
+
 ---
 
 ## What does the plugin do?
