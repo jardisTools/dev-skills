@@ -45,7 +45,7 @@ final class CheckRuleMarkers
                 'never changes the plan itself',
             ],
             'question-points' => ['at most 2 question points', 'STOPP:'],
-            'commit-is-human-gate' => ['gate of the human', 'git log', 'working tree is clean'],
+            'commit-is-human-gate' => ['gate of the human', 'git log', 'working tree is clean', 'exactly one git step'],
         ],
         'process-review-board' => [
             'question-points' => ['at most 2 roles'],

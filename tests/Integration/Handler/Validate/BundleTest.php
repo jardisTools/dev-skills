@@ -462,6 +462,10 @@ final class BundleTest extends TestCase
                 'uncommitted',
                 '`git status`',
                 'never asks for the merge',
+                // E7 fix 5: one halt names exactly one gate; the next gate is named only once the step before stands in `git log`
+                'One halt, one gate',
+                'exactly one git step',
+                'names the next gate only once',
             ] as $keyword
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
@@ -493,6 +497,27 @@ final class BundleTest extends TestCase
         $close = (string) file_get_contents($this->skillFile('process-close'));
         self::assertStringContainsString('human gate (`process-run-stage`)', $close);
         self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $close);
+    }
+
+    public function testHeadUpdateHaltNamesOnlyTheCommit(): void
+    {
+        // E7 mini run 5: the halt at the head-update commit listed the commit and the merge as two gates.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $start   = strpos($content, '8. **Head update.**');
+        self::assertIsInt($start);
+        $step = substr($content, $start, (int) strpos($content, "\n9. **Merge**", $start) - $start);
+
+        foreach (
+            [
+                'names only the commit',
+                'does not mention the merge (step 9)',
+                'neither as a request nor as a second gate in a list',
+                'stands in `git log`',
+                '`git status` is empty',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $step, $keyword);
+        }
     }
 
     public function testMergeTargetIsNamedFromExistingBranchesNeverInvented(): void
