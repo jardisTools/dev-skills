@@ -159,8 +159,8 @@ make install-hooks
 ### Phase 6: commit-msg hook
 
 `make install-hooks` (Phase 5) does not touch `commit-msg`; this phase adds it.
-The hook rejects a `feat:`/`fix:` commit without a `Wissen:` note. It is never
-installed by the Composer plugin, only here.
+The hook warns about a `feat:`/`fix:` commit without a `Wissen:` note, never stops a commit.
+It is never installed by the Composer plugin, only here.
 
 ```bash
 sh vendor/jardis/dev-skills/scripts/install-commit-msg-hook

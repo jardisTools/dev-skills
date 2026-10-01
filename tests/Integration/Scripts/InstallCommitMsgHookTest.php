@@ -359,17 +359,16 @@ final class InstallCommitMsgHookTest extends TestCase
         // The package is not there: a feat commit without a note gets through.
         GitRepo::run($this->project->root, 'commit', '-q', '--allow-empty', '-m', 'feat: no package, no check');
 
-        // The package is there: the same commit is rejected.
+        // The package is there: the same commit still goes through (the hook warns, it never stops a commit).
+        // GitRepo::run discards stderr on success, so the warning is proved by calling the hook directly.
         $this->project->mkdir('vendor/jardis/dev-skills/scripts');
         copy($this->pluginRoot . '/scripts/commit-msg', $this->project->path(self::SCRIPT));
-        try {
-            GitRepo::run($this->project->root, 'commit', '-q', '--allow-empty', '-m', 'feat: rejected now');
-            self::fail('The hook must reject a feat commit without a note.');
-        } catch (\RuntimeException $e) {
-            self::assertStringContainsString('commit-msg:', $e->getMessage());
-        }
-        GitRepo::run($this->project->root, 'commit', '-q', '--allow-empty', '-m', "feat: ok\n\nWissen: hooks#stand");
+        GitRepo::run($this->project->root, 'commit', '-q', '--allow-empty', '-m', 'feat: warned now');
         self::assertSame('2', trim(GitRepo::run($this->project->root, 'rev-list', '--count', 'HEAD')));
+        $this->assertHookWarns($this->project->path('.git/hooks/commit-msg'));
+
+        GitRepo::run($this->project->root, 'commit', '-q', '--allow-empty', '-m', "feat: ok\n\nWissen: hooks#stand");
+        self::assertSame('3', trim(GitRepo::run($this->project->root, 'rev-list', '--count', 'HEAD')));
     }
 
     public function testInstallerPassesShSyntaxCheckAndUsesNoBashisms(): void
@@ -416,18 +415,16 @@ final class InstallCommitMsgHookTest extends TestCase
         $result = $this->install([], $installerInVendor);
         self::assertStringContainsString("result: installed .git/hooks/commit-msg\n", $result['stdout'], $result['stderr']);
 
-        try {
-            GitRepo::run($root, 'commit', '-q', '--allow-empty', '-m', 'feat: without a note');
-            self::fail('The installed hook must reject a feat commit without a note.');
-        } catch (\RuntimeException $e) {
-            self::assertStringContainsString('commit-msg:', $e->getMessage());
-        }
+        // The installed hook never stops the commit; it warns (proved by calling the hook directly).
+        GitRepo::run($root, 'commit', '-q', '--allow-empty', '-m', 'feat: without a note');
+        self::assertSame('1', trim(GitRepo::run($root, 'rev-list', '--count', 'HEAD')));
+        $this->assertHookWarns($this->project->path('.git/hooks/commit-msg'));
 
         ComposerFixture::runComposer($this->project, 'remove jardis/dev-skills');
         self::assertFileDoesNotExist($this->project->path(self::SCRIPT));
 
         GitRepo::run($root, 'commit', '-q', '--allow-empty', '-m', 'feat: after the package is gone');
-        self::assertSame('1', trim(GitRepo::run($root, 'rev-list', '--count', 'HEAD')));
+        self::assertSame('2', trim(GitRepo::run($root, 'rev-list', '--count', 'HEAD')));
     }
 
     private function repo(): void
@@ -436,6 +433,29 @@ final class InstallCommitMsgHookTest extends TestCase
     }
 
     /** A clean project with an empty repository, for loops over several fixtures. */
+    /**
+     * Runs an installed hook the way Git does (cwd = project root, message file as the only argument)
+     * and expects the warning, not a rejection.
+     */
+    private function assertHookWarns(string $hookFile): void
+    {
+        $message = $this->project->writeFile('MSG_FOR_HOOK', "feat: no note\n");
+        $process = proc_open(
+            ['sh', $hookFile, $message],
+            [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes,
+            $this->project->root,
+        );
+        self::assertIsResource($process);
+        stream_get_contents($pipes[1]);
+        $stderr = (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        self::assertSame(0, proc_close($process), $stderr);
+        self::assertStringContainsString('commit-msg: warning:', $stderr);
+    }
+
     private function fresh(): void
     {
         $this->project->cleanup();
