@@ -85,13 +85,28 @@ final class LegacyFixture
     }
 
     /**
+     * Archives `HEAD` exactly as Composer's dist download would: `git archive` honours `export-ignore`
+     * (the working-tree variant above does not), and only committed files are in. The version is
+     * stamped into the archived composer.json only, never into the repository.
+     */
+    public static function archiveHead(string $repoRoot, string $version, string $artifactDir): void
+    {
+        $tmp = $artifactDir . '/.head-' . bin2hex(random_bytes(4)) . '.zip';
+        self::git($repoRoot, ['archive', '--format=zip', '-o', $tmp, 'HEAD']);
+        self::stampVersion($tmp, $version, $artifactDir . '/dev-skills-' . $version . '.zip');
+    }
+
+    /**
      * Consumer project that takes the plugin from an `artifact` repository.
+     *
+     * @param array<string, mixed> $settings the `extra` settings of the plugin; empty = the key is absent
      */
     public static function writeArtifactConsumerComposerJson(
         TempProject $project,
         string $artifactDir,
         string $fakeVendorRoot,
         string $pluginConstraint,
+        array $settings = ['bundled-skills' => true],
     ): void {
         $json = [
             'name'              => 'jardis-test/consumer',
@@ -108,7 +123,7 @@ final class LegacyFixture
                 'jardisadapter/fakecache' => '*',
             ],
             'config' => ['allow-plugins' => ['jardis/dev-skills' => true]],
-            'extra'  => ['jardis/dev-skills' => ['bundled-skills' => true]],
+            'extra'  => $settings === [] ? new \stdClass() : ['jardis/dev-skills' => $settings],
         ];
 
         $project->writeFile(

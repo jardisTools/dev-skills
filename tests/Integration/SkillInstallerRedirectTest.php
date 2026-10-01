@@ -208,6 +208,30 @@ final class SkillInstallerRedirectTest extends TestCase
         self::assertEqualsCanonicalizing($expected, $report->installedSkills());
     }
 
+    public function testMatrixAdapterGlobInstallsNoBundleSkillBeyondTheMandatoryGroupsAndKeepsTheVendorSkill(): void
+    {
+        LegacyFixture::writeInstalledBundle($this->project);
+        $this->project->writeFile('vendor/jardisadapter/fakecache/.claude/skills/adapter-fakecache/SKILL.md', 'vendor skill');
+
+        $report = $this->install((new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => ['adapter-*']]]));
+
+        // No bundle skill is named adapter-*; the glob is for vendor skills, which are always installed.
+        self::assertEqualsCanonicalizing([...$this->mandatoryNames(), 'adapter-fakecache'], $report->installedSkills());
+        self::assertSame([], $report->redirectedSkills());
+        foreach (['.claude/skills', '.agents/skills'] as $root) {
+            self::assertFileExists($this->project->path($root . '/adapter-fakecache/SKILL.md'));
+            foreach ($this->mandatoryNames() as $name) {
+                self::assertFileExists($this->project->path($root . '/' . $name . '/SKILL.md'));
+            }
+            self::assertDirectoryDoesNotExist($this->project->path($root . '/git-start-branch'));
+            self::assertDirectoryDoesNotExist($this->project->path($root . '/generated-code-extend'));
+        }
+        foreach (array_keys(RenamedSkills::MAPPING) as $oldName) {
+            self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/' . $oldName));
+            self::assertFileExists($this->project->path('.claude/.jardis-backup/' . $oldName . '/SKILL.md'));
+        }
+    }
+
     public function testMatrixLocallyChangedOldFolderIsBackedUpBeforeTheRedirectReplacesIt(): void
     {
         LegacyFixture::writeInstalledBundle($this->project);
