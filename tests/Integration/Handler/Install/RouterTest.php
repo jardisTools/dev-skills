@@ -54,6 +54,9 @@ final class RouterTest extends TestCase
         'no attribution' => 'no commit carries a `Co-Authored-By` line or any other tool attribution',
         'gitflow' => 'work happens on a `feature/*` or `fix/*` branch cut from `develop`, a hotfix on a `hotfix/*` branch cut from `main`',
         'gitflow never' => 'never directly on `develop` or `main`',
+        'one gate per halt' => 'A halt names exactly one git gate (branch, commit or merge)',
+        'next gate after log' => 'the next one only once the step before stands in `git log`',
+        'human starts branch' => 'the human starts the branch (`git-start-branch`), the session never offers to create it itself',
     ];
     private const GIT_RULES_START = '<!-- git-rules -->';
     private const GIT_RULES_END = '<!-- /git-rules -->';
