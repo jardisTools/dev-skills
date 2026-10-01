@@ -407,7 +407,7 @@ changed fields automatically). Two simultaneous runs can never both win
 **Basic rule:** the gatekeeper (the node with the conditional write) is the **first
 writing node** of the process. Nothing unwanted may have been written before it — the
 savepoint (see conflict cascade below) afterwards only secures the atomicity of the aborted
-single persist, not the order.
+single persists, not the order.
 
 **Case A — gatekeeper/status aggregate** (e.g. "one invoice per order"). A dedicated
 status aggregate carries a flag (`fakturiert: bool`). The row is created **in advance** (e.g. via

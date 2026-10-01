@@ -42,7 +42,7 @@ Namespace = `<Domain>\<BC>\Model\<Agg>\…`. There is **no `Platform` segment** 
 - **No version** (`$version = ''`, the 99 % case): the generated baseline runs. Nothing to configure. The aggregate is hermetic, so to *change* the baseline you re-model in the Designer or author a **Process** — not an in-place override (`generated-code-extend` §2).
 - **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants: author the variant at `{Agg}/.../v{N}/<Class>.php` and select it **per call** (reads: `$bc->{agg}()->getCounterById($q, 'v2')`; writes family-internally via the kernel seam: `$this->handle(Counter::class)->createCounter($dto, 'v2')` — the BC accessor returns the read-only `{Agg}Read`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The variant survives rebuilds — the Generator does not emit or clean `v{N}/` directories.
 
-> **Scope:** only version **resolution** is wired. No generator emits a `v{N}/` directory — version **creation / design** for the Builder is still open (`OPEN_ITEMS.md` "Versioning of aggregate code + process code"). Treat `v{N}/` as the available-but-not-yet-tooled escape hatch.
+> **Scope:** only version **resolution** is wired. No generator emits a `v{N}/` directory — version **creation / design** for the Builder is still open (`OPEN_ITEMS.md` "Versionierung Aggregat-Code + Process-Code" (versioning of aggregate code + process code)). Treat `v{N}/` as the available-but-not-yet-tooled escape hatch.
 
 Optional `ClassVersionConfig` (only when you need fallback chains):
 

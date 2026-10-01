@@ -1,6 +1,6 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Sorte-A GUI-replacement pattern (OutputDir via update_domain_manifest, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (OutputDir via update_domain_manifest, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
 prerequisites: []
@@ -157,7 +157,7 @@ read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
 consequences preview (`consequences`) of confirming this draft — a query appearing or disappearing, a
-visibility switch `internal`↔`public`, the public surface base path `GET …/{agg}` moving with the query
+visibility switch `internal`↔`public`, the BC facade's public surface base path `GET …/{agg}` moving with the query
 named `{agg}List` (fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved,
 basePathAdded/basePathRemoved) — before committing to `save_queries`. The comparison state is
 always what lies on disk, never a set the caller supplies, and `consequences` stays empty for a
@@ -177,7 +177,7 @@ files into the BC directory (mutating). Neither tool exists to author a `Schema.
 that direction is `design-draft-schema` / `import_schema`; these are the reverse, DB-migration-facing
 export.
 
-### 3. Sorte-A pattern — GUI affordance replaced by a data path
+### 3. Type-A pattern — GUI affordance replaced by a data path
 
 Some browser-UI affordances have no MCP button; they become a plain data operation instead:
 
