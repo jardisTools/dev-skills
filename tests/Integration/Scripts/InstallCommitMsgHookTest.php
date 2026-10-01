@@ -181,20 +181,22 @@ final class InstallCommitMsgHookTest extends TestCase
         $cases = [
             'captainhook.json' => [
                 "\"commit-msg\": {\n    \"enabled\": true,\n    \"actions\": [\n        {\n"
-                . "            \"action\": \"test ! -f {$script} || sh {$script} {\$ARG|value-of:message-file}\"\n"
+                . "            \"action\": \"test ! -f {$script} || sh {$script} {\$ARG|value-of:message-file} || true\"\n"
                 . "        }\n    ]\n}\n",
                 '{}',
             ],
+            // E7-fix-minors: the added lines never reject (no `exit 1`, a failing script is swallowed with `|| true`);
+            // the earlier form `{ sh script || exit 1; }` made the commit fail when the script was missing or failed.
             'grumphp.yml' => [
                 "# GrumPHP has no task that runs a script on commit-msg. Give GrumPHP your own hook templates\n"
                 . "# (grumphp.yml: grumphp.hooks_dir), copy its commit-msg template there, and add before the\n"
                 . "# \"Run GrumPHP\" line of that template:\n"
-                . "[ -f {$script} ] && { sh {$script} \"\$COMMIT_MSG_FILE\" || exit 1; }\n",
+                . "if [ -f {$script} ]; then sh {$script} \"\$COMMIT_MSG_FILE\" || true; fi\n",
                 'grumphp: ~',
             ],
             'lefthook.yml' => [
                 "commit-msg:\n  commands:\n    knowledge-note:\n"
-                . "      run: test ! -f {$script} || sh {$script} {1}\n",
+                . "      run: test ! -f {$script} || sh {$script} {1} || true\n",
                 'pre-commit: {}',
             ],
         ];
@@ -235,7 +237,8 @@ final class InstallCommitMsgHookTest extends TestCase
 
             self::assertSame(0, $result['exit'], $label);
             self::assertStringContainsString('result: foreign ' . $path . "\n", $result['stdout'], $label);
-            self::assertStringContainsString('[ -f ' . self::SCRIPT . ' ] && {', $result['stdout'], $label);
+            self::assertStringContainsString('if [ -f ' . self::SCRIPT . ' ]; then', $result['stdout'], $label);
+            self::assertStringNotContainsString('exit 1', $result['stdout'], $label);
             self::assertStringContainsString('hook of its own', $result['stderr'], $label);
             self::assertSame($foreign, file_get_contents($this->project->path($path)), $label);
             self::assertSame(0o644, fileperms($this->project->path($path)) & 0o777, $label);
@@ -371,6 +374,127 @@ final class InstallCommitMsgHookTest extends TestCase
         self::assertSame('3', trim(GitRepo::run($this->project->root, 'rev-list', '--count', 'HEAD')));
     }
 
+    /**
+     * Zusage E7-fix-minors 1: the lines the installer prints for a foreign hook are appended as the LAST line of
+     * that hook. A missing package script (after `composer remove`) must not become the hook's exit status.
+     */
+    public function testSnippetAsLastLineOfForeignHookLetsCommitThroughWhenScriptIsMissing(): void
+    {
+        $this->repo();
+        $this->writeForeignHookWithSnippet("echo 'foreign hook ran'\n");
+        self::assertFileDoesNotExist($this->project->path(self::SCRIPT));
+
+        $result = $this->commit('feat: the package is gone');
+
+        self::assertSame(0, $result['exit'], $result['stderr']);
+        self::assertSame('1', $this->commitCount());
+    }
+
+    public function testSnippetAsLastLineOfForeignHookLetsCommitThroughWhenScriptWarns(): void
+    {
+        $this->repo();
+        $this->writeForeignHookWithSnippet("echo 'foreign hook ran'\n");
+        $this->project->mkdir('vendor/jardis/dev-skills/scripts');
+        copy($this->pluginRoot . '/scripts/commit-msg', $this->project->path(self::SCRIPT));
+
+        $result = $this->commit('feat: no note');
+
+        self::assertSame(0, $result['exit'], $result['stderr']);
+        self::assertStringContainsString('commit-msg: warning:', $result['stderr']);
+        self::assertSame('1', $this->commitCount());
+    }
+
+    public function testSnippetAsLastLineOfForeignHookLetsCommitThroughWhenScriptExitsWithUsageError(): void
+    {
+        $this->repo();
+        $this->writeForeignHookWithSnippet("echo 'foreign hook ran'\n");
+        $this->project->writeFile(self::SCRIPT, "#!/bin/sh\nexit 2\n");
+
+        $result = $this->commit('feat: the script fails with exit 2');
+
+        self::assertSame(0, $result['exit'], $result['stderr']);
+        self::assertSame('1', $this->commitCount());
+    }
+
+    /**
+     * A foreign hook that rejects on its own keeps rejecting: that is its behaviour, not ours.
+     */
+    public function testForeignHookThatRejectsStaysAuthoritativeBeforeTheSnippet(): void
+    {
+        $this->repo();
+        $this->writeForeignHookWithSnippet("echo 'foreign hook rejects' >&2\nexit 1\n");
+
+        $result = $this->commit('feat: the foreign hook says no');
+
+        self::assertNotSame(0, $result['exit']);
+        self::assertStringContainsString('foreign hook rejects', $result['stderr']);
+        self::assertSame('0', $this->commitCount());
+    }
+
+    /**
+     * Every line the installer prints for a foreign configuration (git hook, GrumPHP, CaptainHook, Lefthook)
+     * has no rejection path: no `exit 1`, and an exit 2 of the script does not become the exit status.
+     */
+    public function testPrintedSnippetsHaveNoRejectionPathAndSwallowAScriptFailure(): void
+    {
+        $cases = [
+            'grumphp'     => ['grumphp.yml', 'grumphp: ~'],
+            'captainhook' => ['captainhook.json', '{}'],
+            'lefthook'    => ['lefthook.yml', 'pre-commit: {}'],
+        ];
+
+        foreach ($cases as $label => [$file, $content]) {
+            $this->fresh();
+            $this->project->writeFile($file, $content . "\n");
+            $this->project->writeFile(self::SCRIPT, "#!/bin/sh\nexit 2\n");
+            $messageFile = $this->project->writeFile('MSG', "feat: x\n");
+            $stdout = $this->install()['stdout'];
+            $snippet = substr($stdout, (int) strpos($stdout, "\n\n") + 2);
+
+            self::assertStringNotContainsString('exit 1', $snippet, $label);
+
+            // The executable line of the snippet, with the manager's placeholder filled in.
+            $lines = array_values(array_filter(
+                explode("\n", $snippet),
+                static fn (string $line): bool => $line !== '' && $line[0] !== '#' && str_contains($line, 'commit-msg'),
+            ));
+            self::assertNotSame([], $lines, $label);
+            $command = (string) end($lines);
+            $command = preg_replace('/^\s*("action": "|run: )/', '', $command);
+            $command = rtrim((string) $command, '"');
+            $command = str_replace(['{$ARG|value-of:message-file}', '{1}'], $messageFile, $command);
+
+            $result = $this->shell($command, ['COMMIT_MSG_FILE' => $messageFile]);
+
+            self::assertSame(0, $result['exit'], $label . ': ' . $command . ' ' . $result['stderr']);
+        }
+    }
+
+    /**
+     * The git-hook snippet (foreign hook, hooks path outside the repository) is evaluated as the last line of a
+     * hook elsewhere; it is checked in the form it is printed, for exit 1 and for the script failing with exit 2.
+     */
+    public function testHooksPathSnippetOutsideTheRepositoryHasNoRejectionPath(): void
+    {
+        $this->repo();
+        $this->project->writeFile(self::SCRIPT, "#!/bin/sh\nexit 2\n");
+        $global = $this->project->root . '-gitconfig';
+        file_put_contents($global, "[core]\n\thooksPath = {$this->project->root}-shared-hooks\n");
+
+        try {
+            $result = $this->install([], null, ['GIT_CONFIG_GLOBAL' => $global]);
+        } finally {
+            unlink($global);
+        }
+        $snippet = substr($result['stdout'], (int) strpos($result['stdout'], "\n\n") + 2);
+
+        self::assertStringContainsString('result: snippet', $result['stdout']);
+        self::assertStringNotContainsString('exit 1', $snippet);
+        $messageFile = $this->project->writeFile('MSG', "feat: x\n");
+        $evaluated = $this->shell("set -- '{$messageFile}'\n" . $snippet, []);
+        self::assertSame(0, $evaluated['exit'], $evaluated['stderr']);
+    }
+
     public function testInstallerPassesShSyntaxCheckAndUsesNoBashisms(): void
     {
         $process = proc_open(['sh', '-n', $this->installer], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
@@ -425,6 +549,75 @@ final class InstallCommitMsgHookTest extends TestCase
 
         GitRepo::run($root, 'commit', '-q', '--allow-empty', '-m', 'feat: after the package is gone');
         self::assertSame('2', trim(GitRepo::run($root, 'rev-list', '--count', 'HEAD')));
+    }
+
+    /**
+     * Writes a hook of its own into .git/hooks, asks the installer what to add, and appends exactly that as the
+     * last lines of the hook, the way a user would.
+     */
+    private function writeForeignHookWithSnippet(string $body): void
+    {
+        $hook = '.git/hooks/commit-msg';
+        $this->project->writeFile($hook, "#!/bin/sh\n# not ours\n" . $body);
+        $result = $this->install();
+        self::assertStringContainsString('result: foreign ' . $hook . "\n", $result['stdout']);
+
+        $snippet = substr($result['stdout'], (int) strpos($result['stdout'], "\n\n") + 2);
+        file_put_contents($this->project->path($hook), $snippet, FILE_APPEND);
+        chmod($this->project->path($hook), 0o755);
+    }
+
+    /**
+     * A real `git commit`, so Git itself runs the hook; the exit status is returned, not thrown.
+     *
+     * @return array{exit: int, stdout: string, stderr: string}
+     */
+    private function commit(string $message): array
+    {
+        return $this->runProcess([
+            'git', '-c', 'safe.directory=*', '-c', 'user.name=Test', '-c', 'user.email=test@example.invalid',
+            '-c', 'commit.gpgsign=false', '-C', $this->project->root, 'commit', '-q', '--allow-empty', '-m', $message,
+        ], $this->project->root, []);
+    }
+
+    private function commitCount(): string
+    {
+        return trim(GitRepo::run($this->project->root, 'rev-list', '--count', '--all'));
+    }
+
+    /**
+     * @param array<string, string> $env
+     * @return array{exit: int, stdout: string, stderr: string}
+     */
+    private function shell(string $command, array $env): array
+    {
+        return $this->runProcess(['sh', '-c', $command], $this->project->root, $env);
+    }
+
+    /**
+     * @param list<string> $command
+     * @param array<string, string> $env
+     * @return array{exit: int, stdout: string, stderr: string}
+     */
+    private function runProcess(array $command, string $cwd, array $env): array
+    {
+        $process = proc_open(
+            $command,
+            [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $pipes,
+            $cwd,
+            array_merge(getenv(), $env),
+        );
+        if (!is_resource($process)) {
+            throw new \RuntimeException('Cannot start ' . $command[0] . '.');
+        }
+
+        $stdout = (string) stream_get_contents($pipes[1]);
+        $stderr = (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        return ['exit' => proc_close($process), 'stdout' => $stdout, 'stderr' => $stderr];
     }
 
     private function repo(): void

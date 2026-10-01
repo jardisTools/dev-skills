@@ -562,7 +562,7 @@ final class BundleTest extends TestCase
                 'deviation from the plan',
                 'before the fix brief',
                 'open-question gate',
-                'never changes the plan itself',
+                'never changes the plan on its own decision',
                 '`Decisions delegated`',
                 'decided',
             ] as $keyword
@@ -572,6 +572,8 @@ final class BundleTest extends TestCase
 
         // the question-point paragraph keeps its sentence about the plan correction after the gate's answer
         self::assertStringContainsString('corrects the plan where the answer deviates', $content);
+        // E7-fix-minors: section 6 must not read against section 8; the old absolute wording is gone
+        self::assertStringNotContainsString('never changes the plan itself', $content);
     }
 
     public function testVerifyRedPointsAtTheFailurePathWithoutSecondWording(): void
@@ -593,7 +595,7 @@ final class BundleTest extends TestCase
             self::assertStringContainsString($keyword, $section, $keyword);
         }
         self::assertStringNotContainsString('<!-- rule:failure-path -->', $content, 'a reference, no second wording');
-        self::assertStringNotContainsString('never changes the plan itself', $content, 'a reference, no second wording');
+        self::assertStringNotContainsString('never changes the plan on its own decision', $content, 'a reference, no second wording');
     }
 
     public function testChooseTierNamesFourTiersAndBothMarkers(): void

@@ -305,7 +305,7 @@ Behaviour rules of the `process` skills are stated as literal text, not only as 
 | `process-choose-tier` | `tier-escalate` | `only with a named reason`, `the lower tier`, `two or more subtasks are never` |
 | `process-choose-tier` | `decide-yourself-no-tier-drop` | `lowers no tier`, `waives no gate` |
 | `process-run-stage` | `fresh-session-per-stage` | `fresh agent session` |
-| `process-run-stage` | `failure-path` | `fix run`, `follow-up run`, `STOPP:`, `without a question to the human`, `never changes the plan itself` |
+| `process-run-stage` | `failure-path` | `fix run`, `follow-up run`, `STOPP:`, `without a question to the human`, `never changes the plan on its own decision` |
 | `process-run-stage` | `question-points` | `at most 2 question points`, `STOPP:` |
 | `process-run-stage` | `commit-is-human-gate` | `gate of the human`, `git log`, `working tree is clean`, `exactly one git step`, `git-rules` |
 | `process-review-board` | `question-points` | `at most 2 roles` |

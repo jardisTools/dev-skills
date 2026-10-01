@@ -42,7 +42,7 @@ final class CheckRuleMarkers
                 'follow-up run',
                 'STOPP:',
                 'without a question to the human',
-                'never changes the plan itself',
+                'never changes the plan on its own decision',
             ],
             'question-points' => ['at most 2 question points', 'STOPP:'],
             'commit-is-human-gate' => [
