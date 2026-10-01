@@ -19,7 +19,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * The full install with real Composer runs, taken from `git archive HEAD` as an `artifact`
  * repository: exactly what a consumer downloads, `export-ignore` included. Only committed files
- * are in the archive, so these tests measure the state of HEAD, not of the working tree.
+ * are in the archive, so these tests measure the committed state (`git archive HEAD`), not the
+ * working tree; uncommitted changes are checked by the rest of the suite.
  *
  * Covers the install picture (33 skills in both folders, 19 reviewers in five formats, router,
  * CLAUDE.md block, Gemini entry, manifest), the repeat run, the update from 1.3.6 with the

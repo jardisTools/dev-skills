@@ -164,7 +164,7 @@ The plugin acts on `composer install` and `composer update` (Composer's post-ins
 
 ## Update and downgrade
 
-**No downgrade.** If `.claude/skills/.jardis-managed.json` was written by a newer plugin version (or a newer manifest schema), an older plugin changes nothing and prints a warning. This holds for install and uninstall. A manifest the plugin cannot read is ignored with a warning.
+**No downgrade.** A downgrade below 1.4.0 is not supported. Version 1.3.x does not know the manifest `.claude/skills/.jardis-managed.json`; it manages skill folders by name prefix (`adapter-`, `core-`, `support-`, `tools-`, `schema-`, `plan-`, `platform-`, `rules-`). From 1.4.0 on, a guard applies: if the manifest was written by a newer plugin version (or a newer manifest schema), an older plugin changes nothing and prints a warning. This holds for install and uninstall. A manifest the plugin cannot read is ignored with a warning.
 
 **Update from 1.3.x.** Version 1.4.0 renamed 18 bundle skills to a scheme of area prefixes (for example `rules-architecture` is now `foundation-architecture`; `RenamedSkills` lists all 18). The update migrates as follows:
 
@@ -461,7 +461,7 @@ make generate-catalog           # Generate skills/packages-find-existing/SKILL.m
 make generate-catalog-check     # Check that the checked-in SKILL.md matches the manifest (exit≠0 on drift)
 make check-catalog-packagist    # Check Packagist for Jardis packages missing from catalog/manifest.json (warning only, exit 0)
 make check-public-text          # Check publicly shipped texts for home paths and private denylist terms (env PUBLIC_TEXT_DENYLIST)
-make check-changelog-top VERSION=1.4.0  # Check that the top version heading of CHANGELOG.md is the version to tag
+make check-changelog-top VERSION=1.4.0  # Exit 0 if the top version heading of CHANGELOG.md is the version to tag, any other exit means not releasable (the message says why)
 make shell                      # Run a shell inside the phpcli container
 make clean                      # Stop containers and clean up volumes
 make remove                     # Stop and remove containers, images, network and caches
@@ -469,7 +469,7 @@ make ssh-agent                  # Get SSH agent ready
 make install-hooks              # Install git hooks (pre-commit + pre-push)
 ```
 
-Before a release tag run `make check-changelog-top VERSION=<x.y.z>`; the release notes are in [CHANGELOG.md](CHANGELOG.md). Notes for agents working in this repository are in [AGENTS.md](AGENTS.md).
+Before a release tag run `make check-changelog-top VERSION=<x.y.z>`: exit 0 means the version matches, any other exit means the tag is not releasable and the message says why (`make` reports every failure as exit 2). The release notes are in [CHANGELOG.md](CHANGELOG.md). Notes for agents working in this repository are in [AGENTS.md](AGENTS.md).
 
 Architecture: Closure-Orchestrator pattern (`src/SkillInstaller.php`, `src/SkillUninstaller.php`), handlers as `__invoke()` closures under `src/Handler/`, value objects under `src/Data/`. Composer events via `Composer\Plugin\PluginInterface` + `Composer\EventDispatcher\EventSubscriberInterface` in `src/Plugin.php`.
 

@@ -30,7 +30,7 @@ final class OverviewTest extends TestCase
 
         $document = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
-        $document->loadHTML($this->html);
+        $document->loadHTML('<?xml encoding="utf-8"?>' . $this->html);
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
@@ -60,6 +60,38 @@ final class OverviewTest extends TestCase
     public function testPageHasFiveAreas(): void
     {
         self::assertSame(self::AREAS, $this->xpath->query('//h2')->length);
+    }
+
+    public function testToolCoverageMatrixHasFiveToolColumnsAndLegend(): void
+    {
+        $matrix = "//section[@id='s5']//table[contains(concat(' ', normalize-space(@class), ' '), ' mx ')]";
+
+        $headers = [];
+        foreach ($this->xpath->query($matrix . '//tr[1]/th') as $cell) {
+            $headers[] = trim($cell->textContent);
+        }
+        self::assertCount(7, $headers, 'building block, five tools, fallback');
+        self::assertSame(
+            ['Claude Code', 'Codex CLI/IDE', 'Cursor', 'GitHub Copilot', 'Gemini CLI'],
+            array_slice($headers, 1, 5)
+        );
+
+        $rows = $this->xpath->query($matrix . "//tr[not(contains(@class, 'guar'))][position() > 1]");
+        self::assertGreaterThanOrEqual(10, $rows->length, 'nine building blocks plus the commit-msg hook');
+        foreach ($rows as $row) {
+            $symbols = [];
+            foreach ($this->xpath->query('td[position() >= 2 and position() <= 6]', $row) as $cell) {
+                $symbols[] = trim($cell->textContent);
+            }
+            self::assertCount(5, $symbols);
+            self::assertSame([], array_values(array_diff($symbols, ['✔', '◐', '✘', '?'])));
+        }
+
+        $legend = $this->xpath->query("//section[@id='s5']//p[contains(@class, 'src')]")->item(0);
+        self::assertNotNull($legend);
+        foreach (['✔', '◐', '✘', '?', 'retrieved 2026-10-01'] as $part) {
+            self::assertStringContainsString($part, $legend->textContent);
+        }
     }
 
     public function testPageStatesFactsAndLeavesNothingForDecision(): void

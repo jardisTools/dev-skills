@@ -88,6 +88,11 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 .mx td.alt{text-align:left;font-size:11px;color:#374151}
 .y{color:#15803d;font-weight:700}.p{color:#b45309;font-weight:700}.n0{color:#b91c1c;font-weight:700}.q{color:var(--mute);font-weight:700}
 .guar td{font-size:11px}
+/* Cards for stated facts */
+.vcard{border:2px solid var(--vs);background:var(--vs-bg);border-radius:6px;padding:6px 9px;font-size:12px}
+.vcard b{color:#854d0e}
+.vcard.ok{border-color:var(--art);background:var(--art-bg)}
+.vcard.ok b{color:var(--art)}
 .layers{border:1px solid var(--art);background:var(--art-bg);border-radius:8px;padding:7px 10px;font-size:12px;margin-bottom:12px}
 .src{font-size:11px;color:var(--mute)}
 .fixed{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--panel);font-size:12px;margin-bottom:16px}
@@ -269,6 +274,15 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 </div>
 
 <div class="band"><div class="bl" style="color:#b91c1c">Checks</div><div><span class="k g" style="display:inline-block;font-size:10px;font-weight:700;border-radius:3px;padding:0 4px;color:#fff;background:#b91c1c">G</span> <span class="mono">pool-check.php</span> only reads; exit code 0 clean, 1 violations, 2 usage error or no pool · the <span class="mono">commit-msg</span> hook only warns and always exits 0 · <span class="mono">check-commit-messages &lt;from&gt;..&lt;to&gt;</span> runs the same check over a commit range, for example in CI · <span class="mono">install-commit-msg-hook</span> writes the hook, <span class="mono">git-setup-repository</span> runs it</div></div>
+<h3>What the package puts in place for the cycle</h3>
+<div class="three">
+<div class="vcard ok"><b>Pool pointer in the router</b> — the managed block in <code>AGENTS.md</code> carries the line “Wissenspool: <code>.claude/wissen/INDEX.md</code> — vor Entscheiden lesen, Vermerk-Pflicht”, so a session finds the pool without any private setting.</div>
+<div class="vcard ok"><b>Tools shipped with the package</b> — the <code>commit-msg</code> hook, its installer <code>install-commit-msg-hook</code> and the pool check <code>pool-check.php</code> come with <code>jardis/dev-skills</code> under <code>scripts/</code>.</div>
+<div class="vcard ok"><b>Scaffold at the first undertaking</b> — <code>process-concept</code> copies only <code>INDEX.md</code> into <code>.claude/wissen/</code>, and only when that folder is missing; an existing pool is never changed.</div>
+<div class="vcard ok"><b>Offer at the end of a chat</b> — a chat that produced more than an answer ends with two offers: create a project folder (<code>docs/vorhaben/&lt;name&gt;/</code>) and carry knowledge into the pool. The rule is in <code>process-choose-tier</code>; nothing is created without a yes.</div>
+<div class="vcard ok"><b><code>PROGRESS.md</code> with a fixed head</b> — <code>## Kopf</code> is the first heading, with four lines in this order: <code>Phase</code>, <code>Stage</code>, <code>Next step</code>, <code>Open decisions</code>.</div>
+<div class="vcard ok"><b>Fresh session per stage</b> — every stage, and every implementer session inside it, runs in a fresh agent session; the head of the progress file and the brief are the only hand-over. The rule is in <code>process-run-stage</code>.</div>
+</div>
 <p class="src">Source: the skills <code>knowledge-maintain-pool</code>, <code>knowledge-record-decision</code>, <code>process-concept</code>, <code>process-close</code>, <code>process-run-stage</code> and the scripts under <code>scripts/</code>.</p>
 </section>
 
@@ -443,15 +457,21 @@ your-project/
 <section id="s5">
 <h2>Tool coverage</h2>
 <table class="mx">
-<tr><th style="width:250px">What the plugin writes</th><th>Claude Code</th><th>Codex</th><th>Cursor</th><th>GitHub Copilot</th><th>Gemini CLI</th><th style="width:340px">Note</th></tr>
-<tr><td>Skills folder</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Copilot reads both <code>.claude/skills</code> and <code>.agents/skills</code>; an entry may show twice, not verified</td></tr>
-<tr><td>Router (<code>AGENTS.md</code>)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Claude Code: <code>@AGENTS.md</code> in <code>CLAUDE.md</code> · Gemini CLI: <code>context.fileName</code> in <code>.gemini/settings.json</code></td></tr>
-<tr><td>Reviewer agent files</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Codex as TOML, Copilot as <code>.agent.md</code>, the others as Markdown</td></tr>
+<tr><th style="width:250px">Process building block</th><th>Claude Code</th><th>Codex CLI/IDE</th><th>Cursor</th><th>GitHub Copilot</th><th>Gemini CLI</th><th style="width:340px">Fallback where ◐ / ✘ / ?</th></tr>
+<tr><td>Router (<code>AGENTS.md</code>) read</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="p">◐</td><td class="alt">Gemini CLI: <code>context.fileName</code> in <code>settings.json</code> set to <code>AGENTS.md</code></td></tr>
+<tr><td>Phase skills (<code>SKILL.md</code>) load</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Independent reviewer (sub-agent, fresh context)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Model per reviewer</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Board of reviewers in parallel</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="q">?</td><td class="alt">Gemini CLI: not documented by the vendor</td></tr>
+<tr><td>Progress / task list</td><td class="p">◐</td><td class="q">?</td><td class="q">?</td><td class="q">?</td><td class="y">✔</td><td class="alt">Claude Code: on models the documentation does not name, opt in with <code>CLAUDE_CODE_ENABLE_TODO_TOOLS=1</code> · Codex, Cursor, Copilot: not documented by the vendor</td></tr>
+<tr><td>Plan mode without write access</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="y">✔</td><td class="alt">Claude Code: edits stay blocked until the plan is approved, except in interactive terminal sessions with bypass permissions available · Codex, Cursor: a plan before implementation, no write lock stated · Copilot: not available in Visual Studio</td></tr>
+<tr><td>Headless run</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"><code>claude -p</code> · <code>codex exec</code> · <code>agent -p</code> · <code>copilot -p</code> · <code>gemini -p</code></td></tr>
+<tr><td>MCP (<code>jardis mcp</code>)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
 <tr><td><code>commit-msg</code> hook with the <code>Wissen:</code> note</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">a Git hook, independent of the tool; it warns and never rejects a commit</td></tr>
-<tr class="guar"><th>Guarantee level</th><td style="background:#dcfce7"><b>tested</b><br>Claude Code 2.1.286</td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td class="alt">tested: the process was run with the tool and each listed check passed · documented, not tested: the vendor documentation says the tool reads that location</td></tr>
+<tr class="guar"><th>Guarantee level</th><td style="background:#dcfce7"><b>tested</b><br>Claude Code 2.1.286</td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td class="alt">tested: the process was run with the tool and each listed check passed · documented, not tested: the vendor documentation says the tool offers the building block</td></tr>
 </table>
 <div class="band"><div class="bl">Not covered</div><div>Aider and Continue are not served. Codex Cloud and the Copilot cloud agent are outside the guarantee, even for the tools above.</div></div>
-<p class="src">✔ the plugin writes this for the tool. Source: README section Supported tools, which quotes the vendor documentation for each tool.</p>
+<p class="src">✔ documented without restriction · ◐ documented with a restriction · ✘ the documentation denies it · ? not found in the vendor documentation. Source: vendor documentation, retrieved 2026-10-01; what the plugin writes for each tool is in the README section Supported tools.</p>
 </section>
 
 </div>

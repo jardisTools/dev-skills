@@ -70,7 +70,7 @@ check-public-text: ## Check publicly shipped texts for home paths and private de
 	$(DOCKER_COMPOSE) run --rm --no-deps -e PUBLIC_TEXT_DENYLIST -e PUBLIC_TEXT_REQUIRE_DENYLIST phpcli php /app/bin/check-public-text.php
 .PHONY: check-public-text
 
-check-changelog-top: ## Check that the top version heading of CHANGELOG.md is the version to tag (VERSION=x.y.z)
+check-changelog-top: ## Exit 0 if the CHANGELOG.md top heading is the version to tag (VERSION=x.y.z), any other exit means not releasable
 ifndef VERSION
 	@echo "check-changelog-top: VERSION is required, e.g. make check-changelog-top VERSION=1.4.0" >&2; exit 2
 else
