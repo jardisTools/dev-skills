@@ -9,23 +9,23 @@ next: []
 
 ### 1. Call chain
 
-Two chains reach the transport layer — **read** and **process** — the BC facade's Außentür (G2) exposes no aggregate writes:
+Two chains reach the transport layer — **read** and **process** — the BC facade's public surface (G2) exposes no aggregate writes:
 
 ```
 new MyApp($kernel)                ← final Domain facade, holds the DomainKernel (DomainKernelInterface), one per request/run
-    ↓ $app->counter()             ← BC facade (the Außentür)
+    ↓ $app->counter()             ← BC facade (the public surface)
     ↓ ->counter()                 ← Aggregate READ facade `{Agg}Read` (hermetic, reached via $bc->{agg}())
     ↓ ->getCounterById($dto)      ← DomainResponseInterface
 ```
 
 ```
 new MyApp($kernel)                ← final Domain facade, holds the DomainKernel (DomainKernelInterface), one per request/run
-    ↓ $app->counter()             ← BC facade (the Außentür)
+    ↓ $app->counter()             ← BC facade (the public surface)
     ↓ ->process()                 ← Process facade `{BC}Process` (hermetic, reached via $bc->process())
     ↓ ->createCounter($dto)       ← DomainResponseInterface
 ```
 
-Three method hops on the `MyApp` instance: BC accessor → `{agg}()`/`process()` accessor → use-case method. **There is no general third chain for aggregate writes from the transport layer.** The aggregate write facade `{Agg}/{Agg}.php` is reachable only family-internally, via the Kernel-Naht (`$this->handle({Agg}::class)`), from classes that extend the Domain Context (Process node bodies, Services — the Context-Familie). A PSR-15 controller, CLI command, or queue consumer is **outside** that family and has no `handle()` of its own — it can only reach `$app->{bc}()->{agg}()` (read) and `$app->{bc}()->process()->{process}()` (write). To let the transport layer trigger a write, model a **Process** around the aggregate command (`generated-code-extend` §2/§4) — a bare aggregate command with no Process is by design not externally callable (G6).
+Three method hops on the `MyApp` instance: BC accessor → `{agg}()`/`process()` accessor → use-case method. **There is no general third chain for aggregate writes from the transport layer.** The aggregate write facade `{Agg}/{Agg}.php` is reachable only family-internally, via the kernel seam (`$this->handle({Agg}::class)`), from classes that extend the Domain Context (Process node bodies, Services — the Context family). A PSR-15 controller, CLI command, or queue consumer is **outside** that family and has no `handle()` of its own — it can only reach `$app->{bc}()->{agg}()` (read) and `$app->{bc}()->process()->{process}()` (write). To let the transport layer trigger a write, model a **Process** around the aggregate command (`generated-code-extend` §2/§4) — a bare aggregate command with no Process is by design not externally callable (G6).
 
 **Rules-Layer exception (G10).** A Command explicitly marked `expose: true` in `Closures.json` (and therefore carrying ≥1 bound Rule — enforced at build time) gets a **fourth, narrower** call chain straight off the BC facade: `$app->{bc}()->{lcfirst(Command)}($dto)` — two hops, no `process()`, no aggregate accessor. It still runs the Command's Rule chain (Guard) unconditionally, from inside the same generated CommandHandler every other caller uses — the shortcut is only at the transport hop, not a bypass of the guard. This exists specifically for Commands with no orchestration need beyond their Rule chain; a Command with real multi-step behaviour still belongs behind a Process.
 
@@ -61,7 +61,7 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 | 404 | 404 Not Found | 2 | Target absent |
 | 409 | 409 Conflict | 2 | State conflict |
 | 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — payload carries `{rule, messageKey, context}` under `data` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
-| 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's bestand-check — never a 422) |
+| 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422) |
 
 Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). Per X-1 the generator emits a minimal payload — **Command** echoes only the affected identifier, **Query** returns the projected scalar tree under the aggregate root key (see also `generated-code-recipes` for the full response-shape table). Examples:
 
@@ -83,7 +83,7 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 }
 ```
 
-CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the Außentür's canonical handle (the single-Akte projection is key-conformant either way); only an aggregate **without** a unique key leads list items with the root `id`. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
+CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle (the single-aggregate-record projection is key-conformant either way); only an aggregate **without** a unique key leads list items with the root `id`. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
 
 ### 4. Transport patterns
 

@@ -150,7 +150,7 @@ No method is hand-written and nothing under `{Agg}/` is edited — both facades 
 3. `Command/Handler/Action/<NodeClass>.php` — one node stub per node. Custom nodes are `CreateIfNotExists` with an `@node-id` marker; **the body is yours** and survives rebuilds. Namespace: `…\Process\<Name>\Command\Handler\Action\<NodeClass>`.
 4. A thin-dispatch method on the hermetic `{BC}Process` facade: `return $this->context(<Name>Handler::class, $in, $version)();` — reached via `$bc->process()->{name}($dto)`.
 
-The segments `Query/`, `Repository/`, and `Service/` are **not emitted** by the Generator — they are developer-authored as needed (KI-/Dev-owned).
+The segments `Query/`, `Repository/`, and `Service/` are **not emitted** by the Generator — they are developer-authored as needed (AI-/Dev-owned).
 
 Your logic lives in the custom-node bodies. The process has **no aggregate ownership** and invokes whichever aggregate commands/queries it needs via `$this->context(...)` / `$this->handle(...)` from a node.
 
