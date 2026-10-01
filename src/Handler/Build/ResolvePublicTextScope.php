@@ -8,14 +8,15 @@ use JardisTools\DevSkills\Data\PublicTextScope;
 
 /**
  * Determines which files ship publicly: every tracked file that is not
- * marked `export-ignore`, plus the two published docs. Tracked files under
+ * marked `export-ignore`, plus the published docs (the overview page, its
+ * landing page and the skill format). Tracked files under
  * tests/Fixture/ are returned as regex-only paths. Paths that do not exist
  * on disk are skipped. An empty result (no tracked files, no scannable path)
  * or a failing git call throws: the gate must never pass on an empty scope.
  */
 final class ResolvePublicTextScope
 {
-    private const EXTRA_PATHS = ['docs/overview.html', 'docs/SKILL-FORMAT.md'];
+    private const EXTRA_PATHS = ['docs/overview.html', 'docs/index.html', 'docs/SKILL-FORMAT.md'];
     private const FIXTURE_PREFIX = 'tests/Fixture/';
 
     public function __invoke(string $repoRoot): PublicTextScope

@@ -459,7 +459,7 @@ your-project/
 <table class="mx">
 <tr><th style="width:250px">Process building block</th><th>Claude Code</th><th>Codex CLI/IDE</th><th>Cursor</th><th>GitHub Copilot</th><th>Gemini CLI</th><th style="width:340px">Fallback where ◐ / ✘ / ?</th></tr>
 <tr><td>Router (<code>AGENTS.md</code>) read</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="p">◐</td><td class="alt">Gemini CLI: <code>context.fileName</code> in <code>settings.json</code> set to <code>AGENTS.md</code></td></tr>
-<tr><td>Phase skills (<code>SKILL.md</code>) load</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Phase skills (<code>SKILL.md</code>) load</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Gemini CLI: loads a skill through the <code>activate_skill</code> tool and asks you to confirm first</td></tr>
 <tr><td>Independent reviewer (sub-agent, fresh context)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
 <tr><td>Model per reviewer</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
 <tr><td>Board of reviewers in parallel</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="q">?</td><td class="alt">Gemini CLI: not documented by the vendor</td></tr>

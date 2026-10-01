@@ -129,12 +129,15 @@ final class CheckPublicTextTest extends TestCase
         $this->project->writeFile('untracked-extra/overview-not.md', 'x');
         $this->git('init', '-q');
         $this->git('add', '.gitattributes', 'newdir', 'hidden', 'docs', 'tests');
+        // Published docs enter the scope by path, even before they are tracked.
+        $this->project->writeFile('docs/index.html', 'x');
 
         $scope = (new ResolvePublicTextScope())($this->project->root);
 
         self::assertContains('newdir/a.md', $scope->paths);
         self::assertContains('.gitattributes', $scope->paths);
         self::assertContains('docs/SKILL-FORMAT.md', $scope->paths);
+        self::assertContains('docs/index.html', $scope->paths);
         self::assertNotContains('hidden/b.md', $scope->paths);
         self::assertNotContains('untracked-extra/overview-not.md', $scope->paths);
         self::assertSame(['tests/Fixture/f.txt'], $scope->regexOnlyPaths);
