@@ -202,8 +202,8 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | Use-case kind | Generated `setData(...)` shape |
 |---|---|
 | **Query ById / By{UniqueKey}** (and hand-modelled single variants) | `['counter' => $projected[0] ?? null]` — one projected nested scalar tree or `null` (see Query projection below) |
-| **Query ByIds** | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing ids → partial result, empty `ids` → `[]` |
-| **Query By{PluralKey}** (only on an aggregate with a public unique key) | `['counter' => $projected]` — `list<Akte>`, **no `[0]` collapse**; missing keys → partial result, empty key list → `[]`; same shape as ByIds, keyed on the unique column instead of the PK |
+| **Query ByIds** | `['counter' => $projected]` — `list<AggregateRecord>`, **no `[0]` collapse**; missing ids → partial result, empty `ids` → `[]` |
+| **Query By{PluralKey}** (only on an aggregate with a public unique key) | `['counter' => $projected]` — `list<AggregateRecord>`, **no `[0]` collapse**; missing keys → partial result, empty key list → `[]`; same shape as ByIds, keyed on the unique column instead of the PK |
 | **Create** | `['identifier' => $handler->getData()->getIdentifier()]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['identifier' => …, '<childIdentifier>' => …]` — root key from cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** (root scalars) | `['identifier' => $cmd->getIdentifier()]` — pure echo of input identity |
@@ -231,7 +231,7 @@ An aggregate **WITH** a unique key — list → keys → `get{Agg}By{PluralKey}`
 ```php
 $list  = $bc->order()->orderList($filter);                                             // filtered flat list
 $keys  = array_values(array_unique(array_column($list['items'], 'orderNumber')));
-$akten = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys)); // ['order' => list<Akte>]
+$records = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys)); // ['order' => list<AggregateRecord>]
 ```
 
 An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
@@ -239,7 +239,7 @@ An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
 ```php
 $list  = $bc->counter()->counterList($filter);                               // filtered flat list
 $ids   = array_values(array_unique(array_column($list['items'], 'id')));
-$akten = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids));  // ['counter' => list<Akte>]
+$records = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids));  // ['counter' => list<AggregateRecord>]
 ```
 
 Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one aggregate record · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every aggregate record carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (public surface/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
@@ -295,7 +295,7 @@ protected function reason(WorkflowContextInterface $context): mixed
 
 **Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a business verdict (true/false) is data and is routed via a downstream decision node.
 
-**`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle „In API sichtbar", default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
+**`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle "In API sichtbar" (visible in API), default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
 **Rules:**
 - Never `new` the Sub-Handler directly — always `$this->context(SubHandler::class, $in)()` (V2 / V3).
@@ -354,7 +354,7 @@ final class CheckStockInCatalog extends EcommerceContext
 
 A Rule is a synchronous, endpoint-bound yes/no guard — for an existing-data check that must run before a Command, not for anything multi-step or side-effecting (that stays a Process). Declared in `Closures.json` (BC-level, sibling of Process/): a catalog entry (name, optional Policy reference) plus a binding (which Command, ordered chain, `expose` switch).
 
-**Where the catalog entry comes from.** You author it in the Closure-Editor (`…/closures/{name}/{closure|code}`, reached from the model list's "Neu ▾" or the "Closure andocken ▾" guard-chain menu on the Aggregate's "API" tab) or headless via MCP `save_closures` — never by hand-editing `Closures.json`. Before writing `__invoke()`, pull the ready-composed work package: the MCP Resource template `jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` (same JSON over `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work`) hands you the free-text task, the contract/signature, `uses`/`reads` call recipes, the generated test's path, and `body: "offen"`/`"geschrieben"` telling you whether the stub still throws `Not implemented`.
+**Where the catalog entry comes from.** You author it in the Closure-Editor (`…/closures/{name}/{closure|code}`, reached from the model list's "Neu ▾" (New) or the "Closure andocken ▾" (attach Closure) guard-chain menu on the Aggregate's "API" tab) or headless via MCP `save_closures` — never by hand-editing `Closures.json`. Before writing `__invoke()`, pull the ready-composed work package: the MCP Resource template `jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` (same JSON over `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work`) hands you the free-text task, the contract/signature, `uses`/`reads` call recipes, the generated test's path, and `body: "offen"`/`"geschrieben"` telling you whether the stub still throws `Not implemented`.
 
 ```php
 // {BC}/Closure/CounterMustBeActive.php — DeveloperOwned, tag RuleClass
@@ -368,8 +368,8 @@ final class CounterMustBeActive extends MeterDeviceContext
             new QueryCounterByIdentifier(identifier: $cmd->identifier)
         );
 
-        $akte = $read->getData()['counter'] ?? null;
-        if ($akte === null || ($akte['status'] ?? null) !== 'active') {
+        $record = $read->getData()['counter'] ?? null;
+        if ($record === null || ($record['status'] ?? null) !== 'active') {
             return RuleResult::reject(
                 rule: self::class,
                 messageKey: 'counter.must_be_active',
@@ -415,8 +415,8 @@ domain event on "order delivered"), not only when invoicing itself — otherwise
 race returns as an initial-creation race. Process flow:
 
 ```
-N1 „MarkInvoiced"          — conditional UPDATE fakturiert: false → true
-   ON_SUCCESS → N2 „CreateCustomerInvoice"   (unconditional INSERT)
+N1 "MarkInvoiced"          — conditional UPDATE fakturiert: false → true
+   ON_SUCCESS → N2 "CreateCustomerInvoice"   (unconditional INSERT)
    ON_FAIL    → declared 409 edge (reject terminal)
 ```
 
@@ -428,7 +428,7 @@ not a special case, and needs no handling of its own.
 counter aggregate (`lastNumber: int`):
 
 ```
-N1 „ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
+N1 "ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
    ON_SUCCESS → N2 uses the new value (passed on via WorkflowContext::getLatest() in the
                 node body — there is no declarative way for this in the corpus, dev surface)
    ON_FAIL    → 409
@@ -448,14 +448,14 @@ including the side effect (documented, Postgres number range, see below).
 
 This is the three-level separation from `generated-code-workflow-api` §1: **branching** (ON_SUCCESS/ON_FAIL
 = true/false, pure path selection) · **response status** (always from the actual `DomainResponse`
-of the last decisive node, NEVER from the edge declaration) · **transaction** (the no path
+of the last decisive node, NEVER from the edge declaration) · **transaction** (the No path
 keeps committing — a declared 409 terminal is no reason to roll back, only a thrown
 technical error rolls back).
 
 **Collision sequence (Case A):** both runs load `fakturiert=false`. The first N1 wins. The
 second N1 waits on the row lock, re-evaluates the current state after waiting (the UPDATE
 is a current read), hits 0 rows → 409 → N2 is never reached. The bracket does
-NOT roll back in that case, it commits empty — the no path is a legitimate completion, not an abort.
+NOT roll back in that case, it commits empty — the No path is a legitimate completion, not an abort.
 
 **Limits:**
 
@@ -514,7 +514,7 @@ gatekeeper.
 | Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey`/`data.context` in the response | Expected behaviour, not a bug — either the existing data genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
 | `expose: true` binding fails the build | The Command has zero bound Rules (B3 — exposed endpoints must be rule-guarded), or it's a Create-Command (name always collides with `{agg}()`, structurally never exposable) | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
 | Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`generated-code-workflow-api` §5) |
-| M7 warning ("doppelt gebunden") on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent existing data between them; drop the node binding if redundant |
+| M7 warning ("doppelt gebunden" (bound twice)) on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent existing data between them; drop the node binding if redundant |
 
 ### Anchors
 

@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Workflow-Engine API used by Process-Designer-generated Use-Case orchestrators — seven routing statuses (`ON_SUCCESS` / `ON_FAIL` / `ON_TIMEOUT` / `ON_SKIP` / `ON_CANCEL` / `ON_EVENT` / `ON_EXIT`), `WorkflowConfig`/`addNode` graph construction, the Event-Kasten ◇ node variant, `handlerFactory` Closure conventions, three opaque `WorkflowContext` slots (`reference`, `response`, `exception`), R5 routing-safety rules.
+description: Workflow-Engine API used by Process-Designer-generated Use-Case orchestrators — seven routing statuses (`ON_SUCCESS` / `ON_FAIL` / `ON_TIMEOUT` / `ON_SKIP` / `ON_CANCEL` / `ON_EVENT` / `ON_EXIT`), `WorkflowConfig`/`addNode` graph construction, the Event node ◇ variant, `handlerFactory` Closure conventions, three opaque `WorkflowContext` slots (`reference`, `response`, `exception`), R5 routing-safety rules.
 zone: post-active
 persona: C
 prerequisites: [generated-code-extend]
@@ -11,7 +11,7 @@ The Process-Designer-Orchestrator (`<Name>Handler.php`, generated under `{BC}/Pr
 
 ### 1. The seven routing statuses
 
-The editable node body is `protected function logic($cmd, WorkflowContextInterface $context): array` and returns exactly one of these as `['status' => WorkflowResult::ON_*, 'data' => [...]]` (same shape as the Event-Kasten below); the generated `__invoke` wraps that into a `WorkflowResult` automatically — never construct `WorkflowResult` inside the `logic()` body:
+The editable node body is `protected function logic($cmd, WorkflowContextInterface $context): array` and returns exactly one of these as `['status' => WorkflowResult::ON_*, 'data' => [...]]` (same shape as the Event node below); the generated `__invoke` wraps that into a `WorkflowResult` automatically — never construct `WorkflowResult` inside the `logic()` body:
 
 | Constant | Meaning |
 |---|---|
@@ -53,7 +53,7 @@ private function config(): WorkflowConfigInterface
 
 End nodes (empty routing map `[]`) let the engine terminate properly.
 
-### Event-Kasten ◇ (event node)
+### Event node ◇
 
 A Designer node can be marked as **Event ◇** instead of **Action** (`mode: async`). In the Designer the author declares an **event field binding** on the node — a list `eventFields: [{label, source}]`, where each `source` points to a command field of the process input (`ProcessEventFieldEditor.svelte`, details tab of the ticket panel).
 
@@ -98,9 +98,9 @@ This is a refinement of the three-level separation from §1: **branching** (`ON_
 = true/false) remains unchanged pure path selection; **response status** still always comes from the
 actual `DomainResponse`, but from the last decisive execution of the node, not from the
 edge declaration and not simply from the first or last chain member — a
-convergent no-terminal (several predecessor nodes lead into the same reject node) makes "last
+convergent No terminal (several predecessor nodes lead into the same reject node) makes "last
 chain member" structurally wrong, a healed retry of the same node makes "any earlier
-4xx" structurally wrong; **transaction** remains: the no path keeps committing, only a
+4xx" structurally wrong; **transaction** remains: the No path keeps committing, only a
 thrown technical error rolls back. Use case + measured values: `generated-code-recipes`
 Recipe 11.
 
