@@ -1,0 +1,57 @@
+#!/bin/sh
+# CI net for the commit-msg hook: checks the message of every non-merge commit in a range.
+#
+# Usage: check-commit-messages <from>..<to>       e.g. origin/develop..HEAD
+#
+# Holds no rules of its own: each message is handed to the commit-msg script next to this file.
+# Merge commits are skipped. Reads the repository only, never writes. Plain POSIX sh.
+# A commit counts as warned when the hook prints anything for it (its exit code carries no verdict).
+# Exit 0 always, also when commits were warned; 2 on a usage error or an unresolvable range.
+
+here=$(dirname "$0")
+hook="$here/commit-msg"
+
+case ${1:-} in
+    -h | --help)
+        echo 'Usage: check-commit-messages <from>..<to>'
+        exit 0
+        ;;
+    *..*)
+        range=$1
+        ;;
+    *)
+        echo 'Usage: check-commit-messages <from>..<to>' >&2
+        exit 2
+        ;;
+esac
+
+if [ ! -f "$hook" ]; then
+    echo "check-commit-messages: $hook not found" >&2
+    exit 2
+fi
+
+if ! commits=$(git rev-list --no-merges --reverse "$range" --); then
+    echo "check-commit-messages: cannot resolve range '$range'" >&2
+    exit 2
+fi
+
+tmp=$(mktemp) || exit 2
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+checked=0
+warned=0
+for commit in $commits; do
+    checked=$((checked + 1))
+    git log -1 --format=%B "$commit" > "$tmp"
+    output=$(sh "$hook" "$tmp" 2>&1) || true
+    if [ -n "$output" ]; then
+        warned=$((warned + 1))
+        printf '%s %s\n  %s\n' "$(git log -1 --format=%h "$commit")" "$(git log -1 --format=%s "$commit")" "$output" >&2
+    fi
+done
+
+if [ "$warned" -gt 0 ]; then
+    echo "check-commit-messages: $warned of $checked commit message(s) warned" >&2
+else
+    echo "check-commit-messages: $checked commit message(s) checked, all accepted"
+fi

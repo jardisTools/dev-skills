@@ -1,0 +1,31 @@
+# Progress — <name>
+
+## Kopf
+- **Phase:** concept
+- **Stage:** —
+- **Next step:** Run the concept interview with the human and draft KONZEPT.html
+- **Open decisions:** —
+
+## Goal
+
+One sentence: what must be true at the end.
+
+## Target picture
+
+Path of the picture (`KONZEPT.html`, `KONZEPT.png` after approval) or of the executable example.
+
+## Guard rails
+
+2 to 5 limits: scope, prohibitions, rulings that hold.
+
+## Stages
+
+- none yet; the plan lists them. A finished stage shrinks to `E<n> done <commit>`.
+
+## Decisions delegated
+
+- none yet. One line each: date, question, decision, source.
+
+## Open points
+
+- none yet. Triaged at close.

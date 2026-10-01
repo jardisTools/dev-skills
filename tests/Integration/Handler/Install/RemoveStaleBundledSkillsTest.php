@@ -5,8 +5,16 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
 use Composer\Util\Filesystem;
+use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\StaleRemovalResult;
+use JardisTools\DevSkills\Handler\Install\BackupFolder;
+use JardisTools\DevSkills\Handler\Install\CopySkill;
+use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
 use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
+use JardisTools\DevSkills\Handler\Manifest\ChecksumDirectory;
+use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Tests\Support\TempProject;
+use JardisTools\DevSkills\Tests\Support\TreeSnapshot;
 use PHPUnit\Framework\TestCase;
 
 final class RemoveStaleBundledSkillsTest extends TestCase
@@ -23,70 +31,174 @@ final class RemoveStaleBundledSkillsTest extends TestCase
         $this->project->cleanup();
     }
 
-    public function testRemovesExistingBundledSkillDirectory(): void
+    public function testRemovesManifestPathsInBothFoldersWithoutBackupWhenUnchanged(): void
     {
-        $this->project->writeFile('.claude/skills/plan-requirements/SKILL.md', 'bundled');
+        $manifest = $this->installAlpha();
 
-        $removed = (new RemoveStaleBundledSkills(new Filesystem()))(
-            ['plan-requirements'],
-            $this->project->root,
-        );
+        $result = $this->remove(['.claude/skills/alpha', '.agents/skills/alpha'], $manifest);
 
-        self::assertSame(['plan-requirements'], $removed);
-        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/plan-requirements'));
+        self::assertSame(['alpha'], $result->removed);
+        self::assertSame([], $result->backups);
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/alpha'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/alpha'));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
     }
 
-    public function testSkipsNamesThatAreNotOnDisk(): void
+    public function testLocallyChangedFolderIsBackedUpBeforeRemoval(): void
     {
-        $removed = (new RemoveStaleBundledSkills(new Filesystem()))(
-            ['plan-requirements'],
-            $this->project->root,
-        );
+        $manifest = $this->installAlpha();
+        $this->project->writeFile('.claude/skills/alpha/notes.md', 'my notes');
 
-        self::assertSame([], $removed);
+        $result = $this->remove(['.claude/skills/alpha', '.agents/skills/alpha'], $manifest);
+
+        self::assertCount(1, $result->backups);
+        self::assertSame('alpha', $result->backups[0]['skill']);
+        self::assertSame('my notes', file_get_contents($this->project->path('.claude/.jardis-backup/alpha/notes.md')));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/skills/alpha'));
+        self::assertDirectoryDoesNotExist($this->project->path('.agents/skills/alpha'));
     }
 
-    public function testRemovesEvenWhenUserModifiedTheSkill(): void
+    public function testOnlyPathsGivenAreTouchedNeverNamesFromElsewhere(): void
     {
-        $this->project->writeFile(
-            '.claude/skills/plan-requirements/SKILL.md',
-            '# user edited this!',
-        );
-        $this->project->writeFile(
-            '.claude/skills/plan-requirements/notes.md',
-            'my additional file',
-        );
+        $manifest = $this->installAlpha();
+        $this->project->writeFile('.claude/skills/user-own/SKILL.md', 'mine');
 
-        $removed = (new RemoveStaleBundledSkills(new Filesystem()))(
-            ['plan-requirements'],
-            $this->project->root,
-        );
+        $this->remove(['.claude/skills/alpha'], $manifest);
 
-        self::assertSame(['plan-requirements'], $removed);
-        self::assertFileDoesNotExist(
-            $this->project->path('.claude/skills/plan-requirements/notes.md'),
-        );
+        self::assertDirectoryExists($this->project->path('.agents/skills/alpha'));
+        self::assertFileExists($this->project->path('.claude/skills/user-own/SKILL.md'));
     }
 
-    public function testReturnsOnlyActuallyRemovedNames(): void
+    public function testSkipsPathsNotOnDiskAndKeysNotInManifest(): void
     {
-        $this->project->writeFile('.claude/skills/platform-usage/SKILL.md', 'x');
+        $manifest = $this->installAlpha();
 
-        $removed = (new RemoveStaleBundledSkills(new Filesystem()))(
-            ['plan-requirements', 'platform-usage', 'rules-patterns'],
-            $this->project->root,
-        );
+        $result = $this->remove(['.claude/skills/gone', '.claude/skills/not-listed'], $manifest);
 
-        self::assertSame(['platform-usage'], $removed);
+        self::assertSame([], $result->removed);
     }
 
-    public function testEmptyInputIsNoOp(): void
+    public function testKeysWithParentSegmentsAreIgnored(): void
     {
-        $removed = (new RemoveStaleBundledSkills(new Filesystem()))(
-            [],
-            $this->project->root,
+        $outside = new TempProject('dev-skills-outside-');
+        $outside->writeFile('victim/SKILL.md', 'keep');
+        $key = '../' . basename($outside->root) . '/victim';
+        $manifest = new Manifest(Manifest::SCHEMA_VERSION, '1.4.0', [
+            $key => ['source' => 'jardis/dev-skills', 'sha256' => 'x'],
+        ]);
+
+        $result = $this->remove([$key], $manifest);
+
+        self::assertSame([], $result->removed);
+        self::assertCount(1, $result->warnings);
+        self::assertFileExists($outside->path('victim/SKILL.md'));
+        $outside->cleanup();
+    }
+
+    public function testAbsoluteKeysOutsideTheSkillFoldersAreNeitherBackedUpNorRemoved(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        $outside->writeFile('victim/SKILL.md', 'keep');
+        $this->project->writeFile('docs/keep/SKILL.md', 'docs');
+        $this->project->writeFile('.claude/skills/alpha/SKILL.md', 'alpha');
+        $keys = [
+            $outside->path('victim'),
+            $this->project->path('docs/keep'),
+            // absolute, even though it is a real skill folder of the project
+            $this->project->path('.claude/skills/alpha'),
+        ];
+        $manifest = $this->manifestWithChangedChecksums($keys);
+        $outsideBefore = TreeSnapshot::of($outside->root);
+        $projectBefore = TreeSnapshot::of($this->project->root);
+
+        $result = $this->remove($keys, $manifest);
+
+        self::assertSame([], $result->removed);
+        self::assertSame([], $result->backups);
+        self::assertCount(3, $result->warnings);
+        self::assertSame($outsideBefore, TreeSnapshot::of($outside->root));
+        self::assertSame($projectBefore, TreeSnapshot::of($this->project->root));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
+        $outside->cleanup();
+    }
+
+    public function testKeyPointingAtASymlinkIsNeitherBackedUpNorRemoved(): void
+    {
+        $outside = new TempProject('dev-skills-outside-');
+        $outside->writeFile('victim/SKILL.md', 'keep');
+        $this->project->mkdir('.claude/skills');
+        self::assertTrue(symlink($outside->path('victim'), $this->project->path('.claude/skills/alpha')));
+        $manifest = $this->manifestWithChangedChecksums(['.claude/skills/alpha']);
+        $outsideBefore = TreeSnapshot::of($outside->root);
+
+        $result = $this->remove(['.claude/skills/alpha'], $manifest);
+
+        self::assertSame([], $result->removed);
+        self::assertSame([], $result->backups);
+        self::assertCount(1, $result->warnings);
+        self::assertTrue(is_link($this->project->path('.claude/skills/alpha')));
+        self::assertSame($outsideBefore, TreeSnapshot::of($outside->root));
+        self::assertDirectoryDoesNotExist($this->project->path('.claude/.jardis-backup'));
+        $outside->cleanup();
+    }
+
+    public function testWithoutManifestNothingIsRemoved(): void
+    {
+        $this->installAlpha();
+
+        $result = $this->remove(['.claude/skills/alpha'], null);
+
+        self::assertSame([], $result->removed);
+        self::assertDirectoryExists($this->project->path('.claude/skills/alpha'));
+    }
+
+    /**
+     * @param list<string> $keys
+     */
+    private function manifestWithChangedChecksums(array $keys): Manifest
+    {
+        $entries = [];
+        foreach ($keys as $key) {
+            $entries[$key] = ['source' => 'jardis/dev-skills', 'sha256' => 'does-not-match'];
+        }
+
+        return new Manifest(Manifest::SCHEMA_VERSION, '1.4.0', $entries);
+    }
+
+    private function installAlpha(): Manifest
+    {
+        $checksum = new ChecksumDirectory();
+        $entries = [];
+        foreach (['.claude/skills/alpha', '.agents/skills/alpha'] as $key) {
+            $this->project->writeFile($key . '/SKILL.md', 'alpha');
+            $entries[$key] = ['source' => 'jardis/dev-skills', 'sha256' => $checksum($this->project->path($key))];
+        }
+        $entries['.claude/skills/not-listed'] = ['source' => 'jardis/dev-skills', 'sha256' => 'x'];
+
+        return new Manifest(Manifest::SCHEMA_VERSION, '1.4.0', $entries);
+    }
+
+    /**
+     * @param list<string> $keys
+     */
+    private function remove(array $keys, ?Manifest $manifest): StaleRemovalResult
+    {
+        $fs = new Filesystem();
+        $backupFolder = new BackupFolder(
+            (new CopySkill($fs))->__invoke(...),
+            (new FindFreeBackupDir(static fn (): \DateTimeImmutable => new \DateTimeImmutable()))->__invoke(...),
         );
 
-        self::assertSame([], $removed);
+        return (new RemoveStaleBundledSkills(
+            $fs,
+            (new ChecksumDirectory())->__invoke(...),
+            $backupFolder->__invoke(...),
+            (new ResolveManagedFolder())->__invoke(...),
+        ))(
+            $keys,
+            $manifest,
+            $this->project->root,
+            $this->project->path('.claude/.jardis-backup'),
+        );
     }
 }

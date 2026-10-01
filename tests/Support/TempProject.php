@@ -57,7 +57,7 @@ final class TempProject
 
         foreach ($iter as $item) {
             /** @var \SplFileInfo $item */
-            if ($item->isDir()) {
+            if ($item->isDir() && !$item->isLink()) {
                 rmdir($item->getPathname());
             } else {
                 unlink($item->getPathname());

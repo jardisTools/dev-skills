@@ -54,7 +54,7 @@ validate-skills: ## Validate every bundled SKILL.md against docs/SKILL-FORMAT.md
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/validate-skills.php
 .PHONY: validate-skills
 
-generate-catalog: ## Generate skills/jardis-catalog/SKILL.md from catalog/manifest.json
+generate-catalog: ## Generate skills/packages-find-existing/SKILL.md from catalog/manifest.json
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/generate-catalog.php
 .PHONY: generate-catalog
 
@@ -65,6 +65,18 @@ generate-catalog-check: ## Check that the checked-in SKILL.md matches the manife
 check-catalog-packagist: ## Check Packagist for Jardis packages missing from catalog/manifest.json (warning only, exit 0)
 	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/check-catalog-packagist.php
 .PHONY: check-catalog-packagist
+
+check-public-text: ## Check publicly shipped texts for home paths and private denylist terms (env PUBLIC_TEXT_DENYLIST)
+	$(DOCKER_COMPOSE) run --rm --no-deps -e PUBLIC_TEXT_DENYLIST -e PUBLIC_TEXT_REQUIRE_DENYLIST phpcli php /app/bin/check-public-text.php
+.PHONY: check-public-text
+
+check-changelog-top: ## Exit 0 if the CHANGELOG.md top heading is the version to tag (VERSION=x.y.z), any other exit means not releasable
+ifndef VERSION
+	@echo "check-changelog-top: VERSION is required, e.g. make check-changelog-top VERSION=1.4.0" >&2; exit 2
+else
+	$(DOCKER_COMPOSE) run --rm --no-deps phpcli php /app/bin/check-changelog-top.php "$(VERSION)"
+endif
+.PHONY: check-changelog-top
 
 <---development----->: ## -----------------------------------------------------------------------
 shell: ## Run a shell inside the phpcli container

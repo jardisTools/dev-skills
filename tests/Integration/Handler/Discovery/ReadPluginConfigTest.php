@@ -4,95 +4,90 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Discovery;
 
+use JardisTools\DevSkills\Data\PluginConfig;
+use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * One test per row of the R1b config table, plus the malformed-input cases.
+ */
 final class ReadPluginConfigTest extends TestCase
 {
-    public function testReturnsDefaultOnWhenExtraIsEmpty(): void
+    private const MANDATORY_WARNING = 'bundled-skills=false: mandatory groups foundation-*/process-* are always installed';
+
+    public function testAbsentKeyInstallsAll(): void
     {
-        // Missing key → default-on: jardis-catalog + the two lifecycle skills; not none().
         $config = (new ReadPluginConfig())([]);
 
-        self::assertFalse($config->installNone);
-        self::assertFalse($config->installAll);
-        self::assertSame(
-            ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'],
-            $config->includeGlobs,
-        );
-        self::assertSame([], $config->excludeGlobs);
+        self::assertTrue($config->installAll);
+        self::assertFalse($config->mandatoryOnly);
         self::assertNull($config->warning);
     }
 
-    public function testReturnsDefaultOnWhenRootKeyIsMissing(): void
+    public function testAbsentRootKeyInstallsAll(): void
     {
         $config = (new ReadPluginConfig())(['other/package' => ['foo' => true]]);
 
-        self::assertFalse($config->installNone);
-        self::assertSame(
-            ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'],
-            $config->includeGlobs,
-        );
+        self::assertTrue($config->installAll);
         self::assertNull($config->warning);
     }
 
-    public function testReturnsDefaultOnWhenBundledSkillsKeyIsMissing(): void
+    public function testAbsentBundledSkillsKeyInstallsAll(): void
     {
         $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['something-else' => 1]]);
 
-        self::assertFalse($config->installNone);
-        self::assertSame(
-            ['jardis-catalog', 'jardis-start-here', 'jardis-mcp-consumer'],
-            $config->includeGlobs,
-        );
-    }
-
-    public function testReturnsAllWhenTrue(): void
-    {
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => ['bundled-skills' => true],
-        ]);
-
         self::assertTrue($config->installAll);
-        self::assertFalse($config->installNone);
-    }
-
-    public function testReturnsNoneWhenFalse(): void
-    {
-        // Explicit false = user explicitly opted out of ALL bundled skills, incl. catalog.
-        // This is distinct from "key missing" which now returns default-on.
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => ['bundled-skills' => false],
-        ]);
-
-        self::assertTrue($config->installNone);
         self::assertNull($config->warning);
     }
 
-    public function testExcludeJardisCatalogOptOut(): void
+    public function testTrueInstallsAll(): void
     {
-        // User can opt out of just the catalog via the exclude key.
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => [
-                'bundled-skills' => ['exclude' => ['jardis-catalog']],
-            ],
-        ]);
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => true]]);
 
-        self::assertFalse($config->installNone);
-        self::assertSame([], $config->includeGlobs);
-        self::assertSame(['jardis-catalog'], $config->excludeGlobs);
+        self::assertTrue($config->installAll);
+        self::assertFalse($config->mandatoryOnly);
+        self::assertNull($config->warning);
     }
 
-    public function testListShortcutBecomesIncludeFilter(): void
+    public function testFalseKeepsOnlyMandatoryGroupsWithWarning(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => false]]);
+
+        self::assertFalse($config->installAll);
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(self::MANDATORY_WARNING, $config->warning);
+    }
+
+    public function testEmptyListBehavesLikeFalse(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => []]]);
+
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(self::MANDATORY_WARNING, $config->warning);
+    }
+
+    public function testEmptyIncludeBehavesLikeFalse(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => ['include' => []]],
+        ]);
+
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(self::MANDATORY_WARNING, $config->warning);
+    }
+
+    public function testListBecomesIncludeFilter(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['plan-*', 'rules-architecture']],
         ]);
 
         self::assertFalse($config->installAll);
-        self::assertFalse($config->installNone);
+        self::assertFalse($config->mandatoryOnly);
         self::assertSame(['plan-*', 'rules-architecture'], $config->includeGlobs);
         self::assertSame([], $config->excludeGlobs);
+        self::assertNull($config->warning);
     }
 
     public function testObjectWithIncludeAndExclude(): void
@@ -107,28 +102,10 @@ final class ReadPluginConfigTest extends TestCase
         ]);
 
         self::assertFalse($config->installAll);
-        self::assertFalse($config->installNone);
+        self::assertFalse($config->mandatoryOnly);
         self::assertSame(['plan-*', 'rules-*'], $config->includeGlobs);
         self::assertSame(['rules-patterns'], $config->excludeGlobs);
-    }
-
-    public function testEmptyListMeansNone(): void
-    {
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => ['bundled-skills' => []],
-        ]);
-
-        self::assertTrue($config->installNone);
         self::assertNull($config->warning);
-    }
-
-    public function testEmptyObjectMeansNone(): void
-    {
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => ['bundled-skills' => ['include' => []]],
-        ]);
-
-        self::assertTrue($config->installNone);
     }
 
     public function testObjectWithOnlyExcludeMeansAllExceptExcluded(): void
@@ -141,67 +118,173 @@ final class ReadPluginConfigTest extends TestCase
         self::assertSame(['tools-*'], $config->excludeGlobs);
     }
 
-    public function testInvalidScalarFallsBackToNoneWithWarning(): void
+    public function testInvalidScalarBehavesLikeFalseWithWarning(): void
     {
-        $config = (new ReadPluginConfig())([
-            'jardis/dev-skills' => ['bundled-skills' => 42],
-        ]);
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['bundled-skills' => 42]]);
 
-        self::assertTrue($config->installNone);
-        self::assertNotNull($config->warning);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('int', (string) $config->warning);
+        self::assertStringContainsString(PluginConfig::MANDATORY_NOTICE, (string) $config->warning);
     }
 
-    public function testInvalidListEntryFallsBackToNoneWithWarning(): void
+    public function testInvalidListEntryBehavesLikeFalseWithWarning(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['plan-*', 42]],
         ]);
 
-        self::assertTrue($config->installNone);
-        self::assertNotNull($config->warning);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('bundled-skills[1]', (string) $config->warning);
     }
 
-    public function testNonListIncludeFallsBackToNoneWithWarning(): void
+    public function testNonListIncludeBehavesLikeFalseWithWarning(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['include' => 'plan-*']],
         ]);
 
-        self::assertTrue($config->installNone);
-        self::assertNotNull($config->warning);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('include must be a list', (string) $config->warning);
     }
 
-    public function testInvalidIncludeEntryFallsBackToNoneWithWarning(): void
+    public function testInvalidIncludeEntryBehavesLikeFalseWithWarning(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['include' => ['plan-*', null]]],
         ]);
 
-        self::assertTrue($config->installNone);
-        self::assertNotNull($config->warning);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('bundled-skills.include[1]', (string) $config->warning);
     }
 
-    public function testNonListExcludeFallsBackToNoneWithWarning(): void
+    public function testNonListExcludeBehavesLikeFalseWithWarning(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['exclude' => 'tools-*']],
         ]);
 
-        self::assertTrue($config->installNone);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('exclude must be a list', (string) $config->warning);
     }
 
-    public function testInvalidExcludeEntryFallsBackToNoneWithWarning(): void
+    public function testInvalidExcludeEntryBehavesLikeFalseWithWarning(): void
     {
         $config = (new ReadPluginConfig())([
             'jardis/dev-skills' => ['bundled-skills' => ['exclude' => [1]]],
         ]);
 
-        self::assertTrue($config->installNone);
+        self::assertTrue($config->mandatoryOnly);
         self::assertStringContainsString('bundled-skills.exclude[0]', (string) $config->warning);
+    }
+
+    public function testProcessDocsDefaultsToCommitted(): void
+    {
+        foreach ([[], ['jardis/dev-skills' => []], ['jardis/dev-skills' => ['bundled-skills' => false]]] as $extra) {
+            $config = (new ReadPluginConfig())($extra);
+
+            self::assertSame(ProcessDocsMode::Committed, $config->processDocs);
+            self::assertNull($config->processDocsWarning);
+        }
+    }
+
+    public function testProcessDocsLocalIsRead(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['process-docs' => 'local']]);
+
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNull($config->processDocsWarning);
+        self::assertTrue($config->installAll, 'independent of bundled-skills');
+    }
+
+    public function testProcessDocsIsIndependentOfBundledSkills(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => ['plan-*'], 'process-docs' => 'committed'],
+        ]);
+
+        self::assertSame(ProcessDocsMode::Committed, $config->processDocs);
+        self::assertSame(['plan-*'], $config->includeGlobs);
+    }
+
+    public function testInvalidProcessDocsWarnsAndFallsBackToLocal(): void
+    {
+        foreach (['public', 42, true, ['local'], null] as $raw) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['process-docs' => $raw]]);
+
+            self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+            self::assertStringContainsString('process-docs', (string) $config->processDocsWarning);
+            self::assertStringContainsString('local', (string) $config->processDocsWarning);
+        }
+    }
+
+    public function testInvalidProcessDocsDoesNotDisturbBundledSkills(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => false, 'process-docs' => 'nonsense'],
+        ]);
+
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(self::MANDATORY_WARNING, $config->warning);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+    }
+
+    public function testGitRulesDefaultToOnWhenTheKeyIsAbsent(): void
+    {
+        foreach ([[], ['jardis/dev-skills' => []], ['jardis/dev-skills' => ['bundled-skills' => false]]] as $extra) {
+            $config = (new ReadPluginConfig())($extra);
+
+            self::assertTrue($config->gitRules);
+            self::assertNull($config->gitRulesWarning);
+        }
+    }
+
+    public function testGitRulesTrueIsOn(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => true]]);
+
+        self::assertTrue($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+    }
+
+    public function testGitRulesFalseIsTheOptOut(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => false]]);
+
+        self::assertFalse($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+    }
+
+    public function testInvalidGitRulesStayOnAndWarn(): void
+    {
+        foreach (['false', 'off', 0, 1, ['false'], null] as $raw) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => $raw]]);
+
+            self::assertTrue($config->gitRules, 'an invalid value never switches the rules off');
+            self::assertStringContainsString('git-rules', (string) $config->gitRulesWarning);
+            self::assertStringContainsString('git-rules=true', (string) $config->gitRulesWarning);
+        }
+    }
+
+    public function testGitRulesAreIndependentOfBundledSkillsAndProcessDocs(): void
+    {
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => false, 'process-docs' => 'nonsense', 'git-rules' => false],
+        ]);
+
+        self::assertFalse($config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+        self::assertTrue($config->mandatoryOnly);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNotNull($config->processDocsWarning);
+
+        $config = (new ReadPluginConfig())([
+            'jardis/dev-skills' => ['bundled-skills' => ['plan-*'], 'process-docs' => 'local', 'git-rules' => 'nonsense'],
+        ]);
+
+        self::assertTrue($config->gitRules);
+        self::assertNotNull($config->gitRulesWarning);
+        self::assertSame(['plan-*'], $config->includeGlobs);
+        self::assertSame(ProcessDocsMode::Local, $config->processDocs);
+        self::assertNull($config->processDocsWarning);
     }
 }

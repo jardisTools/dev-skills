@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jardis/dev-skills overview</title>
+<style>
+:root{
+  --ink:#1f2937; --mute:#6b7280; --line:#d1d5db; --bg:#ffffff; --panel:#f8fafc;
+  --hum:#6d28d9; --hum-bg:#f5f3ff; --chk:#1d4ed8; --chk-bg:#eff6ff;
+  --art:#166534; --art-bg:#f0fdf4; --vs:#ca8a04; --vs-bg:#fefce8;
+  --new:#0f766e; --old:#9ca3af;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.page{width:1400px;margin:0 auto;padding:28px 30px 60px}
+h1{font-size:24px;margin:0 0 4px}
+h2{font-size:18px;margin:0 0 12px;padding-bottom:6px;border-bottom:2px solid var(--ink)}
+h3{font-size:14px;margin:14px 0 8px}
+.sub{color:var(--mute);margin:0 0 18px}
+section{margin:0 0 34px;break-inside:avoid-page}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:0 0 20px}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;border:1px solid}
+.c-hum{color:var(--hum);background:var(--hum-bg);border-color:var(--hum)}
+.c-chk{color:var(--chk);background:var(--chk-bg);border-color:var(--chk)}
+.c-art{color:var(--art);background:var(--art-bg);border-color:var(--art)}
+.c-unk{color:var(--mute);background:#fff;border:1px dashed var(--mute)}
+.vs{border:2px solid var(--vs)!important;background:var(--vs-bg)!important}
+.rule.ok{border-color:var(--art);background:var(--art-bg)}
+/* Tiers */
+.tiers{display:grid;grid-template-columns:150px repeat(4,1fr);gap:10px;align-items:stretch;margin-bottom:10px}
+.entry{display:flex;flex-direction:column;justify-content:center;align-items:center;border:2px solid var(--ink);border-radius:8px;padding:8px;text-align:center;font-weight:600}
+.entry small{font-weight:400;color:var(--mute)}
+.tier{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel)}
+.tier b{display:block;font-size:14px}
+.tier.t3{border:2px solid var(--ink);background:#fff}
+.tier .how{margin-top:4px;color:var(--mute);font-size:12px}
+.down{text-align:right;padding-right:12%;font-size:20px;line-height:1;color:var(--ink);margin:-2px 0 6px}
+/* Phase swimlanes */
+.lanes{display:grid;grid-template-columns:110px repeat(9,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.lanes>div{padding:7px 8px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px}
+.lanes .lh{background:#111827;color:#fff;font-weight:600;font-size:12px;display:flex;align-items:center}
+.lanes .ph{background:#111827;color:#fff;position:relative}
+.lanes .ph b{display:block;font-size:13px}
+.lanes .ph .st{font-size:11px;color:#cbd5e1}
+.lanes .ph .sk{display:block;margin-top:4px;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#99f6e4}
+.lanes .ph:not(:last-child)::after{content:"▶";position:absolute;right:-7px;top:40%;color:#111827;font-size:12px;z-index:2;text-shadow:0 0 2px #fff}
+.lanes .gate{background:#1e3a8a}
+.lanes .loop{background:#374151}
+.lanes .rl{font-weight:600;display:flex;align-items:center}
+.r-hum{background:var(--hum-bg)} .r-hum.rl{color:var(--hum)}
+.r-chk{background:var(--chk-bg)} .r-chk.rl{color:var(--chk)}
+.r-art{background:var(--art-bg)} .r-art.rl{color:var(--art)}
+.none{color:var(--old)}
+.band{display:grid;grid-template-columns:110px 1fr;border:1px solid var(--line);border-radius:8px;margin-top:8px;overflow:hidden}
+.band>div{padding:7px 10px;font-size:12px}
+.band .bl{font-weight:600;background:var(--panel);border-right:1px solid var(--line)}
+.loopnote{grid-column:7 / span 2;text-align:center;font-size:11px;color:#374151;background:#f3f4f6;border-bottom:1px solid var(--line)}
+/* Skills */
+.rule{border:2px solid var(--vs);background:var(--vs-bg);border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.rule .big{font-size:16px;font-weight:600}
+.areas{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.area{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.area h4{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}
+.area h4 span{font-weight:400;color:var(--mute);font-size:11px}
+.sk{margin:0 0 6px}
+.sk .n{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--new)}
+.sk .d{font-size:12px}
+.sk .h{font-size:11px;color:var(--mute)}
+.sk .was{font-size:11px;color:var(--mute)}
+.newb{font-size:10px;font-weight:700;color:#fff;background:var(--new);border-radius:3px;padding:0 4px;margin-left:4px;vertical-align:1px}
+table{border-collapse:collapse;width:100%;font-size:12px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:left;vertical-align:top}
+th{background:var(--panel);font-weight:600}
+td.o{font-family:ui-monospace,Menlo,monospace;color:#6b7280;text-decoration:line-through;text-decoration-color:#d1d5db}
+td.nn{font-family:ui-monospace,Menlo,monospace;color:var(--new);font-weight:600}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.two>*,.three>*{min-width:0}
+td code{overflow-wrap:break-word}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+/* Installation */
+pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;color:#e2e8f0;border-radius:8px;padding:14px 16px;font:12px/1.55 ui-monospace,Menlo,monospace;white-space:pre}
+.tree .t-new{color:#5eead4} .tree .t-now{color:#cbd5e1} .tree .t-new{color:#fde047} .tree .t-c{color:#94a3b8}
+/* Matrix */
+.mx td,.mx th{text-align:center}
+.mx td:first-child,.mx th:first-child{text-align:left}
+.mx td.alt{text-align:left;font-size:11px;color:#374151}
+.y{color:#15803d;font-weight:700}.p{color:#b45309;font-weight:700}.n0{color:#b91c1c;font-weight:700}.q{color:var(--mute);font-weight:700}
+.guar td{font-size:11px}
+/* Cards for stated facts */
+.vcard{border:2px solid var(--vs);background:var(--vs-bg);border-radius:6px;padding:6px 9px;font-size:12px}
+.vcard b{color:#854d0e}
+.vcard.ok{border-color:var(--art);background:var(--art-bg)}
+.vcard.ok b{color:var(--art)}
+.layers{border:1px solid var(--art);background:var(--art-bg);border-radius:8px;padding:7px 10px;font-size:12px;margin-bottom:12px}
+.src{font-size:11px;color:var(--mute)}
+.fixed{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--panel);font-size:12px;margin-bottom:16px}
+.fixed ul{margin:4px 0 0;padding-left:18px;columns:2;column-gap:28px}
+/* Knowledge cycle */
+.places{display:grid;grid-template-columns:1.35fr 1fr 0.9fr 0.9fr;gap:10px;margin-bottom:12px}
+.place{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;font-size:12px}
+.place h4{margin:0 0 4px;font-size:13px}
+.secs{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0}
+.secs span{font-family:ui-monospace,Menlo,monospace;font-size:11px;border:1px solid var(--new);color:var(--new);border-radius:3px;padding:0 5px;background:#f0fdfa}
+.track{display:grid;grid-template-columns:130px 1fr 190px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.track .tn{background:#111827;color:#fff;padding:8px 10px;font-weight:600;font-size:13px}
+.track .tn small{display:block;font-weight:400;color:#cbd5e1;font-size:11px;margin-top:3px}
+.steps{display:flex;align-items:stretch;padding:8px;gap:0}
+.step{flex:1;border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:11.5px;background:#fff;position:relative;margin-right:16px}
+.step:last-child{margin-right:0}
+.step:not(:last-child)::after{content:"▶";position:absolute;right:-13px;top:42%;font-size:10px;color:#374151}
+.step .k{display:inline-block;font-size:10px;font-weight:700;border-radius:3px;padding:0 4px;margin-right:3px;color:#fff}
+.k.r{background:var(--chk)} .k.w{background:var(--hum)} .k.g{background:#b91c1c} .k.d{background:var(--art)}
+.step .o{display:block;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--new);margin-top:2px}
+.track .repo{border-left:1px solid var(--line);padding:8px 10px;font-size:11.5px;background:var(--panel)}
+@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{width:auto}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1><code>jardis/dev-skills</code> — the process for Jardis projects</h1>
+<p class="sub">Version 1.4.0 · a Composer plugin that installs skills, an <code>AGENTS.md</code> process router and reviewer agent files into a Jardis project · five areas on this page: process map, knowledge cycle, skill map, installation picture, tool coverage</p>
+
+<div class="fixed"><b>Fixed points:</b>
+<ul>
+<li>33 bundled skills in nine areas, plus the skills of every Jardis vendor package</li>
+<li>Skills land in <code>.claude/skills</code> and <code>.agents/skills</code>; one managed block lands in <code>AGENTS.md</code></li>
+<li>Branch, commit and merge are gates of the human; no commit carries a tool attribution</li>
+<li>19 reviewer roles are written as agent files for five tools</li>
+<li>Only Claude Code is tested; Codex, Cursor, GitHub Copilot and Gemini CLI are documented, not tested</li>
+<li>The groups <code>foundation-*</code> and <code>process-*</code> are always installed</li>
+<li>The switch <code>process-docs</code> keeps the process documents in the commit (<code>committed</code>) or out of it (<code>local</code>)</li>
+</ul></div>
+
+<div class="legend">
+<span class="chip c-hum">Human decides</span>
+<span class="chip c-chk">Reviewer (independent, fresh context)</span>
+<span class="chip c-art">Artefact</span>
+<span class="chip c-unk">no role in this phase</span>
+<span class="chip" style="border-color:var(--new);color:var(--new)">Skill name</span>
+</div>
+
+<!-- ========================================================= 1 -->
+<section id="s1">
+<h2>Process map</h2>
+
+<div class="tiers">
+  <div class="entry">Task<small>every request</small><span class="mono" style="color:var(--new);margin-top:4px">process-choose-tier</span></div>
+  <div class="tier"><b>0 Answer</b>question, explanation, typo<div class="how">no process, answer directly</div></div>
+  <div class="tier"><b>1 Single action</b>one thing, one place, no open decision<div class="how">the main session does it itself · hygiene: update the docs, test changed logic, run only the gates the change touches, read the diff back</div></div>
+  <div class="tier"><b>2 Small assignment</b>big, loud or isolated <i>or</i> several subtasks<div class="how">one sub-agent per subtask · the main session keeps the task list and verifies against ground truth, it does not implement · hygiene as in 1</div></div>
+  <div class="tier t3"><b>3 Undertaking</b>open decision, dependent steps, new architecture, public API, data, security<div class="how">stages below · when in doubt the lower tier · a tier-3 criterion that shows up decides for tier 3</div></div>
+</div>
+<div class="down">▼</div>
+
+<div class="lanes">
+  <div class="lh">Phase</div>
+  <div class="ph"><b>Concept</b><span class="st">stage 0</span><span class="sk">process-concept</span></div>
+  <div class="ph"><b>PRD</b><span class="st">stage 1</span><span class="sk">process-write-prd</span></div>
+  <div class="ph gate"><b>Requirements board</b><span class="st">on the PRD · once per undertaking</span><span class="sk">process-review-board</span></div>
+  <div class="ph"><b>Plan</b><span class="st">stage 2</span><span class="sk">process-write-plan</span></div>
+  <div class="ph gate"><b>Design board</b><span class="st">on the plan · once per undertaking</span><span class="sk">process-review-board</span></div>
+  <div class="ph loop"><b>Build</b><span class="st">each stage of the plan</span><span class="sk">process-run-stage</span></div>
+  <div class="ph loop"><b>Verification</b><span class="st">each stage of the plan</span><span class="sk">process-verify</span></div>
+  <div class="ph gate"><b>Acceptance</b><span class="st">after the last stage</span><span class="sk">process-verify</span></div>
+  <div class="ph"><b>Close</b><span class="st">once per undertaking</span><span class="sk">process-close</span></div>
+
+  <div class="rl r-hum">Human decides</div>
+  <div class="r-hum">Interview: answers point by point · <b>accepts the target picture</b> (no yes, no next stage)</div>
+  <div class="r-hum"><b>confirms the PRD</b></div>
+  <div class="r-hum">Every finding is ruled; <b>every fork goes to the human</b>, minor ones too</div>
+  <div class="r-hum"><b>releases the plan</b></div>
+  <div class="r-hum">Every finding is ruled; <b>every fork goes to the human</b></div>
+  <div class="r-hum">At most 2 question points per stage · <b>commit and merge are gates of the human</b></div>
+  <div class="r-hum"><b>Sight gate</b> where a surface is built: target picture beside screenshot, always blocks</div>
+  <div class="r-hum"><b>Accepts</b> the gate verdict</div>
+  <div class="r-hum">Each open point gets one of four decisions · <b>decides</b> process changes from the retro</div>
+
+  <div class="rl r-chk">Reviewer</div>
+  <div class="r-chk">Before anything new: what the environment already does<br><span class="mono">existing-capability-check</span></div>
+  <div class="r-chk none">—</div>
+  <div class="r-chk">Skeptic always, further roles only with a reason (domain, DDD strategy, frontend UX) · blind, in parallel · one merged list</div>
+  <div class="r-chk none">—</div>
+  <div class="r-chk">Default two roles: architecture, test strategy · packages only for new package APIs · more only with a reason</div>
+  <div class="r-chk">Code review per phase (<span class="mono">code-review-change</span>) · open-question gate · failure diagnosis</div>
+  <div class="r-chk">Stage verifier, blind, once per stage, doer ≠ checker · QA gates once per stage by the main session</div>
+  <div class="r-chk">Acceptance gate, end to end against the whole PRD, once</div>
+  <div class="r-chk none">—</div>
+
+  <div class="rl r-art">Artefact</div>
+  <div class="r-art"><span class="mono">KONZEPT.html</span> (+ <span class="mono">KONZEPT.png</span> at approval) · <span class="mono">PROGRESS.md</span> with head: Phase, Stage, Next step, Open decisions</div>
+  <div class="r-art"><span class="mono">PRD.md</span> adds error cases, states, limits and data paths to the picture</div>
+  <div class="r-art">One finding list, every finding resolved or rejected</div>
+  <div class="r-art"><span class="mono">PLAN.md</span>: stages → phases, file scope, acceptance criteria per phase</div>
+  <div class="r-art">Findings worked into the plan</div>
+  <div class="r-art">One brief per phase (≤ 6 KB, ≤ 8 commitments, ≤ 30 KB context load) · one commit per phase</div>
+  <div class="r-art">Verdict GREEN or RED (≤ 5 items, ≤ 3 red proofs) · screenshot · merge</div>
+  <div class="r-art">Per criterion MET or GAP · verdict GREEN or RED</div>
+  <div class="r-art">Digest <span class="mono">docs/digests/…</span> · folder deleted · delivery once</div>
+</div>
+
+<div class="band"><div class="bl">Stage loop</div><div>Per phase: brief → implementer (fresh session) → commit. Per stage: verifier → QA gates → sight gate → head update → merge. After RED: <b>one</b> fix run and <b>one</b> follow-up run of the verifier, then <span class="mono">STOPP:</span> in the progress head.</div></div>
+<div class="band"><div class="bl" style="color:#b91c1c">Failure path</div><div><b>A</b> recoverable → one fresh retry · <b>B</b> answerable question → open-question gate (<span class="mono">open-question-gate</span>; the answer is derived from PRD, target picture, constitution and code) · diagnosis by <span class="mono">failure-diagnosis</span> · never delegated: destructive operations, public API changes, scope beyond the PRD, publication, cost, third parties</div></div>
+<div class="band"><div class="bl" style="color:var(--new)">Knowledge</div><div><span class="mono">knowledge-*</span> · read the pool before a format, architecture or emission decision · every <span class="mono">feat:</span> and <span class="mono">fix:</span> commit carries a <span class="mono">Wissen:</span> note line</div></div>
+<div class="band"><div class="bl">Resume</div><div><span class="mono">process-resume</span> · a fresh session finds the active <span class="mono">PROGRESS.md</span> (at most 60 lines, only the main session writes it), honours <span class="mono">STOPP:</span>, runs the preflight and takes up exactly one next step · every stage runs in a fresh agent session</div></div>
+<div class="band"><div class="bl">Roles</div><div>Main session = orchestrator: writes briefs, watches, checks against ground truth, builds nothing · implementer = sub-agent per phase, writes no progress file and no state-changing git command · reviewer = own sub-agent that sees only the target artefact, the acceptance criteria and the code · without sub-agents: a fresh headless run per role (<span class="mono">claude -p</span>, <span class="mono">codex exec</span>, <span class="mono">agent -p</span>, <span class="mono">copilot -p</span>, <span class="mono">gemini -p</span>)</div></div>
+<p class="src">Source: the process router in <code>AGENTS.md</code> and the skills <code>process-choose-tier</code>, <code>process-concept</code>, <code>process-write-prd</code>, <code>process-write-plan</code>, <code>process-review-board</code>, <code>process-run-stage</code>, <code>process-verify</code>, <code>process-close</code>, <code>process-resume</code>.</p>
+</section>
+
+<!-- ========================================================= 2 -->
+<section id="s2k">
+<h2>Knowledge cycle</h2>
+<div class="legend" style="margin-bottom:10px">
+<span class="chip" style="background:var(--chk);color:#fff;border-color:var(--chk)">R read</span>
+<span class="chip" style="background:var(--hum);color:#fff;border-color:var(--hum)">W write</span>
+<span class="chip" style="background:#b91c1c;color:#fff;border-color:#b91c1c">G Git hook or check</span>
+<span class="chip" style="background:var(--art);color:#fff;border-color:var(--art)">D account (docs/)</span>
+</div>
+
+<div class="layers"><b>Three layers:</b> layer 1 <b>chat</b> (raw material, never the source of truth) → layer 2 <b>project documents</b> <code>docs/vorhaben/&lt;name&gt;/</code> → layer 3 <b>knowledge</b> <code>.claude/wissen/</code>. The direction is fixed: chat, then project documents, then knowledge.</div>
+
+<div class="places">
+  <div class="place"><h4>WHERE · knowledge pool (why and pitfalls)</h4>
+    <span class="mono">.claude/wissen/INDEX.md</span> is the entry point · one page per topic <span class="mono">.claude/wissen/&lt;topic&gt;.md</span>
+    <div class="secs"><span>Stand</span><span>Entscheide</span><span>Fallen</span><span>Ersetzt</span><span>Verweise</span></div>
+    condensed, not appended · a decision carries date, author and source · page ≤ 16,384 bytes and 160 lines, index &lt; 10,240 bytes</div>
+  <div class="place"><h4>WHERE · account</h4>
+    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> holds PROGRESS, KONZEPT, PRD, PLAN<br>→ at close: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, the folder is deleted, no archive</div>
+  <div class="place"><h4>WHERE · skills (what)</h4>
+    <span class="mono">.claude/skills</span> and <span class="mono">.agents/skills</span> arrive through Composer. The plugin writes the skills and never writes the pool; the agent creates the pool scaffold through <span class="mono">process-concept</span>.</div>
+  <div class="place"><h4>IN THE REPO?</h4>
+    <b>committed</b> (default): everything is left to the commit<br>
+    <b>local</b> (switch <span class="mono">process-docs</span>): the exclude block in <span class="mono">.git/info/exclude</span> also holds <span class="mono">.claude/wissen/</span>, <span class="mono">docs/vorhaben/</span> and <span class="mono">docs/digests/</span>; <span class="mono">.gitignore</span> stays untouched</div>
+</div>
+
+<div class="track">
+  <div class="tn">A · Project start<small>no pool yet, first undertaking</small></div>
+  <div class="steps">
+    <div class="step"><span class="k w">W</span>Scaffold: <b>empty INDEX.md</b>, only when <span class="mono">.claude/wissen/</span> is missing<span class="o">.claude/wissen/INDEX.md</span></div>
+    <div class="step"><span class="k w">W</span><b>Interview:</b> every settled point goes into the concept artefact, not into a chat summary<span class="o">KONZEPT.html</span></div>
+    <div class="step"><span class="k d">D</span>PRD, plan and progress file as the account<span class="o">docs/vorhaben/&lt;name&gt;/</span></div>
+    <div class="step"><span class="k r">R</span>The <b>brief</b> names the pool pages that touch the area, chosen from INDEX.md<span class="o">INDEX.md → pages</span></div>
+    <div class="step"><span class="k w">W</span><span class="k g">G</span>A decision becomes one line in <i>Entscheide</i>; the <code>feat:</code> commit carries the note<span class="o">Wissen: &lt;page&gt;#&lt;section&gt;</span></div>
+    <div class="step"><span class="k r">R</span>The <b>verifier</b> receives the knowledge pages the briefs named</div>
+    <div class="step"><span class="k w">W</span><span class="k d">D</span><b>Close:</b> lessons into the pool · digest · folder deleted<span class="o">docs/digests/</span></div>
+  </div>
+  <div class="repo">Pool and docs committed · mode local: all of it under the exclude block, the digest too</div>
+</div>
+
+<div class="track">
+  <div class="tn">B · Feature<small>single action or undertaking</small></div>
+  <div class="steps">
+    <div class="step"><span class="k r">R</span>Before a format, architecture or emission decision, read the responsible page<span class="o">INDEX.md → &lt;topic&gt;.md</span></div>
+    <div class="step"><span class="k w">W</span><code>feat:</code> extends <i>Stand</i> or <i>Entscheide</i>; a replaced fact moves to <i>Ersetzt</i></div>
+    <div class="step"><span class="k w">W</span>A page the change contradicts is corrected in the <b>same</b> commit</div>
+    <div class="step"><span class="k g">G</span><b>commit-msg hook:</b> a <code>feat:</code> or <code>fix:</code> commit without the note produces a warning, the commit goes through<span class="o">Wissen: &lt;page&gt;#&lt;section&gt; | Wissen: keins – &lt;reason&gt;</span></div>
+    <div class="step"><span class="k g">G</span><b>pool check:</b> sections, links, path references and size caps<span class="o">pool-check.php</span></div>
+  </div>
+  <div class="repo">The note stands in the Git history · pages committed or local</div>
+</div>
+
+<div class="track">
+  <div class="tn">C · Bugfix<small>with or without an undertaking</small></div>
+  <div class="steps">
+    <div class="step"><span class="k w">W</span>Fix and a test for the changed logic</div>
+    <div class="step"><span class="k w">W</span>Pool entry <b>only if all four criteria hold</b>: not obvious from the code · regression · trap · pool wrong or incomplete</div>
+    <div class="step"><span class="k w">W</span>2 to 4 lines in <i>Fallen</i>: symptom, cause, rule, source<span class="o">&lt;topic&gt;.md#Fallen</span></div>
+    <div class="step"><span class="k g">G</span><code>fix:</code> carries <code>Wissen: &lt;page&gt;#fallen</code> or <code>Wissen: keins – &lt;reason&gt;</code></div>
+    <div class="step"><span class="k w">W</span>A wrong page is corrected in the same commit</div>
+  </div>
+  <div class="repo">as B</div>
+</div>
+
+<div class="band"><div class="bl" style="color:#b91c1c">Checks</div><div><span class="k g" style="display:inline-block;font-size:10px;font-weight:700;border-radius:3px;padding:0 4px;color:#fff;background:#b91c1c">G</span> <span class="mono">pool-check.php</span> only reads; exit code 0 clean, 1 violations, 2 usage error or no pool · the <span class="mono">commit-msg</span> hook only warns and always exits 0 · <span class="mono">check-commit-messages &lt;from&gt;..&lt;to&gt;</span> runs the same check over a commit range, for example in CI · <span class="mono">install-commit-msg-hook</span> writes the hook, <span class="mono">git-setup-repository</span> runs it</div></div>
+<h3>What the package puts in place for the cycle</h3>
+<div class="three">
+<div class="vcard ok"><b>Pool pointer in the router</b> — the managed block in <code>AGENTS.md</code> carries the line “Wissenspool: <code>.claude/wissen/INDEX.md</code> — vor Entscheiden lesen, Vermerk-Pflicht”, so a session finds the pool without any private setting.</div>
+<div class="vcard ok"><b>Tools shipped with the package</b> — the <code>commit-msg</code> hook, its installer <code>install-commit-msg-hook</code> and the pool check <code>pool-check.php</code> come with <code>jardis/dev-skills</code> under <code>scripts/</code>.</div>
+<div class="vcard ok"><b>Scaffold at the first undertaking</b> — <code>process-concept</code> copies only <code>INDEX.md</code> into <code>.claude/wissen/</code>, and only when that folder is missing; an existing pool is never changed.</div>
+<div class="vcard ok"><b>Offer at the end of a chat</b> — a chat that produced more than an answer ends with two offers: create a project folder (<code>docs/vorhaben/&lt;name&gt;/</code>) and carry knowledge into the pool. The rule is in <code>process-choose-tier</code>; nothing is created without a yes.</div>
+<div class="vcard ok"><b><code>PROGRESS.md</code> with a fixed head</b> — <code>## Kopf</code> is the first heading, with four lines in this order: <code>Phase</code>, <code>Stage</code>, <code>Next step</code>, <code>Open decisions</code>.</div>
+<div class="vcard ok"><b>Fresh session per stage</b> — every stage, and every implementer session inside it, runs in a fresh agent session; the head of the progress file and the brief are the only hand-over. The rule is in <code>process-run-stage</code>.</div>
+</div>
+<p class="src">Source: the skills <code>knowledge-maintain-pool</code>, <code>knowledge-record-decision</code>, <code>process-concept</code>, <code>process-close</code>, <code>process-run-stage</code> and the scripts under <code>scripts/</code>.</p>
+</section>
+
+<!-- ========================================================= 3 -->
+<section id="s3s">
+<h2>Skill map</h2>
+
+<div class="rule ok">
+<div class="big">Naming scheme: <code>&lt;area&gt;-&lt;what-it-does&gt;</code> · English · kebab-case</div>
+The area says where in the lifecycle a skill is used: <code>start</code>, <code>packages</code>, <code>process</code>, <code>knowledge</code>, <code>git</code>, <code>design</code>, <code>generated-code</code>, <code>foundation</code>; the review skill carries <code>code-review</code>. Skills of Jardis packages (<code>adapter-*</code>, <code>core-*</code>, <code>support-*</code>, <code>tools-*</code>) belong to those packages and are added on top.
+</div>
+
+<div class="areas">
+  <div class="area"><h4>start · packages <span>entry</span></h4>
+    <div class="sk"><div class="n">start-orientation</div><div class="d">Entry point: walks the lifecycle phases and routes to every other skill</div></div>
+    <div class="sk"><div class="n">packages-find-existing</div><div class="d">Before hand-building a reusable component, check which Jardis package already provides it, then <code>composer require</code></div></div>
+  </div>
+
+  <div class="area" style="grid-column:span 2"><h4>process <span>always installed · tier choice, stages 0 to 4, review</span></h4>
+    <div class="two" style="gap:4px 14px">
+      <div>
+        <div class="sk"><div class="n">process-choose-tier</div><div class="d">Decide how much process a task needs: answer, single action, small assignment or undertaking</div></div>
+        <div class="sk"><div class="n">process-check-existing</div><div class="d">Before something new, ask what the environment already does, via a blind checker</div></div>
+        <div class="sk"><div class="n">process-concept</div><div class="d">Stage 0: concept interview, approved target picture, project folder with progress file</div></div>
+        <div class="sk"><div class="n">process-write-prd</div><div class="d">Stage 1: the PRD adds error cases, states, limits and data paths; requirements board once</div></div>
+        <div class="sk"><div class="n">process-write-plan</div><div class="d">Stage 2: cut into stages and phases with file scope and acceptance criteria; design board once</div></div>
+        <div class="sk"><div class="n">process-review-board</div><div class="d">Choose roles with a reason, run them blind, merge one list, rule on every finding</div></div>
+      </div>
+      <div>
+        <div class="sk"><div class="n">process-run-stage</div><div class="d">One brief per phase, a fresh implementer, commit, blind verification, QA gates, merge</div></div>
+        <div class="sk"><div class="n">process-verify</div><div class="d">One blind verifier per stage and one end-to-end acceptance gate at the end</div></div>
+        <div class="sk"><div class="n">process-close</div><div class="d">Triage open points, carry lessons into the pool, write the digest, delete the folder, deliver once</div></div>
+        <div class="sk"><div class="n">process-resume</div><div class="d">Continue a running undertaking in a fresh session from its progress file</div></div>
+        <div class="sk"><div class="n">code-review-change</div><div class="d">After every coding task and before any commit: findings graded Blocker, Major or Minor, never edits code</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="area"><h4>knowledge <span>decision pool</span></h4>
+    <div class="sk"><div class="n">knowledge-maintain-pool</div><div class="d">Layout, size caps and upkeep of the pool under <code>.claude/wissen/</code>; the pool check</div></div>
+    <div class="sk"><div class="n">knowledge-record-decision</div><div class="d">Record a decision or a bugfix lesson with date, author and source; the <code>Wissen:</code> note on <code>feat:</code> and <code>fix:</code> commits</div></div>
+  </div>
+
+  <div class="area"><h4>git <span>Gitflow</span></h4>
+    <div class="sk"><div class="n">git-setup-repository</div><div class="d">One-time Gitflow setup: develop branch, repository settings, branch ruleset, git hooks</div></div>
+    <div class="sk"><div class="n">git-start-branch</div><div class="d">Create a Gitflow branch with issue number and type detection</div></div>
+    <div class="sk"><div class="n">git-commit-change</div><div class="d">Conventional Commit from the current changes, after review</div></div>
+    <div class="sk"><div class="n">git-push-and-open-pr</div><div class="d">Push with the quality gate and open a pull request</div></div>
+    <div class="sk"><div class="n">git-check-compliance</div><div class="d">Check that the repository follows the Gitflow conventions</div></div>
+  </div>
+
+  <div class="area"><h4>design <span>before the generated code</span></h4>
+    <div class="sk"><div class="n">design-draft-schema</div><div class="d">Draft the content of a <code>Schema.json</code> for the Designer from a plain-text domain idea</div></div>
+    <div class="sk"><div class="n">design-headless-mcp</div><div class="d">Drive a Jardis workspace without a browser through <code>jardis mcp</code>: tools, resources, error envelopes</div></div>
+  </div>
+
+  <div class="area"><h4>generated-code <span>after the Designer</span></h4>
+    <div class="sk"><div class="n">generated-code-extend</div><div class="d">Extend generated code: the hermetic generator-owned tree, the developer surface, the prohibitions</div></div>
+    <div class="sk"><div class="n">generated-code-wire-transport</div><div class="d">Wire generated queries and processes into HTTP, CLI, queue or worker code</div></div>
+    <div class="sk"><div class="n">generated-code-versioning</div><div class="d">ClassVersion resolution and the versioning model</div></div>
+    <div class="sk"><div class="n">generated-code-workflow-api</div><div class="d">Workflow-engine API behind generated process orchestrators</div></div>
+    <div class="sk"><div class="n">generated-code-recipes</div><div class="d">Recipes and troubleshooting for generated code</div></div>
+  </div>
+
+  <div class="area"><h4>foundation <span>standards, cross-cutting · always installed</span></h4>
+    <div class="sk"><div class="n">foundation-architecture</div><div class="d">Five pillars, hexagonal dependency direction, Closure-Orchestrator pattern</div></div>
+    <div class="sk"><div class="n">foundation-patterns</div><div class="d">Catalogue of the ten design patterns used in Jardis</div></div>
+    <div class="sk"><div class="n">foundation-testing</div><div class="d">Integration over unit, mock only at ports, a fixed process for failing tests</div></div>
+    <div class="sk"><div class="n">foundation-frontend-review</div><div class="d">Stack-agnostic frontend review rules</div></div>
+    <div class="sk"><div class="n">foundation-php</div><div class="d">PHP 8.3 reference: strict types, PHPStan level 8, PSR-4, no traits</div></div>
+    <div class="sk"><div class="n">foundation-working-principles</div><div class="d">Skill first, then source code, then ask; verify values instead of guessing</div></div>
+  </div>
+</div>
+
+<h3>Chains <code>prerequisites</code> / <code>next</code> from the skill frontmatter</h3>
+<div class="two">
+  <div class="layers" style="margin:0"><b>Undertaking:</b> <span class="mono">process-choose-tier → process-concept → process-write-prd → process-write-plan → process-run-stage → process-verify → process-close → knowledge-record-decision</span></div>
+  <div class="layers" style="margin:0"><b>Other chains:</b> <span class="mono">git-start-branch → git-commit-change → git-push-and-open-pr</span> · <span class="mono">design-draft-schema → generated-code-extend → generated-code-*</span> · <span class="mono">foundation-working-principles → knowledge-maintain-pool → knowledge-record-decision</span> · <span class="mono">code-review-change → git-commit-change</span></div>
+</div>
+
+<h3>Reviewer roles (sub-agent definitions in <code>process-review-board/reviewers/</code>)</h3>
+<table>
+<tr><th style="width:250px">Role</th><th style="width:200px">Used by</th><th>Taken when</th></tr>
+<tr><td><code>prd-review-skeptic</code></td><td>requirements board</td><td>always</td></tr>
+<tr><td><code>prd-review-domain-expert</code></td><td>requirements board</td><td>the PRD models a domain or a domain decision is open</td></tr>
+<tr><td><code>prd-review-ddd-strategy</code></td><td>requirements board</td><td>contexts, domain language or a public API are cut or changed</td></tr>
+<tr><td><code>prd-review-frontend-ux</code></td><td>requirements board</td><td>the PRD has a user interface</td></tr>
+<tr><td><code>plan-review-architecture</code></td><td>design board</td><td>default</td></tr>
+<tr><td><code>plan-review-test-strategy</code></td><td>design board</td><td>default</td></tr>
+<tr><td><code>plan-review-packages</code></td><td>design board</td><td>the plan touches new package APIs</td></tr>
+<tr><td><code>plan-review-ddd-tactics</code></td><td>design board</td><td>the plan cuts aggregates, value objects or repositories</td></tr>
+<tr><td><code>plan-review-php</code></td><td>design board</td><td>the plan is mostly PHP code with error handling and edge cases that matter</td></tr>
+<tr><td><code>plan-review-frontend-architecture</code></td><td>design board</td><td>the plan has a user interface</td></tr>
+<tr><td><code>plan-review-frontend-tests</code></td><td>design board</td><td>the plan has a user interface</td></tr>
+<tr><td><code>plan-review-frontend-a11y</code></td><td>design board</td><td>a phase produces an interface people operate</td></tr>
+<tr><td><code>plan-review-frontend-types</code></td><td>design board</td><td>a phase touches types or data flow in the frontend</td></tr>
+<tr><td><code>plan-review-frontend-ux</code></td><td>design board</td><td>the plan carries out interface states and interactions</td></tr>
+<tr><td><code>stage-verifier</code></td><td><code>process-verify</code></td><td>once per stage</td></tr>
+<tr><td><code>acceptance-gate</code></td><td><code>process-verify</code></td><td>once per undertaking, after the last stage</td></tr>
+<tr><td><code>existing-capability-check</code></td><td><code>process-check-existing</code></td><td>before something new is introduced</td></tr>
+<tr><td><code>open-question-gate</code></td><td><code>process-run-stage</code></td><td>before a question reaches the human</td></tr>
+<tr><td><code>failure-diagnosis</code></td><td><code>process-run-stage</code></td><td>after RED, when the report does not explain the cause</td></tr>
+</table>
+<p class="src">Source: the frontmatter of the 33 skills under <code>skills/</code> and <code>docs/SKILL-FORMAT.md</code> (area prefixes).</p>
+</section>
+
+<!-- ========================================================= 4 -->
+<section id="s4i">
+<h2>Installation picture in a Jardis project</h2>
+<div class="two" style="grid-template-columns:1.12fr 0.88fr">
+<pre class="tree"><span class="t-c"># composer require --dev jardis/dev-skills  →  post-install / post-update</span>
+your-project/
+├── <span class="t-now">AGENTS.md</span>                         <span class="t-c">managed block BEGIN/END jardis/dev-skills</span>
+│     <span class="t-now">process router: tiers · phase → skill · reviewer roles · pointer to the pool</span>
+│     <span class="t-now">+ aggregated AGENTS.md of the Jardis vendor packages</span>   <span class="t-c">warning above 32,768 bytes (Codex)</span>
+├── <span class="t-now">CLAUDE.md</span>                         <span class="t-c">managed block: imports @AGENTS.md</span>
+├── .claude/
+│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 bundled skills + vendor skills · Claude Code, Copilot</span>
+│   ├── skills/.jardis-managed.json     <span class="t-c">manifest: every skill folder the plugin installed</span>
+│   ├── <span class="t-now">agents/&lt;role&gt;.md</span>                <span class="t-c">reviewer agent files (Claude Code)</span>
+│   └── .jardis-backup/                 <span class="t-c">copies of folders that differed from the managed state</span>
+├── <span class="t-now">.agents/skills/&lt;name&gt;/SKILL.md</span>     <span class="t-c">the same skills for Codex, Cursor, Copilot, Gemini CLI</span>
+├── <span class="t-now">.codex/agents/&lt;role&gt;.toml</span>          <span class="t-c">reviewer agent files (Codex)</span>
+├── <span class="t-now">.cursor/agents/&lt;role&gt;.md</span>           <span class="t-c">reviewer agent files (Cursor)</span>
+├── <span class="t-now">.github/agents/&lt;role&gt;.agent.md</span>     <span class="t-c">reviewer agent files (Copilot)</span>
+├── <span class="t-now">.gemini/agents/&lt;role&gt;.md</span>           <span class="t-c">reviewer agent files (Gemini CLI)</span>
+├── <span class="t-now">.gemini/settings.json</span>             <span class="t-c">context.fileName lists AGENTS.md</span>
+└── .git/info/exclude                 <span class="t-c">managed block: always .claude/.jardis-backup/; mode local adds more</span>
+
+<span class="t-c"># created later by the process, not by the install</span>
+├── <span class="t-new">.claude/wissen/</span>                    <span class="t-c">knowledge pool · INDEX.md + topic pages · scaffold by process-concept</span>
+├── <span class="t-new">.claude/PROJECT_PROFILE.md</span>          <span class="t-c">project facts: QA entry, ports, build · by process-concept</span>
+├── <span class="t-new">docs/vorhaben/&lt;name&gt;/</span>             <span class="t-c">PROGRESS.md · KONZEPT.html/.png · PRD.md · PLAN.md · briefs</span>
+├── <span class="t-new">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>
+└── <span class="t-new">commit-msg hook</span>                    <span class="t-c">written by scripts/install-commit-msg-hook, warns only</span>
+</pre>
+<div>
+<h3>Reviewers: one definition, thin files per tool</h3>
+<table>
+<tr><th>Layer</th><th>Content</th></tr>
+<tr><td>Source (once)</td><td>The role text in <code>process-review-board/reviewers/&lt;role&gt;.md</code>. It is copied with the skill to <code>.claude/skills</code> and <code>.agents/skills</code>.</td></tr>
+<tr><td>File per tool</td><td>One agent file per role and tool, written by the plugin. A file the plugin did not write is never overwritten; the plugin leaves it and warns.</td></tr>
+<tr><td>Without sub-agents</td><td>The skill names the fallback: a fresh headless run per role with a pure review assignment.</td></tr>
+</table>
+
+<h3>Configuration <code>composer.json</code></h3>
+<pre class="tree" style="white-space:pre;font-size:11.5px">"extra": { "jardis/dev-skills": {
+    "bundled-skills": true,
+    <span class="t-c">// all 33 by default; a list or include/exclude narrows it</span>
+    <span class="t-c">// foundation-* and process-* are always installed</span>
+    "git-rules": true,
+    <span class="t-c">// false removes the git sentences from the router</span>
+    <span class="t-now">"process-docs": "committed"</span>
+    <span class="t-c">// or "local": entries in .git/info/exclude</span>
+} }</pre>
+
+<h3>What the plugin writes for which tool</h3>
+<table>
+<tr><th>Tool</th><th>Skills</th><th>Router</th><th>Agent files</th></tr>
+<tr><td>Claude Code</td><td><code>.claude/skills</code></td><td><code>AGENTS.md</code> via <code>CLAUDE.md</code></td><td><code>.claude/agents</code></td></tr>
+<tr><td>Codex</td><td><code>.agents/skills</code></td><td><code>AGENTS.md</code></td><td><code>.codex/agents</code></td></tr>
+<tr><td>Cursor</td><td><code>.agents/skills</code></td><td><code>AGENTS.md</code></td><td><code>.cursor/agents</code></td></tr>
+<tr><td>GitHub Copilot</td><td><code>.agents/skills</code>, <code>.claude/skills</code></td><td><code>AGENTS.md</code></td><td><code>.github/agents</code></td></tr>
+<tr><td>Gemini CLI</td><td><code>.agents/skills</code></td><td><code>AGENTS.md</code> via <code>.gemini/settings.json</code></td><td><code>.gemini/agents</code></td></tr>
+</table>
+<p class="src">Source: README sections Installation, Supported tools and Reviewer agent files.</p>
+</div>
+</div>
+</section>
+
+<!-- ========================================================= 5 -->
+<section id="s5">
+<h2>Tool coverage</h2>
+<table class="mx">
+<tr><th style="width:250px">Process building block</th><th>Claude Code</th><th>Codex CLI/IDE</th><th>Cursor</th><th>GitHub Copilot</th><th>Gemini CLI</th><th style="width:340px">Fallback where ◐ / ✘ / ?</th></tr>
+<tr><td>Router (<code>AGENTS.md</code>) read</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="p">◐</td><td class="alt">Gemini CLI: <code>context.fileName</code> in <code>settings.json</code> set to <code>AGENTS.md</code></td></tr>
+<tr><td>Phase skills (<code>SKILL.md</code>) load</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">Gemini CLI: loads a skill through the <code>activate_skill</code> tool and asks you to confirm first</td></tr>
+<tr><td>Independent reviewer (sub-agent, fresh context)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Model per reviewer</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td>Board of reviewers in parallel</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="q">?</td><td class="alt">Gemini CLI: not documented by the vendor</td></tr>
+<tr><td>Progress / task list</td><td class="p">◐</td><td class="q">?</td><td class="q">?</td><td class="q">?</td><td class="y">✔</td><td class="alt">Claude Code: on models the documentation does not name, opt in with <code>CLAUDE_CODE_ENABLE_TODO_TOOLS=1</code> · Codex, Cursor, Copilot: not documented by the vendor</td></tr>
+<tr><td>Plan mode without write access</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="p">◐</td><td class="y">✔</td><td class="alt">Claude Code: edits stay blocked until the plan is approved, except in interactive terminal sessions with bypass permissions available · Codex, Cursor: a plan before implementation, no write lock stated · Copilot: not available in Visual Studio</td></tr>
+<tr><td>Headless run</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"><code>claude -p</code> · <code>codex exec</code> · <code>agent -p</code> · <code>copilot -p</code> · <code>gemini -p</code></td></tr>
+<tr><td>MCP (<code>jardis mcp</code>)</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt"></td></tr>
+<tr><td><code>commit-msg</code> hook with the <code>Wissen:</code> note</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="alt">a Git hook, independent of the tool; it warns and never rejects a commit</td></tr>
+<tr class="guar"><th>Guarantee level</th><td style="background:#dcfce7"><b>tested</b><br>Claude Code 2.1.286</td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td style="background:#fef9c3"><b>documented, not tested</b></td><td class="alt">tested: the process was run with the tool and each listed check passed · documented, not tested: the vendor documentation says the tool offers the building block</td></tr>
+</table>
+<div class="band"><div class="bl">Not covered</div><div>Aider and Continue are not served. Codex Cloud and the Copilot cloud agent are outside the guarantee, even for the tools above.</div></div>
+<p class="src">✔ documented without restriction · ◐ documented with a restriction · ✘ the documentation denies it · ? not found in the vendor documentation. Source: vendor documentation, retrieved 2026-10-01; what the plugin writes for each tool is in the README section Supported tools.</p>
+</section>
+
+</div>
+</body>
+</html>

@@ -25,13 +25,13 @@ final class ScanPluginSkillsTest extends TestCase
     public function testFindsCrossPackageSkills(): void
     {
         $this->project->writeFile('skills/plan-requirements/SKILL.md', 'x');
-        $this->project->writeFile('skills/platform-usage/SKILL.md', 'y');
+        $this->project->writeFile('skills/generated-code-wire-transport/SKILL.md', 'y');
 
         $skills = (new ScanPluginSkills())($this->project->root);
         $names = array_map(static fn ($s) => $s->name, $skills);
         sort($names);
 
-        self::assertSame(['plan-requirements', 'platform-usage'], $names);
+        self::assertSame(['generated-code-wire-transport', 'plan-requirements'], $names);
     }
 
     public function testSourcePackageIsPlugin(): void
@@ -43,15 +43,15 @@ final class ScanPluginSkillsTest extends TestCase
         self::assertSame('jardis/dev-skills', $skills[0]->sourcePackage);
     }
 
-    public function testSkipsBackupSkillDirectories(): void
+    public function testSkipsNonSkillFoldersAndKeepsRealSkills(): void
     {
-        $this->project->writeFile('skills/platform-usage/SKILL.md', 'x');
-        $this->project->writeFile('skills/platform-usage.backup/SKILL.md', 'stale');
+        $this->project->writeFile('skills/generated-code-wire-transport/SKILL.md', 'x');
+        $this->project->writeFile('skills/notes/readme.md', 'x');
 
         $skills = (new ScanPluginSkills())($this->project->root);
         $names = array_map(static fn ($s) => $s->name, $skills);
 
-        self::assertSame(['platform-usage'], $names);
+        self::assertSame(['generated-code-wire-transport'], $names);
     }
 
     public function testReturnsEmptyWhenSkillsDirMissing(): void

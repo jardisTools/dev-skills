@@ -9,29 +9,36 @@ use JardisTools\DevSkills\Data\AgentsDescriptor;
 final class BuildManagedBlock
 {
     /**
-     * Thin pointer sentence placed inside the managed block when jardis-catalog
+     * Thin pointer sentence placed inside the managed block when packages-find-existing
      * is installed. Points the agent at the catalog skill before any Eigenbau,
-     * and at `jardis-start-here` as the master entry point for the full
+     * and at `start-orientation` as the master entry point for the full
      * lifecycle (schema -> design -> implementation).
      */
     public const CATALOG_POINTER
         = 'Before hand-building a reusable building block, '
-        . 'consult the `jardis-catalog` skill to check for an installable Jardis package. '
-        . 'For the full workflow from schema to implementation, start with the `jardis-start-here` skill.';
+        . 'consult the `packages-find-existing` skill to check for an installable Jardis package. '
+        . 'For the full workflow from schema to implementation, start with the `start-orientation` skill.';
 
     /**
-     * Builds the managed-block string (header + intro + optional catalog pointer
-     * + sources + footer) that the plugin owns inside AGENTS.md. The returned
+     * Builds the managed-block string (header + optional router text + intro
+     * + optional catalog pointer + sources + footer) that the plugin owns inside
+     * AGENTS.md. The router text (including the pool pointer sentence) comes
+     * from the caller and stands between the BEGIN marker and the
+     * "Jardis packages" heading; this class adds nothing to it. The returned
      * string does NOT end with a trailing newline — the caller decides how to
      * splice it into the file.
      *
      * @param list<AgentsDescriptor> $descriptors
      */
-    public function __invoke(array $descriptors, bool $catalogInstalled = false): string
-    {
+    public function __invoke(
+        array $descriptors,
+        bool $catalogInstalled = false,
+        string $routerText = '',
+    ): string {
         $sections = [
             AnalyzeAgentsMd::HEADER,
             '',
+            ...($routerText !== '' ? [rtrim($routerText), ''] : []),
             '# Jardis packages — AI agent context',
             '',
             'Aggregated by `jardis/dev-skills`. Run `composer install` to refresh.',

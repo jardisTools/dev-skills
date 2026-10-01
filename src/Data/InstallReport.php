@@ -18,8 +18,43 @@ final class InstallReport
 
     private bool $agentsMdHealed = false;
 
+    private bool $agentsMdCreated = false;
+
     /** @var list<string> */
     private array $removedBundledSkills = [];
+
+    /** @var list<string> */
+    private array $redirectedSkills = [];
+
+    /** @var list<string> */
+    private array $notices = [];
+
+    /** @var list<string> */
+    private array $warnings = [];
+
+    public function addWarning(string $warning): void
+    {
+        $this->warnings[] = $warning;
+    }
+
+    public function addWarningIfAny(?string $warning): void
+    {
+        if ($warning !== null && $warning !== '') {
+            $this->warnings[] = $warning;
+        }
+    }
+
+    public function addNoticeIfAny(?string $notice): void
+    {
+        if ($notice !== null && $notice !== '') {
+            $this->notices[] = $notice;
+        }
+    }
+
+    public function addRedirectedSkill(string $oldName): void
+    {
+        $this->redirectedSkills[] = $oldName;
+    }
 
     public function addInstalledSkill(string $name): void
     {
@@ -36,12 +71,19 @@ final class InstallReport
         $this->backedUpSkills[] = ['skill' => $name, 'backupPath' => $backupPath];
     }
 
+    public function addBackedUpSkillIfAny(string $name, ?string $backupPath): void
+    {
+        if ($backupPath !== null) {
+            $this->addBackedUpSkill($name, $backupPath);
+        }
+    }
+
     public function setAgentsFilesAggregated(int $count): void
     {
         $this->agentsFilesAggregated = $count;
     }
 
-    public function setAgentsMdBackupPath(string $path): void
+    public function setAgentsMdBackupPath(?string $path): void
     {
         $this->agentsMdBackupPath = $path;
     }
@@ -49,6 +91,11 @@ final class InstallReport
     public function setAgentsMdHealed(bool $healed): void
     {
         $this->agentsMdHealed = $healed;
+    }
+
+    public function setAgentsMdCreated(bool $created): void
+    {
+        $this->agentsMdCreated = $created;
     }
 
     public function installedSkillCount(): int
@@ -88,10 +135,46 @@ final class InstallReport
     }
 
     /**
+     * True when this run wrote AGENTS.md although no such file was there before.
+     */
+    public function agentsMdCreated(): bool
+    {
+        return $this->agentsMdCreated;
+    }
+
+    /**
      * @return list<string>
      */
     public function removedBundledSkills(): array
     {
         return $this->removedBundledSkills;
+    }
+
+    /**
+     * Old skill names that were left behind as redirect skills (not counted as installed skills).
+     *
+     * @return list<string>
+     */
+    public function redirectedSkills(): array
+    {
+        return $this->redirectedSkills;
+    }
+
+    /**
+     * Informational messages for the user, e.g. the migration hint after an update.
+     *
+     * @return list<string>
+     */
+    public function notices(): array
+    {
+        return $this->notices;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function warnings(): array
+    {
+        return $this->warnings;
     }
 }

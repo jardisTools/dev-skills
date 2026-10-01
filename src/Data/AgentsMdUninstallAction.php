@@ -10,4 +10,5 @@ enum AgentsMdUninstallAction: string
     case BlockStripped = 'block_stripped';
     case Untouched = 'untouched';
     case Corrupt = 'corrupt';
+    case SkippedLink = 'skipped_link';
 }

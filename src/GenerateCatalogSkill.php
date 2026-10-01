@@ -13,7 +13,7 @@ use JardisTools\DevSkills\Handler\Build\WriteSkill;
 
 /**
  * Orchestrator: reads catalog/manifest.json and writes the rendered
- * skills/jardis-catalog/SKILL.md. Composed of atomic Closures; contains
+ * skills/packages-find-existing/SKILL.md. Composed of atomic Closures; contains
  * no own logic — only pipeline wiring (Closure-Orchestrator pattern).
  */
 final class GenerateCatalogSkill
