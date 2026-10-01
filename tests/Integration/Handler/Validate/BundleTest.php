@@ -456,6 +456,12 @@ final class BundleTest extends TestCase
                 'commit message from the report',
                 'asks the human',
                 '`git log`',
+                // E7 fix 4: the head update is a commit gate of its own; no merge request over an unclean tree
+                'working tree is clean',
+                'head update',
+                'uncommitted',
+                '`git status`',
+                'never asks for the merge',
             ] as $keyword
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
@@ -464,12 +470,100 @@ final class BundleTest extends TestCase
         // the loop steps point at the gate instead of telling the session to commit or merge itself
         self::assertStringNotContainsString('the main session commits', $content);
         self::assertStringNotContainsString('then commits with', $content);
-        self::assertSame(2, substr_count($content, 'human gate'), 'steps 3 and 8 of the loop name the gate');
+        // three names since E7 fix 4: steps 3 (commit), 8 (head update, commit gate of its own) and 9 (merge) of the loop name the gate
+        self::assertSame(3, substr_count($content, 'human gate'), 'steps 3, 8 and 9 of the loop name the gate');
+
+        $loopStart = strpos($content, '### 2. The stage loop');
+        self::assertIsInt($loopStart);
+        $loop = substr($content, $loopStart, (int) strpos($content, '### 3.', $loopStart) - $loopStart);
+        foreach (
+            [
+                '8. **Head update.**',
+                'working tree is clean',
+                '`git-commit-change`',
+                '9. **Merge**',
+                '`git status`',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $loop, $keyword);
+        }
+        self::assertLessThan(strpos($loop, '9. **Merge**'), strpos($loop, '8. **Head update.**'), 'head update comes before the merge step');
 
         // the delivery step of process-close points at the same gate, with no second wording of the rule
         $close = (string) file_get_contents($this->skillFile('process-close'));
         self::assertStringContainsString('human gate (`process-run-stage`)', $close);
         self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $close);
+    }
+
+    public function testMergeTargetIsNamedFromExistingBranchesNeverInvented(): void
+    {
+        // E7 mini run git gates: the session named `develop` as merge target, the project had none.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $start   = strpos($content, '9. **Merge**');
+        self::assertIsInt($start);
+        $step = substr($content, $start, (int) strpos($content, "\n\n", $start) - $start);
+
+        foreach (
+            [
+                'existing branches',
+                '`git branch -a`',
+                'git flow of the project',
+                'is missing',
+                'at the gate',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $step, $keyword);
+        }
+    }
+
+    public function testFailurePathStartsTheFixRunWithoutQuestionAndNeverEditsThePlanItself(): void
+    {
+        // E7 mini run git gates: after RED the session asked "start the fix run?"; a plan deviation was corrected
+        // in the plan by the session itself and logged without the open-question gate.
+        $content = (string) file_get_contents($this->skillFile('process-run-stage'));
+        $marker  = strpos($content, '<!-- rule:failure-path -->');
+        self::assertIsInt($marker);
+        $rule = substr($content, $marker, (int) strpos($content, "\n\n", $marker) - $marker);
+
+        foreach (
+            [
+                'without a question to the human',
+                'no question point',
+                'deviation from the plan',
+                'before the fix brief',
+                'open-question gate',
+                'never changes the plan itself',
+                '`Decisions delegated`',
+                'decided',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $rule, $keyword);
+        }
+
+        // the question-point paragraph keeps its sentence about the plan correction after the gate's answer
+        self::assertStringContainsString('corrects the plan where the answer deviates', $content);
+    }
+
+    public function testVerifyRedPointsAtTheFailurePathWithoutSecondWording(): void
+    {
+        // E7 mini run git gates: only process-verify was loaded after RED, so the session asked before the fix run.
+        $content = (string) file_get_contents($this->skillFile('process-verify'));
+        $start   = strpos($content, '### 4. After the verdict');
+        self::assertIsInt($start);
+        $section = substr($content, $start, (int) strpos($content, "\n### 5.", $start) - $start);
+
+        foreach (
+            [
+                'load `process-run-stage`',
+                'its failure path applies',
+                'without a question to the human',
+                'human gate (`process-run-stage`)',
+            ] as $keyword
+        ) {
+            self::assertStringContainsString($keyword, $section, $keyword);
+        }
+        self::assertStringNotContainsString('<!-- rule:failure-path -->', $content, 'a reference, no second wording');
+        self::assertStringNotContainsString('never changes the plan itself', $content, 'a reference, no second wording');
     }
 
     public function testChooseTierNamesFourTiersAndBothMarkers(): void

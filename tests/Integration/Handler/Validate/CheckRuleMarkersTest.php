@@ -61,9 +61,9 @@ final class CheckRuleMarkersTest extends TestCase
             ],
             'process-run-stage' => [
                 'fresh-session-per-stage' => ['fresh agent session'],
-                'failure-path' => ['fix run', 'follow-up run', 'STOPP:'],
+                'failure-path' => ['fix run', 'follow-up run', 'STOPP:', 'without a question to the human', 'never changes the plan itself'],
                 'question-points' => ['at most 2 question points', 'STOPP:'],
-                'commit-is-human-gate' => ['gate of the human', 'git log'],
+                'commit-is-human-gate' => ['gate of the human', 'git log', 'working tree is clean'],
             ],
             'process-review-board' => [
                 'question-points' => ['at most 2 roles'],
