@@ -100,12 +100,12 @@ final class TestMeterDevice
 }
 ```
 
-**Write access needs a family-internal harness.** The BC accessor (`$app->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context-Familie). Tests that drive a command (arrange/seed or under test) go through a `{Bc}WriteHarness` in `tests/Support/` — a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` Kernel-Naht (no Reflection tricks; a subclass can call an inherited `protected` method). The harness is built directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`), **not** via the test wrapper's `$this->handle(...)` — the wrapper above is not part of the Context-Familie (it extends nothing generated), so it has no `handle()` of its own to delegate through.
+**Write access needs a family-internal harness.** The BC accessor (`$app->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context family). Tests that drive a command (arrange/seed or under test) go through a `{Bc}WriteHarness` in `tests/Support/` — a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` kernel seam (no Reflection tricks; a subclass can call an inherited `protected` method). The harness is built directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`), **not** via the test wrapper's `$this->handle(...)` — the wrapper above is not part of the Context family (it extends nothing generated), so it has no `handle()` of its own to delegate through.
 
 **A. Full 4-hop chain (integration)** — real Domain Facade, real DB from `make start`, schema reset in `setUp()`:
 
 ```php
-// tests/Support/CounterWriteHarness.php — write facade via family-internal Kernel-Naht
+// tests/Support/CounterWriteHarness.php — write facade via family-internal kernel seam
 // (genuine subclass of the generated, non-final BC facade — unaffected by the
 // Domain facade's final-ification)
 final class CounterWriteHarness extends Counter {   // the generated Counter BC class
@@ -178,14 +178,14 @@ final class InMemoryHttpClient implements HttpClientInterface
 }
 ```
 
-**E. Rule (Rules-Layer) — pure predicate PLUS endpoint integration, both mandatory.** A Rule (`{BC}/Closure/{Name}.php`) is a legitimate rare case for a Unit test — its `__invoke({Cmd}DTO): RuleResult` signature is a pure Ja/Nein predicate, and faking the read facade it calls is the whole point:
+**E. Rule (Rules-Layer) — pure predicate PLUS endpoint integration, both mandatory.** A Rule (`{BC}/Closure/{Name}.php`) is a legitimate rare case for a Unit test — its `__invoke({Cmd}DTO): RuleResult` signature is a pure yes/no predicate, and faking the read facade it calls is the whole point:
 
 ```php
 final class CounterMustBeActiveTest extends TestCase
 {
     public function testRejectsInactiveCounter(): void
     {
-        $rule = new CounterMustBeActive(/* constructed against a Fake read facade returning an inactive Akte */);
+        $rule = new CounterMustBeActive(/* constructed against a Fake read facade returning an inactive aggregate record */);
 
         $result = $rule(new UpdateCounter(identifier: 'M-1'));
 

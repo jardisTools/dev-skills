@@ -1,6 +1,6 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Sorte-A GUI-replacement pattern (OutputDir via update_domain_manifest, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (OutputDir via update_domain_manifest, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
 prerequisites: []
@@ -79,11 +79,11 @@ created here) via `create_context_map_external_node` / `update_context_map_exter
 `context-map-patterns` Resource is the closed pattern catalogue (fetch it instead of hardcoding
 the eight names), plus the `context-map` and `context-map-declared-targets` Resource templates.
 
-**Ist-Abgleich (drift) is a read-only Resource, not a tool:** `jardis://context-map/{domain}/drift`
-compares the declared (Soll) edges against the real, synchronous `consumedCalls` the domain's
+**Drift check is a read-only Resource, not a tool:** `jardis://context-map/{domain}/drift`
+compares the declared edges against the real, synchronous `consumedCalls` the domain's
 processes actually make (Ist) — six finding categories (undeclared, unused, direction
 contradiction, pattern contradiction, both-ways-vs-directed, and the quiet in-agreement state);
-each Ist-Kante additionally carries its call evidence (`Calls` — `processName`/`nodeID`/`facade`/`processFile`),
+each real edge additionally carries its call evidence (`Calls` — `processName`/`nodeID`/`facade`/`processFile`),
 computed on demand, never persisted. Resolving a finding goes through the ordinary edge CRUD
 tools above — there is deliberately no bulk "align everything" tool; each link/delete is a
 human- or agent-confirmed single step.
@@ -100,11 +100,11 @@ whether it may back a Process Rule-node; `sets` — Rule-Sets it may join as a m
 (per closure: guard chains, Rule-nodes, other Closures' `uses`), `usedAtUnknown` (true when the
 process-usage scan itself failed, so an empty `usedAt` must NOT be read as "genuinely unused"),
 `scalarTypes` (the closed column-type vocabulary a scalar input/output may declare) and
-`policyCoverage` (Steckbrief policy id → `{level, closures, wirkorte}`, `level` one of `covered` /
+`policyCoverage` (Steckbrief (BC canvas) policy id → `{level, closures, wirkorte}`, `level` one of `covered` /
 `no-effect` / `no-anchor` / `unknown-usage` — `no-anchor` also stands for a policy with no
 anchoring closure at all when the usage scan failed, since that fact is Usage-independent);
 `closures-drift` is a read-only finding set — `policy_without_rule` / `rule_without_policy` /
-`empty_chain` — mirroring the Context-Map Ist-Abgleich pattern (computed on demand, never
+`empty_chain` — mirroring the Context-Map drift-check pattern (computed on demand, never
 persisted, no bulk-align tool here either). Lifecycle tools mirror `rename_query`/`delete_query`/
 `duplicate_query`'s pattern: `rename_closure` (`confirm=true` required, or `dryRun=true` for a
 no-write preview; cascades the rename into every binding chain naming it, every Closure's `uses`
@@ -156,8 +156,8 @@ set against V-QDEF-1..16, 18..24 plus RB1 (name collision with the read base, Bl
 read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
-Folgen-Vorschau (`consequences`) of confirming this draft — a query appearing or disappearing, a
-visibility switch `internal`↔`public`, the Außentür base path `GET …/{agg}` moving with the query
+consequences preview (`consequences`) of confirming this draft — a query appearing or disappearing, a
+visibility switch `internal`↔`public`, the BC facade's public surface base path `GET …/{agg}` moving with the query
 named `{agg}List` (fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved,
 basePathAdded/basePathRemoved) — before committing to `save_queries`. The comparison state is
 always what lies on disk, never a set the caller supplies, and `consequences` stays empty for a
@@ -177,7 +177,7 @@ files into the BC directory (mutating). Neither tool exists to author a `Schema.
 that direction is `design-draft-schema` / `import_schema`; these are the reverse, DB-migration-facing
 export.
 
-### 3. Sorte-A pattern — GUI affordance replaced by a data path
+### 3. Type-A pattern — GUI affordance replaced by a data path
 
 Some browser-UI affordances have no MCP button; they become a plain data operation instead:
 
