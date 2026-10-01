@@ -420,12 +420,10 @@ final class SkillInstallerTest extends TestCase
     public function testInstalledBlockCarriesTheTierRulesOfTheShippedRouter(): void
     {
         // The real router of this plugin, not a stand-in: the three tier sentences
-        // (tier-3 precedence, load duty, delegation) and the three gate sentences
-        // (full skill load, human gates, record before pool write) must reach the project's AGENTS.md.
-        $this->pluginRepo->writeFile(
-            'router/AGENTS-router.md',
-            (string) file_get_contents(dirname(__DIR__, 2) . '/router/AGENTS-router.md'),
-        );
+        // (tier-3 precedence, load duty, delegation), the gate sentences that no opt-out removes
+        // (full skill load, record before pool write) and, by default, the git rules
+        // (human gates, no attribution, Gitflow) must reach the project's AGENTS.md.
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
 
         $this->install();
 
@@ -433,9 +431,73 @@ final class SkillInstallerTest extends TestCase
         $cut = strpos($agents, '## Tiers');
         self::assertIsInt($cut);
         $preface = substr($agents, 0, $cut);
-        foreach ([...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS] as $label => $keyword) {
+        $keywords = [...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS, ...RouterTest::GIT_RULE_KEYWORDS];
+        foreach ($keywords as $label => $keyword) {
             self::assertStringContainsString($keyword, $preface, sprintf('Installed AGENTS.md lacks the %s rule.', $label));
         }
+        self::assertStringNotContainsString('git-rules', $agents, 'the marker lines never reach AGENTS.md');
+    }
+
+    public function testGitRulesOptOutLeavesTheGitSentencesOutOfTheInstalledBlock(): void
+    {
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
+
+        $report = $this->installer(PluginConfig::all()->withGitRules(false, null));
+
+        $agents = (string) file_get_contents($this->project->path('AGENTS.md'));
+        $cut = strpos($agents, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($agents, 0, $cut);
+        foreach ([...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS] as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('Opt-out AGENTS.md lacks the %s rule.', $label));
+        }
+        self::assertStringContainsString('Wissenspool: `.claude/wissen/INDEX.md`', $agents);
+        foreach (RouterTest::GIT_RULE_KEYWORDS as $label => $keyword) {
+            self::assertStringNotContainsString($keyword, $agents, sprintf('Opt-out AGENTS.md still states the %s rule.', $label));
+        }
+        self::assertStringNotContainsString('Co-Authored-By', $agents);
+        self::assertStringNotContainsString('git-rules', $agents);
+        self::assertSame([], $report->warnings(), 'the opt-out is a choice, not a warning');
+    }
+
+    public function testSwitchingGitRulesOnOffOnRewritesTheBlockAndLeavesTheRestOfAgentsMdAlone(): void
+    {
+        $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
+        $before = "# My project\n\nOwn rules above the block.\n\n";
+        $after = "\n## Own notes\n\nOwn rules below the block.\n";
+        $this->project->writeFile('AGENTS.md', $before . AnalyzeAgentsMd::HEADER . "\nold\n" . AnalyzeAgentsMd::FOOTER . "\n" . $after);
+
+        $this->installer(PluginConfig::all());
+        $on = (string) file_get_contents($this->project->path('AGENTS.md'));
+        $this->installer(PluginConfig::all()->withGitRules(false, null));
+        $off = (string) file_get_contents($this->project->path('AGENTS.md'));
+        $this->installer(PluginConfig::all());
+        $onAgain = (string) file_get_contents($this->project->path('AGENTS.md'));
+
+        self::assertStringContainsString(RouterTest::GIT_RULE_KEYWORDS['human gates'], $on);
+        self::assertStringNotContainsString(RouterTest::GIT_RULE_KEYWORDS['human gates'], $off);
+        self::assertSame($on, $onAgain, 'off and on again restores the block byte for byte');
+        foreach ([$on, $off, $onAgain] as $agents) {
+            self::assertStringStartsWith($before . AnalyzeAgentsMd::HEADER, $agents);
+            self::assertStringEndsWith(AnalyzeAgentsMd::FOOTER . "\n" . $after, $agents);
+            self::assertSame(1, substr_count($agents, AnalyzeAgentsMd::HEADER));
+        }
+    }
+
+    public function testInvalidGitRulesValueWarnsInTheReportAndKeepsTheRulesOn(): void
+    {
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => 'off']]);
+
+        $report = $this->installer($config);
+
+        self::assertCount(1, $report->warnings());
+        self::assertStringContainsString('git-rules', $report->warnings()[0]);
+        self::assertStringContainsString(
+            RouterTest::GIT_RULE_KEYWORDS['human gates'],
+            (string) file_get_contents($this->project->path('AGENTS.md')),
+        );
     }
 
     public function testOversizedAgentsMdWarnsInReport(): void
@@ -778,6 +840,11 @@ final class SkillInstallerTest extends TestCase
         $installer = new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root);
 
         return $installer($this->project->root, $this->project->path('vendor'), $pluginVersion);
+    }
+
+    private function shippedRouter(): string
+    {
+        return (string) file_get_contents(dirname(__DIR__, 2) . '/router/AGENTS-router.md');
     }
 
     private function installer(PluginConfig $config): InstallReport

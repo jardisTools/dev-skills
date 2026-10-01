@@ -466,6 +466,11 @@ final class BundleTest extends TestCase
                 'One halt, one gate',
                 'exactly one git step',
                 'names the next gate only once',
+                // E7 P7.4: the opt-out lifts the gates only when the router names them no more; in doubt they apply
+                'git-rules',
+                'only when the router of the project does not name them',
+                'follows the git rules of the project',
+                'also when unsure',
             ] as $keyword
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
