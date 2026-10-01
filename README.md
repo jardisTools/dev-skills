@@ -8,6 +8,8 @@
 
 The same overview as a web page: [overview.html](https://jardistools.github.io/dev-skills/overview.html).
 
+The overview in German: [overview.de.html](https://jardistools.github.io/dev-skills/overview.de.html).
+
 ---
 
 ## What does the plugin do?
