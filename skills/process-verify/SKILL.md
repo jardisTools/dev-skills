@@ -26,8 +26,8 @@ The verifier runs **once per stage**, blind, and doer and checker are two sessio
 
 Give it exactly:
 
-1. the acceptance criteria of the stage;
-2. the target artefact of the undertaking (the picture or example approved in stage 0);
+1. the acceptance criteria of the stage: its `Done when` line and the AK of its phases;
+2. the target artefact of the undertaking (the understanding sheet and the picture or example approved in stage 0);
 3. the stage diff, within a context load of 30 KB;
 4. the knowledge pages the briefs named.
 
@@ -57,8 +57,8 @@ The verdict is one of `GREEN` or `RED`. Read it against the files: check the nam
 The gate runs **once per undertaking**, after the last stage is merged, and checks the result end to end against the whole PRD. All stages green does not mean the PRD is met: the gate looks for the gaps between the parts. Its source is `../process-review-board/reviewers/acceptance-gate.md`.
 
 1. The main session runs the QA gates of `.claude/PROJECT_PROFILE.md` once for the whole undertaking and keeps the log path and the exit code. The gate does not run them itself.
-2. Start the gate in a fresh session and give it the PRD, the progress file, and the log path and exit code. Nothing else: no reasoning of implementers or verifiers.
-3. It returns, per PRD criterion, `MET` with evidence or `GAP`, and one overall verdict `GREEN` or `RED`.
+2. Start the gate in a fresh session and give it the PRD, the understanding sheet, the progress file, and the log path and exit code. Nothing else: no reasoning of implementers or verifiers.
+3. It returns, per PRD criterion and per acceptance criterion of the understanding sheet, `MET` with evidence or `GAP`, and one overall verdict `GREEN` or `RED`.
 
 `GREEN`: show the verdict to the human. When the human accepts, write the head phase `close` into the progress file and continue with `process-close`.
 

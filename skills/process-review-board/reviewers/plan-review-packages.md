@@ -21,7 +21,7 @@ The plan. Check:
 
 - packages the plan uses, and packages that would cover a building block the plan writes by hand;
 - correct use of a package API instead of reaching around it into internal structures;
-- own implementations where an installable package already delivers the capability.
+- own implementations where an installable package already delivers the capability, the `By hand` line of each stage included.
 
 ## Return
 

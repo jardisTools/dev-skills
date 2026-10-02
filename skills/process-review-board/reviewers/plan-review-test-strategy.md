@@ -23,7 +23,8 @@ The plan. Check:
 - integration tests as the standard; unit tests only as fallback for pure logic, not planned early out of habit;
 - mocks only at port boundaries (interfaces); fakes preferred over mocks;
 - test helpers at the place the language profile of the project prescribes;
-- every commitment of the PRD reached by at least one test.
+- every commitment of the PRD reached by at least one test;
+- the `Done when` line of each stage is observable and names the tests that hold it.
 
 ## Return
 
