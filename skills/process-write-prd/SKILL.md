@@ -23,13 +23,36 @@ Write `docs/vorhaben/<name>/PRD.md` with these parts, each only as long as the u
 
 | Part | Content |
 |---|---|
-| Source | Link to the approved target picture and the goal in one sentence |
+| Source | Link to the approved understanding sheet and the target picture, and the goal in one sentence |
+| Solution | Fixed format, see below |
 | Error cases | What happens on invalid input, missing data, a failing dependency, a repeated call |
 | States | Every state of the thing that changes, with the transitions and who triggers them |
 | Limits | Sizes, counts, time, permissions, what the result must not do |
 | Data paths | Where each datum comes from, where it is stored, who reads it, what leaves the system |
 | Out of scope | What is explicitly not built |
-| Open decisions | Forks that the human has not settled yet |
+| Decisions | Numbered forks, answered or open; fixed format, see below |
+
+The solution part has this format:
+
+```markdown
+## Solution
+- **BC:** the bounded context or area the change lives in
+- **New:** what is added
+- **Changed:** what existing thing is altered
+```
+
+The decisions part has this format, one block per decision:
+
+```markdown
+## Decisions
+### Decision <n>
+- **Status:** answered | current | open
+- **Question:** ...
+- **Recommendation:** ...
+- **Answer:** ...
+```
+
+Numbers run from 1 and are never reassigned. At most one decision is `current`. `Answer` stays out while the decision is not answered. A PRD line that stems from a decision, or waits for one, ends with the mark `(Decision <n>)`.
 
 Every statement is observable: a reader can tell from the result whether it holds. Where a requirement is a rule ("outwards, X holds"), name the place where X holds today; `process-check-existing` answers that when the answer is not at hand.
 
