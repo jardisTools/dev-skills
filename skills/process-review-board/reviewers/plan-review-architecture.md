@@ -22,7 +22,8 @@ The plan as a design, before any code exists. Check:
 - the five pillars: separation of concerns, single responsibility, composition over inheritance, data-behaviour separation, explicit dependencies;
 - dependency arrows point inwards to the domain core; the core imports no adapter code;
 - closures with one entry point and orchestrators that only chain, without logic of their own;
-- a pattern appears only where the plan names the problem it solves: no problem, no pattern.
+- a pattern appears only where the plan names the problem it solves: no problem, no pattern;
+- the `Generated` and `By hand` lines of each stage agree with the file scope of its phases.
 
 ## Return
 

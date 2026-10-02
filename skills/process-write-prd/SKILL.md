@@ -1,6 +1,6 @@
 ---
 name: process-write-prd
-description: Use when the target picture of an undertaking is approved and stage 1 starts — write the PRD that adds error cases, states, limits and data paths to the picture, run the requirements board once, resolve every finding, get the human's confirmation.
+description: Use when the understanding sheet and target picture are approved and stage 1 starts — write the PRD that adds a solution part, error cases, states, limits, data paths and decisions, run the requirements board once, resolve every finding, get the human's confirmation.
 zone: process
 persona: O
 prerequisites: [process-concept]
@@ -9,11 +9,11 @@ next: [process-write-plan]
 
 ## Scope
 
-The approved target picture shows what the result looks like. It does not show what happens when something goes wrong, which states exist, where the limits are and where the data flows. The PRD states exactly that, and nothing else. The main session writes it; the human confirms it. No plan is written before the confirmation.
+The approved understanding sheet states the requirement and the target picture shows what the result looks like. Neither shows what happens when something goes wrong, which states exist, where the limits are and where the data flows. The PRD states exactly that, and nothing else. The main session writes it; the human confirms it. No plan is written before the confirmation.
 
 ### 1. Entry
 
-Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the target picture must be approved (`KONZEPT.html` or the named executable example). If it is not, go back to `process-concept`. Do not write a PRD for a picture the human has not accepted.
+Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the understanding sheet (`UNDERSTANDING.md`) and the target picture must be approved (`KONZEPT.html` or the named executable example). If they are not, go back to `process-concept`. Do not write a PRD for a sheet or a picture the human has not accepted.
 
 ### 2. The PRD adds, it does not translate
 
@@ -59,7 +59,7 @@ Every statement is observable: a reader can tell from the result whether it hold
 ### 3. Requirements board
 
 <!-- rule:prd-board -->
-Run the requirements board exactly once per undertaking, blind and in parallel, before the human confirms the PRD. Set the progress head to phase `prd-review` while it runs. The board is run by `process-review-board`; it reads the PRD and the target picture, never your reasoning.
+Run the requirements board exactly once per undertaking, blind and in parallel, before the human confirms the PRD. Set the progress head to phase `prd-review` while it runs. The board is run by `process-review-board`; it reads the PRD, the understanding sheet and the target picture, never your reasoning.
 
 Roles:
 

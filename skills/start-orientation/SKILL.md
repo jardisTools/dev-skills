@@ -103,9 +103,9 @@ An undertaking (tier 3) runs in five stages. Every stage has one skill; each nam
 
 | Stage | What happens | Skill |
 |---|---|---|
-| 0 Concept | Interview, target picture, human approval, project folder with progress file | `process-concept` |
-| 1 PRD | Requirements on top of the picture, one review board, human confirmation | `process-write-prd` |
-| 2 Plan | Stages and phases with acceptance criteria, one review board, human release | `process-write-plan` |
+| 0 Concept | Interview, understanding sheet, target picture, human approval, project folder with progress file | `process-concept` |
+| 1 PRD | Solution, error cases, states, limits, data paths and numbered decisions on top of sheet and picture, one review board, human confirmation | `process-write-prd` |
+| 2 Plan | Stages and phases with acceptance criteria and the lines generated, by hand, done when and halt, one review board, human release | `process-write-plan` |
 | 3 Build | One brief per phase, implementers in fresh sessions, QA gates, merge | `process-run-stage` |
 | 3 Check | One blind verifier per stage, one acceptance gate at the end | `process-verify` |
 | 4 Close | Triage, lessons into the pool, digest, delete the project folder | `process-close` |

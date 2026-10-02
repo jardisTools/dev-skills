@@ -3,7 +3,7 @@
 ## Kopf
 - **Phase:** concept
 - **Stage:** —
-- **Next step:** Run the concept interview with the human and draft KONZEPT.html
+- **Next step:** Run the concept interview with the human and draft UNDERSTANDING.md and KONZEPT.html
 - **Open decisions:** —
 
 ## Goal
@@ -12,7 +12,7 @@ One sentence: what must be true at the end.
 
 ## Target picture
 
-Path of the picture (`KONZEPT.html`, `KONZEPT.png` after approval) or of the executable example.
+Path of the understanding sheet (`UNDERSTANDING.md`) and of the picture (`KONZEPT.html`, `KONZEPT.png` after approval) or of the executable example.
 
 ## Guard rails
 

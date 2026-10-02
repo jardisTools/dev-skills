@@ -23,7 +23,7 @@ List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` whose `## Kopf` says `Pha
 
 ### 2. Read the head first
 
-Read the whole `PROGRESS.md`. The head holds `Phase`, `Stage`, `Next step` and `Open decisions`. Open other files only when the next step needs them; the progress file points to them and is not the archive.
+Read the whole `PROGRESS.md`. The head holds `Phase`, `Stage`, `Next step` and `Open decisions`. Open other files only when the next step needs them (the understanding sheet, the PRD with its decisions, the stage plan with its line `Halt`); the progress file points to them and is not the archive.
 
 **Hard stop:** a `STOPP:` entry under `Open decisions` blocks all autonomous work. Put the open question to the human. Only the human's answer clears the entry; then the main session removes it.
 
