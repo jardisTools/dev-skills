@@ -35,7 +35,7 @@ Create `.claude/PROJECT_PROFILE.md` from `templates/PROJECT_PROFILE.md` only whe
 
 ### 4. Interview
 
-Clarify one point at a time.
+Clarify one point at a time. Before the first question, read `.claude/PROJECT_PROFILE.md` when it exists (section 3 creates it only when it is missing); it holds the QA entry, ports and build facts, so the interview does not ask for what it already states.
 
 1. Ask one question. Ask the next only when the current one is answered unambiguously.
 2. Accept no silent assumption. Where the human has not said it, ask; where the project can answer, read it first (code, knowledge pool, `process-check-existing` for what the environment already does).
@@ -78,7 +78,12 @@ The human accepts the sheet and the picture or example; no one else does. Show t
 
 ### 7. Progress file rules
 
-- `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Free lines may follow.
+- `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Five free lines may follow, each optional, in this form:
+  - `- **Title:**` the display name;
+  - `- **Type:**` one of `feature`, `bug`, `project`;
+  - `- **Ticket:**` free text;
+  - `- **BC:**` comma-separated;
+  - `- **Skipped:**` comma-separated, with the keys `concept`, `prd`, `plan`, `stage`, `acceptance`.
 - `Phase` is one of `concept`, `prd`, `prd-review`, `plan`, `plan-review`, `stage`, `acceptance`, `close`.
 - `Stage` is `—` before phase `stage` and `E<n>/<total>` from phase `stage` on, for example `E1/3`.
 - `Next step` is one action in one line.

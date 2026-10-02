@@ -410,3 +410,19 @@ When a Process node needs a Jardis runtime tool (cache, mail, queue, repository 
 - `MessagingService`, `MessagePublisher`: `adapter-messaging`
 - `EventListenerRegistryInterface`, `EventDispatcher`, `EventCollector`: `adapter-eventdispatcher`
 - `HttpClientInterface`, `HttpClient`: `adapter-http`
+
+### 10. Boundary between model and hand code
+
+What the model expresses is generated and hermetic; what it cannot express is written by hand, in the developer-owned segments. A PRD or plan that names a piece of work sorts it by this table.
+
+| Owner | What | Where |
+|---|---|---|
+| Generator | Aggregate tree with Commands, Queries, Events, validators, repositories, read and write facades | `{BC}/Model/{Agg}/` (never edit, §2) |
+| Generator | FieldMap and entity validators of the BC | `{BC}/FieldMap.php`, `{BC}/Entity/Validation/` |
+| Generator | Process facade, input DTO, orchestrator, node stubs, event-data classes | `{BC}/Process/{BC}Process.php`, `{BC}/Process/{Name}/Command/`, `Event/` |
+| Generator | Rule stub, guard closure and result type of the Closure catalog | `{BC}/Closure/` (the stub body is yours) |
+| Hand | Custom-node bodies of a process | `{BC}/Process/{Name}/Command/Handler/Action/` (preserved by `@node-id`) |
+| Hand | Rule bodies (own-BC reads only, V13) | `{BC}/Closure/{RuleName}.php` |
+| Hand | Reads, repositories, Domain Services and value objects a process needs | `{BC}/Process/{Name}/Query/`, `Repository/`, `Service/` |
+| Hand | Versioned variants of a generated class | `v{N}/` next to the class (`generated-code-versioning`) |
+| Hand | Wiring outside the output tree (transport, bootstrap, listeners) | project code (`generated-code-wire-transport`) |

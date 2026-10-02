@@ -29,12 +29,14 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 **Depends on:** none | E<n>.
 **Generated:** Query `ordersByPeriod`; Process `ExportOrders` · skeleton | none.
 **By hand:** <Kind> `<Name>` · <note> | none.
-**Done when:** observable, names the tests that hold it.
+**Done when:** observable; names the tests that hold the result.
 **Halt:** none | one sentence on what the human looks at after the stage.
 ### P1.1 <phase title>
 **Scope:** files, each one named; new or changed.
 **AK:** numbered, each one checkable by a command or a file.
 ```
+
+Inside a stage the work runs in this order: first what is generated, then what is written by hand, then the tests as a step of their own. `Done when` names those tests: one test per acceptance criterion and per error case, written against the product of the undertaking, not against the mechanics of the generator (`foundation-testing` section 6). The four lines stay four; tests get no line of their own. Which work is generated and which is by hand: `generated-code-extend` section 10.
 
 `Generated` is what a generator or tool produces, `By hand` what is written by hand. Both lines use one entry form: per thing `` <Kind> `<Name>` ``, optionally followed by ` · <note>`; several things are separated by `; `; nothing is `none`. It is the form of the lines under `## Affected` in the understanding sheet (`process-concept`).
 

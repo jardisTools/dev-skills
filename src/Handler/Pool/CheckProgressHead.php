@@ -12,7 +12,8 @@ use JardisTools\DevSkills\Data\VorhabenFile;
  * carries four lines in this order, `- **Phase:**`, `- **Stage:**`, `- **Next step:**`, `- **Open decisions:**`.
  * The phase is one of eight values, the stage is `E<n>/<total>` from phase `stage` on and `—` before it, the open
  * decisions are `—` or `STOPP: <ISO date> · <question>`. The file has at most 60 lines. Lines after the four are
- * free. Reports only; it never rewrites a file.
+ * free (by convention the optional `Title`, `Type`, `Ticket`, `BC` and `Skipped`; not checked). Reports only;
+ * it never rewrites a file.
  */
 final class CheckProgressHead
 {

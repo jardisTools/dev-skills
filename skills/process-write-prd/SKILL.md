@@ -13,7 +13,7 @@ The approved understanding sheet states the requirement and the target picture s
 
 ### 1. Entry
 
-Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the understanding sheet (`UNDERSTANDING.md`) and the target picture must be approved (`KONZEPT.html` or the named executable example). If they are not, go back to `process-concept`. Do not write a PRD for a sheet or a picture the human has not accepted.
+Read `.claude/PROJECT_PROFILE.md` for the facts of the project when it exists. Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the understanding sheet (`UNDERSTANDING.md`) and the target picture must be approved (`KONZEPT.html` or the named executable example). If they are not, go back to `process-concept`. Do not write a PRD for a sheet or a picture the human has not accepted.
 
 ### 2. The PRD adds, it does not translate
 
@@ -40,6 +40,8 @@ The solution part has this format:
 - **New:** what is added
 - **Changed:** what existing thing is altered
 ```
+
+Describe the solution in building blocks of the model: Aggregate, Process, Query, Rule, Value list and the like. Every line under `New` and `Changed` answers the check question "can the model express this?". What the model does not carry is written explicitly as hand code. The split between generated and hand-written code is in `generated-code-extend` section 10.
 
 The decisions part has this format, one block per decision:
 
