@@ -1,6 +1,6 @@
 ---
 name: process-write-plan
-description: Use when the PRD is confirmed and stage 2 starts — cut the undertaking into stages, then phases, with file scope and acceptance criteria per phase, apply the cut checks and size caps, run the design board once, get the human's release.
+description: Use when the PRD is confirmed and stage 2 starts — cut the undertaking into stages and phases with file scope, acceptance criteria and the stage lines Generated, By hand, Done when, Halt, apply cut checks, run the design board once, get the human's release.
 zone: process
 persona: O
 prerequisites: [process-write-prd]
@@ -19,7 +19,7 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 
 1. Cut the undertaking into stages: each ends in something that can be verified and merged on its own.
 2. Only then cut each stage into phases. A phase is one brief for one implementer session.
-3. Give every stage a stage plan with: goal, phase list, file scope per phase, acceptance criteria (AK) per phase, dependencies between phases and between stages.
+3. Give every stage a stage plan with: goal, dependencies, the four lines `Generated`, `By hand`, `Done when` and `Halt`, phase list, file scope per phase, acceptance criteria (AK) per phase, dependencies between phases.
 4. Do not cut phases finer than needed and never split a phase afterwards. If the context of a phase does not suffice, the implementer's turn ends with a restart point; the assignment is not torn into two briefs. If a cut proves wrong, correct the plan itself before the next brief is written.
 5. Keep the derivation of a cut out of the plan; it belongs in its own evidence file, linked from the plan.
 
@@ -27,10 +27,16 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 ## E1 <stage title>
 **Goal:** one sentence.
 **Depends on:** none | E<n>.
+**Generated:** Query `ordersByPeriod`; Process `ExportOrders` · skeleton | none.
+**By hand:** <Kind> `<Name>` · <note> | none.
+**Done when:** observable, names the tests that hold it.
+**Halt:** none | one sentence on what the human looks at after the stage.
 ### P1.1 <phase title>
 **Scope:** files, each one named; new or changed.
 **AK:** numbered, each one checkable by a command or a file.
 ```
+
+`Generated` is what a generator or tool produces, `By hand` what is written by hand. Both lines use one entry form: per thing `` <Kind> `<Name>` ``, optionally followed by ` · <note>`; several things are separated by `; `; nothing is `none`. It is the form of the lines under `## Affected` in the understanding sheet (`process-concept`).
 
 ### 3. Cut checks
 

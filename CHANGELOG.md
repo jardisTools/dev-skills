@@ -4,6 +4,18 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-10-02
+
+### Added
+- **`process-concept`: the understanding sheet.** `docs/vorhaben/<name>/UNDERSTANDING.md` with six fixed sections (two more for a bug) is the third concept form, with the template `templates/UNDERSTANDING.md`.
+- **`process-write-prd`: solution and decisions.** A `## Solution` part (BC, New, Changed) and numbered `### Decision <n>` blocks with the line mark `(Decision <n>)`.
+- **`process-write-plan`: four lines per stage.** After `Depends on` follow Generated, By hand, Done when and Halt; Generated and By hand use the entry form ``<Kind> `<Name>` · <note>``, separated by `; `, or `none`.
+- The follow-up documents carry the new formats: the overview pages (en, de), `start-orientation`, `process-resume`, `process-run-stage`, `process-verify`, `process-close`, the review board with its reviewer texts and the progress template now name the understanding sheet, the PRD solution and decisions parts and the four stage lines.
+
+### Changed
+- `process-concept`: the concept artefact is no longer "never prose"; the sheet is the one allowed text form, and the approval covers the sheet.
+- `process-write-prd`: the part "Open decisions" becomes "Decisions"; "Source" points to the approved sheet and the picture.
+
 ## [1.4.0] - 2026-10-01
 
 ### Added

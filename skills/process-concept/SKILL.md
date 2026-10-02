@@ -1,6 +1,6 @@
 ---
 name: process-concept
-description: Use when a task is an undertaking (tier 3) and stage 0 starts — concept interview, target picture or executable example, human approval, project folder docs/vorhaben/<name>/ with progress file, pool scaffold and project profile when missing.
+description: Use when a task is an undertaking (tier 3) and stage 0 starts — concept interview, understanding sheet, target picture or executable example, human approval, project folder docs/vorhaben/<name>/ with progress file, pool scaffold and project profile when missing.
 zone: process
 persona: O
 prerequisites: [process-choose-tier]
@@ -19,7 +19,7 @@ Stage 0 turns an idea into an approved target picture before anything is specifi
    - It exists and holds a `PROGRESS.md`: stop this skill and continue with `process-resume`. Never overwrite, never re-create.
    - It exists without a `PROGRESS.md`: it is not an undertaking. Tell the human, name the folder, and ask whether to use another name. Create nothing inside it.
 3. Run the two set-up rules of sections 2 and 3, each only when its condition holds.
-4. Create `docs/vorhaben/<name>/PROGRESS.md` from `templates/PROGRESS.md`, title and goal filled in, the head left at phase `concept`. From then on the progress file carries the state.
+4. Create `docs/vorhaben/<name>/PROGRESS.md` from `templates/PROGRESS.md`, title and goal filled in, the head left at phase `concept`. From then on the progress file carries the state. The understanding sheet (section 5) is created from `templates/UNDERSTANDING.md`.
 
 If the project keeps its documents out of the commit (switch `process-docs` set to `local`), the folder stays local. Do not touch the project's ignore files to make that happen.
 
@@ -47,20 +47,32 @@ A human's "decide open points yourself" or "proceed autonomously" waives no gate
 
 ### 5. Concept artefact
 
-The artefact is a picture or an executable example, never prose.
+The concept artefact has three forms. The understanding sheet is written for every undertaking; a picture or an executable example stands next to it wherever there is something to see.
 
 | Form | Examples | File |
 |---|---|---|
+| Understanding sheet | the requirement in fixed sections | `docs/vorhaben/<name>/UNDERSTANDING.md`, from `templates/UNDERSTANDING.md` |
 | Picture | HTML pages showing the screens, states and flows; a sketch | `docs/vorhaben/<name>/KONZEPT.html` |
 | Executable example | a test, a golden file, a sample response | in the project's own test or fixture location, named in the progress file |
 
-Create `KONZEPT.html` for every undertaking that has something to see. For a change without a surface, the executable example carries the concept and `KONZEPT.html` states where it lives. Draft the artefact while the interview runs and show it to the human as it grows.
+Apart from the sheet the artefact is never prose: the sheet is the one allowed text form, and its sections are fixed. Create `KONZEPT.html` for every undertaking that has something to see. For a change without a surface, the executable example carries the concept and `KONZEPT.html` states where it lives. Draft the artefacts while the interview runs and show them to the human as they grow.
+
+The sheet has exactly these headings in this order, each kept even when empty:
+
+- `## Occasion`: what triggered the undertaking.
+- `## Problem`: what is wrong or missing.
+- `## Goal`: what must be true at the end.
+- `## Acceptance criteria`: a numbered list (`1.`, `2.`, ...), each criterion observable.
+- `## Affected`: one line per thing, `` - <Kind> `<Name>` ``; the kind is one word for the sort of thing, for example `Aggregate`, `Process`, `Module`.
+- `## Documents`: one line per document, a Markdown link with a path relative to the undertaking folder.
+
+For a bug, two sections follow `## Goal`: `## Reproduced` and `## Cause`.
 
 ### 6. Approval
 
-The human accepts the artefact; no one else does. Show it, name what it fixes and what it leaves open, and ask for a yes.
+The human accepts the sheet and the picture or example; no one else does. Show them, name what it fixes and what it leaves open, and ask for a yes.
 
-- **No yes, no next stage.** A change request goes back into the interview.
+- **No yes, no next stage.** A change request goes back into the interview. The next stage, the PRD, starts from the approved sheet, not from the conversation.
 - On approval, save a screenshot of the picture as `docs/vorhaben/<name>/KONZEPT.png` with the browser tool at hand. If none is available, say so and ask the human to save it.
 - Set the progress head to phase `prd`, stage `—`, and a next step naming the PRD as one line. Fill in the goal and the path of the approved artefact. An open question stays in the head as `STOPP: <YYYY-MM-DD> · <question>` and blocks autonomous work.
 

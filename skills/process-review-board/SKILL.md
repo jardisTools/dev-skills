@@ -49,7 +49,7 @@ There is no role for Go: a Go review is not part of this board.
 Hand each role exactly this and nothing more:
 
 1. The text of its source file, or its installed reviewer by name (see section 4).
-2. The reviewed document: the PRD with the target picture, or the plan with the confirmed PRD.
+2. The reviewed document: the PRD with the approved understanding sheet and the target picture, or the plan (with its lines `Generated`, `By hand`, `Done when` and `Halt` per stage) with the confirmed PRD.
 3. The acceptance list of the undertaking.
 4. For the domain expert: the domain. For frontend roles: the stack. For the packages role: the area the plan touches.
 5. A hard deadline in tool calls. What a role did not reach it marks as a question.

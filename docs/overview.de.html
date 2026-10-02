@@ -121,7 +121,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <div class="page">
 
 <h1><code>jardis/dev-skills</code> — der Prozess für Jardis-Projekte</h1>
-<p class="sub">Version 1.4.0 · ein Composer-Plugin, das Skills, einen Prozess-Router <code>AGENTS.md</code> und Agent-Dateien für Prüfer in ein Jardis-Projekt installiert · fünf Bereiche auf dieser Seite: Prozess-Landkarte, Wissens-Kreislauf, Skill-Karte, Installationsbild, Werkzeug-Abdeckung</p>
+<p class="sub">Version 1.5.0 · ein Composer-Plugin, das Skills, einen Prozess-Router <code>AGENTS.md</code> und Agent-Dateien für Prüfer in ein Jardis-Projekt installiert · fünf Bereiche auf dieser Seite: Prozess-Landkarte, Wissens-Kreislauf, Skill-Karte, Installationsbild, Werkzeug-Abdeckung</p>
 
 <div class="fixed"><b>Festgelegt:</b>
 <ul>
@@ -168,7 +168,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="ph"><b>Abschluss</b><span class="st">einmal je Vorhaben</span><span class="sk">process-close</span></div>
 
   <div class="rl r-hum">Mensch entscheidet</div>
-  <div class="r-hum">Interview: Antworten Punkt für Punkt · <b>nimmt das Zielbild ab</b> (ohne Ja kein nächstes Stadium)</div>
+  <div class="r-hum">Interview: Antworten Punkt für Punkt · <b>nimmt Verständnisblatt und Zielbild ab</b> (ohne Ja kein nächstes Stadium)</div>
   <div class="r-hum"><b>bestätigt das PRD</b></div>
   <div class="r-hum">Jeder Befund wird beschieden; <b>jede Gabel geht an den Menschen</b>, auch kleine</div>
   <div class="r-hum"><b>gibt den Plan frei</b></div>
@@ -190,10 +190,10 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-chk none">—</div>
 
   <div class="rl r-art">Artefakt</div>
-  <div class="r-art"><span class="mono">KONZEPT.html</span> (+ <span class="mono">KONZEPT.png</span> bei der Abnahme) · <span class="mono">PROGRESS.md</span> mit Kopf: Phase, Stage, Next step, Open decisions</div>
-  <div class="r-art"><span class="mono">PRD.md</span> ergänzt das Bild um Fehlerfälle, Zustände, Grenzen und Datenpfade</div>
+  <div class="r-art"><span class="mono">UNDERSTANDING.md</span> · <span class="mono">KONZEPT.html</span> (+ <span class="mono">KONZEPT.png</span> bei der Abnahme) · <span class="mono">PROGRESS.md</span> mit Kopf: Phase, Stage, Next step, Open decisions</div>
+  <div class="r-art"><span class="mono">PRD.md</span> ergänzt Blatt und Bild um einen Lösungsteil, Fehlerfälle, Zustände, Grenzen, Datenpfade und nummerierte Entscheide</div>
   <div class="r-art">Eine Befundliste, jeder Befund gelöst oder verworfen</div>
-  <div class="r-art"><span class="mono">PLAN.md</span>: Etappen → Phasen, Datei-Scope, Akzeptanzkriterien je Phase</div>
+  <div class="r-art"><span class="mono">PLAN.md</span>: Etappen → Phasen; je Etappe erzeugt, von Hand, fertig wenn, Halt; Datei-Scope, Akzeptanzkriterien je Phase</div>
   <div class="r-art">Befunde in den Plan eingearbeitet</div>
   <div class="r-art">Ein Brief je Phase (≤ 6 KB, ≤ 8 Zusagen, ≤ 30 KB Kontextlast) · ein Commit je Phase</div>
   <div class="r-art">Verdikt GREEN oder RED (≤ 5 Posten, ≤ 3 Rot-Belege) · Screenshot · Merge</div>
@@ -227,7 +227,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
     <div class="secs"><span>Stand</span><span>Entscheide</span><span>Fallen</span><span>Ersetzt</span><span>Verweise</span></div>
     verdichtet, nicht angehängt · ein Entscheid trägt Datum, Urheber und Quelle · Themenseite ≤ 16.384 Bytes und 160 Zeilen, Index &lt; 10.240 Bytes</div>
   <div class="place"><h4>WO · Rechenschaft</h4>
-    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> enthält PROGRESS, KONZEPT, PRD, PLAN<br>→ beim Abschluss: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, der Ordner wird gelöscht, kein Archiv</div>
+    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> enthält PROGRESS, UNDERSTANDING, KONZEPT, PRD, PLAN<br>→ beim Abschluss: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, der Ordner wird gelöscht, kein Archiv</div>
   <div class="place"><h4>WO · Skills (Was)</h4>
     <span class="mono">.claude/skills</span> und <span class="mono">.agents/skills</span> kommen über Composer. Das Plugin schreibt die Skills und nie den Pool; das Pool-Gerüst legt der Agent über <span class="mono">process-concept</span> an.</div>
   <div class="place"><h4>IM REPO?</h4>
@@ -239,7 +239,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="tn">A · Projektstart<small>noch kein Pool, erstes Vorhaben</small></div>
   <div class="steps">
     <div class="step"><span class="k w">W</span>Gerüst: <b>leere INDEX.md</b>, nur wenn <span class="mono">.claude/wissen/</span> fehlt<span class="o">.claude/wissen/INDEX.md</span></div>
-    <div class="step"><span class="k w">W</span><b>Interview:</b> jeder geklärte Punkt gehört ins Konzept-Artefakt, nicht in eine Chat-Zusammenfassung<span class="o">KONZEPT.html</span></div>
+    <div class="step"><span class="k w">W</span><b>Interview:</b> jeder geklärte Punkt gehört ins Konzept-Artefakt, nicht in eine Chat-Zusammenfassung<span class="o">UNDERSTANDING.md · KONZEPT.html</span></div>
     <div class="step"><span class="k d">D</span>PRD, Plan und Fortschrittsdatei als Rechenschaft<span class="o">docs/vorhaben/&lt;name&gt;/</span></div>
     <div class="step"><span class="k r">R</span>Der <b>Brief</b> nennt die Themenseiten des Pools, die den Bereich berühren, ausgewählt aus INDEX.md<span class="o">INDEX.md → Themenseiten</span></div>
     <div class="step"><span class="k w">W</span><span class="k g">G</span>Ein Entscheid wird eine Zeile unter <i>Entscheide</i>; der <code>feat:</code>-Commit trägt den Vermerk<span class="o">Wissen: &lt;page&gt;#&lt;section&gt;</span></div>
@@ -306,9 +306,9 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code
       <div>
         <div class="sk"><div class="n">process-choose-tier</div><div class="d">Entscheiden, wie viel Prozess eine Aufgabe braucht: Antwort, Handgriff, Kleinauftrag oder Vorhaben</div></div>
         <div class="sk"><div class="n">process-check-existing</div><div class="d">Vor etwas Neuem fragen, was das Umfeld schon leistet, über einen blinden Prüfer</div></div>
-        <div class="sk"><div class="n">process-concept</div><div class="d">Stadium 0: Konzept-Interview, abgenommenes Zielbild, Projektordner mit Fortschrittsdatei</div></div>
-        <div class="sk"><div class="n">process-write-prd</div><div class="d">Stadium 1: das PRD ergänzt Fehlerfälle, Zustände, Grenzen und Datenpfade; WAS-Gremium einmal</div></div>
-        <div class="sk"><div class="n">process-write-plan</div><div class="d">Stadium 2: in Etappen und Phasen schneiden, mit Datei-Scope und Akzeptanzkriterien; WIE-Gremium einmal</div></div>
+        <div class="sk"><div class="n">process-concept</div><div class="d">Stadium 0: Konzept-Interview, Verständnisblatt, abgenommenes Zielbild, Projektordner mit Fortschrittsdatei</div></div>
+        <div class="sk"><div class="n">process-write-prd</div><div class="d">Stadium 1: das PRD ergänzt einen Lösungsteil, Fehlerfälle, Zustände, Grenzen, Datenpfade und nummerierte Entscheide; WAS-Gremium einmal</div></div>
+        <div class="sk"><div class="n">process-write-plan</div><div class="d">Stadium 2: in Etappen und Phasen schneiden, mit Datei-Scope, Akzeptanzkriterien und den Zeilen erzeugt, von Hand, fertig wenn und Halt; WIE-Gremium einmal</div></div>
         <div class="sk"><div class="n">process-review-board</div><div class="d">Rollen mit Grund wählen, blind ausführen, eine Liste zusammenführen, jeden Befund bescheiden</div></div>
       </div>
       <div>
@@ -415,7 +415,7 @@ your-project/
 <span class="t-c"># später vom Prozess angelegt, nicht von der Installation</span>
 ├── <span class="t-new">.claude/wissen/</span>                    <span class="t-c">Wissenspool · INDEX.md + Themenseiten · Gerüst durch process-concept</span>
 ├── <span class="t-new">.claude/PROJECT_PROFILE.md</span>          <span class="t-c">Projektfakten: QA-Einstieg, Ports, Build · durch process-concept</span>
-├── <span class="t-new">docs/vorhaben/&lt;name&gt;/</span>             <span class="t-c">PROGRESS.md · KONZEPT.html/.png · PRD.md · PLAN.md · Briefe</span>
+├── <span class="t-new">docs/vorhaben/&lt;name&gt;/</span>             <span class="t-c">PROGRESS.md · UNDERSTANDING.md · KONZEPT.html/.png · PRD.md · PLAN.md · Briefe</span>
 ├── <span class="t-new">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>
 └── <span class="t-new">commit-msg-Hook</span>                    <span class="t-c">geschrieben von scripts/install-commit-msg-hook, warnt nur</span>
 </pre>

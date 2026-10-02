@@ -17,7 +17,7 @@ Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `close`: the ac
 
 ### 2. Carry-over triage
 
-Every open point from `## Open points` and from the open decisions gets **exactly one** of four decisions. Noting it is not a decision.
+Every open point from `## Open points` and from the open decisions (the progress head and every decision of the PRD that is not `answered`) gets **exactly one** of four decisions. Noting it is not a decision.
 
 | Decision | Meaning |
 |---|---|
