@@ -54,7 +54,7 @@ The decisions part has this format, one block per decision:
 - **Answer:** ...
 ```
 
-Numbers run from 1 and are never reassigned. At most one decision is `current`. `Answer` stays out while the decision is not answered. A PRD line that stems from a decision, or waits for one, ends with the mark `(Decision <n>)`.
+Numbers run from 1 and are never reassigned. At most one decision is `current`. `Answer` stays out while the decision is not answered. A PRD line that stems from a decision, or waits for one, ends with the mark `(Decision <n>)`. A line changed after the approval ends with the mark `(Addendum)` instead; the line itself says what changes and what is to be redone.
 
 Every statement is observable: a reader can tell from the result whether it holds. Where a requirement is a rule ("outwards, X holds"), name the place where X holds today; `process-check-existing` answers that when the answer is not at hand.
 
@@ -81,7 +81,7 @@ A human's "decide open points yourself" or "proceed autonomously" waives no gate
 
 ### 5. Confirmation
 
-Show the human the PRD with the list of findings and their rulings. The human confirms; no one else does. A change request goes back into the PRD and the affected rulings, without a new board run.
+Show the human the PRD with the list of findings and their rulings (`FINDINGS.md`, see `process-review-board`). The human confirms; no one else does. A change request goes back into the PRD and the affected rulings, without a new board run.
 
 On confirmation set the progress head to phase `plan`, stage `—`, next step "write the plan". An open question stays in the head as `STOPP: <YYYY-MM-DD> · <question>` and blocks autonomous work.
 

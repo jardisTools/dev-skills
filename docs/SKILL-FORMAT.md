@@ -318,6 +318,8 @@ Behaviour rules of the `process` skills are stated as literal text, not only as 
 
 Keywords are literal, case-sensitive substrings of the skill text (English); write the rule text so that it contains them verbatim.
 
+The rule `commit-is-human-gate` states both stances of the `git-rules` key: strict (the default, branch, commit and merge are gates of the human) and `"delegated"` (the session creates branch and commits itself, the merge stays a gate of the human). The keywords are the same for both.
+
 **Cap figures** are conventions of this format. Each figure must appear in the named skill; a figure that consists only of digits must appear as a whole number (`5` is not satisfied by `15`).
 
 | Skill | Cap | Figures |

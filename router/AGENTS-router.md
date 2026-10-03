@@ -8,6 +8,10 @@ Pick the lowest tier that fits a task and name it in one line — a present tier
 Branch, commit and merge are gates of the human: the session never creates a branch, commits or merges on its own, it stops and asks; no commit carries a `Co-Authored-By` line or any other tool attribution. Git flow: work happens on a `feature/*` or `fix/*` branch cut from `develop`, a hotfix on a `hotfix/*` branch cut from `main`, never directly on `develop` or `main`. A halt names exactly one git gate (branch, commit or merge), and the next one only once the step before stands in `git log`; the human starts the branch (`git-start-branch`), the session never offers to create it itself.
 <!-- /git-rules -->
 
+<!-- git-rules:delegated -->
+Merge and push are gates of the human: the session never merges or pushes on its own, it stops and asks. The session creates the branch and the commits itself: work happens on a `feature/*` or `fix/*` branch cut from `develop`, a hotfix on a `hotfix/*` branch cut from `main`, never directly on `develop` or `main`. It commits only after checking that every changed file belongs to the scope of the task, and reports a commit only once it stands in `git log`; no commit carries a `Co-Authored-By` line or any other tool attribution. A halt names exactly one git gate (merge or push), and the next one only once the step before is done; the `git-*` skills stay started by the human, the session uses plain git.
+<!-- /git-rules:delegated -->
+
 ## Tiers
 
 | Tier | Task | Skill |

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Exception\InstallFailedException;
 use JardisTools\DevSkills\Handler\Install\LoadRouterText;
 use JardisTools\DevSkills\Tests\Support\TempProject;
@@ -12,6 +13,8 @@ use PHPUnit\Framework\TestCase;
 final class LoadRouterTextTest extends TestCase
 {
     private const WITH_GIT_RULES = "# Router\nRoute here.\n\n<!-- git-rules -->\nGit rule.\n<!-- /git-rules -->\n\n## Tiers\nTable.\n";
+
+    private const WITH_BOTH_AREAS = "# Router\nRoute here.\n\n<!-- git-rules -->\nStrict rule.\n<!-- /git-rules -->\n\n<!-- git-rules:delegated -->\nDelegated rule.\n<!-- /git-rules:delegated -->\n\n## Tiers\nTable.\n";
 
     private TempProject $plugin;
 
@@ -54,7 +57,7 @@ final class LoadRouterTextTest extends TestCase
         );
         self::assertSame(
             (new LoadRouterText())($this->plugin->root),
-            (new LoadRouterText())($this->plugin->root, true),
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Strict),
         );
     }
 
@@ -64,16 +67,60 @@ final class LoadRouterTextTest extends TestCase
 
         self::assertSame(
             "# Router\nRoute here.\n\n## Tiers\nTable.",
-            (new LoadRouterText())($this->plugin->root, false),
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Off),
         );
     }
 
-    public function testRouterWithoutMarkersIsTheSameOnAndOff(): void
+    public function testStrictKeepsTheFirstAreaAndDropsTheDelegatedOne(): void
+    {
+        $this->plugin->writeFile('router/AGENTS-router.md', self::WITH_BOTH_AREAS);
+
+        self::assertSame(
+            "# Router\nRoute here.\n\nStrict rule.\n\n## Tiers\nTable.",
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Strict),
+        );
+        self::assertSame(
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Strict),
+            (new LoadRouterText())($this->plugin->root),
+        );
+    }
+
+    public function testDelegatedKeepsTheSecondAreaAndDropsTheStrictOne(): void
+    {
+        $this->plugin->writeFile('router/AGENTS-router.md', self::WITH_BOTH_AREAS);
+
+        self::assertSame(
+            "# Router\nRoute here.\n\nDelegated rule.\n\n## Tiers\nTable.",
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Delegated),
+        );
+    }
+
+    public function testOffDropsBothAreasAndEveryMarkerLine(): void
+    {
+        $this->plugin->writeFile('router/AGENTS-router.md', self::WITH_BOTH_AREAS);
+
+        self::assertSame(
+            "# Router\nRoute here.\n\n## Tiers\nTable.",
+            (new LoadRouterText())($this->plugin->root, GitRulesMode::Off),
+        );
+    }
+
+    public function testMarkerLinesOfEitherAreaNeverReachTheResult(): void
+    {
+        $this->plugin->writeFile('router/AGENTS-router.md', self::WITH_BOTH_AREAS);
+
+        foreach (GitRulesMode::cases() as $mode) {
+            self::assertStringNotContainsString('git-rules', (new LoadRouterText())($this->plugin->root, $mode), $mode->name);
+        }
+    }
+
+    public function testRouterWithoutMarkersIsTheSameInEveryStance(): void
     {
         $this->plugin->writeFile('router/AGENTS-router.md', "# Router\nRoute here.\n\n## Tiers\nTable.\n");
 
-        self::assertSame("# Router\nRoute here.\n\n## Tiers\nTable.", (new LoadRouterText())($this->plugin->root, true));
-        self::assertSame("# Router\nRoute here.\n\n## Tiers\nTable.", (new LoadRouterText())($this->plugin->root, false));
+        foreach (GitRulesMode::cases() as $mode) {
+            self::assertSame("# Router\nRoute here.\n\n## Tiers\nTable.", (new LoadRouterText())($this->plugin->root, $mode), $mode->name);
+        }
     }
 
     public function testMarkerLinesNeverReachTheResult(): void
@@ -83,18 +130,18 @@ final class LoadRouterTextTest extends TestCase
             "<!-- git-rules -->\r\nGit rule.\r\n<!-- /git-rules -->\r\n\r\nTail.\r\n<!-- /git-rules -->\r\n",
         );
 
-        foreach ([true, false] as $gitRules) {
+        foreach ([GitRulesMode::Strict, GitRulesMode::Off] as $gitRules) {
             self::assertStringNotContainsString('git-rules', (new LoadRouterText())($this->plugin->root, $gitRules));
         }
-        self::assertSame("Git rule.\n\nTail.", (new LoadRouterText())($this->plugin->root, true));
-        self::assertSame('Tail.', (new LoadRouterText())($this->plugin->root, false));
+        self::assertSame("Git rule.\n\nTail.", (new LoadRouterText())($this->plugin->root, GitRulesMode::Strict));
+        self::assertSame('Tail.', (new LoadRouterText())($this->plugin->root, GitRulesMode::Off));
     }
 
     public function testAreaWithoutItsEndMarkerStaysEvenWithTheOptOut(): void
     {
         $this->plugin->writeFile('router/AGENTS-router.md', "Intro.\n\n<!-- git-rules -->\nGit rule.\n\n## Tiers\n");
 
-        self::assertSame("Intro.\n\nGit rule.\n\n## Tiers", (new LoadRouterText())($this->plugin->root, false));
+        self::assertSame("Intro.\n\nGit rule.\n\n## Tiers", (new LoadRouterText())($this->plugin->root, GitRulesMode::Off));
     }
 
     public function testUnreadableRouterFileFailsAsCoreError(): void

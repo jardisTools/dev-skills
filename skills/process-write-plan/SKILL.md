@@ -22,6 +22,7 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 3. Give every stage a stage plan with: goal, dependencies, the four lines `Generated`, `By hand`, `Done when` and `Halt`, phase list, file scope per phase, acceptance criteria (AK) per phase, dependencies between phases.
 4. Do not cut phases finer than needed and never split a phase afterwards. If the context of a phase does not suffice, the implementer's turn ends with a restart point; the assignment is not torn into two briefs. If a cut proves wrong, correct the plan itself before the next brief is written.
 5. Keep the derivation of a cut out of the plan; it belongs in its own evidence file, linked from the plan.
+6. A plan line changed after its release ends with the mark `(Addendum)`; the line itself says what changes and what is to be redone.
 
 ```markdown
 ## E1 <stage title>
@@ -77,7 +78,7 @@ Merge the answers into one list, rule on every finding (work it into the plan or
 
 ### 6. Release
 
-Show the human the plan with the findings and their rulings. The human releases it; no one else does. Where the undertaking has a surface, the target picture is stored as `KONZEPT.png` before the first stage.
+Show the human the plan with the findings and their rulings (`FINDINGS.md`, see `process-review-board`). The human releases it; no one else does. Where the undertaking has a surface, the target picture is stored as `KONZEPT.png` before the first stage.
 
 On release set the progress head to phase `stage`, stage `E1/<total>` (the form is `E<n>/<total>`, `<total>` the number of stages in the plan), next step "brief for P1.1", and list the stages in the progress file as one line each.
 

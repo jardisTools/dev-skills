@@ -73,6 +73,7 @@ For a bug, two sections follow `## Goal`: `## Reproduced` and `## Cause`.
 The human accepts the sheet and the picture or example; no one else does. Show them, name what it fixes and what it leaves open, and ask for a yes.
 
 - **No yes, no next stage.** A change request goes back into the interview. The next stage, the PRD, starts from the approved sheet, not from the conversation.
+- **Change after the approval.** A sheet line changed after the approval ends with the mark `(Addendum)`; the line itself says what changes and what is to be redone.
 - On approval, save a screenshot of the picture as `docs/vorhaben/<name>/KONZEPT.png` with the browser tool at hand. If none is available, say so and ask the human to save it.
 - Set the progress head to phase `prd`, stage `—`, and a next step naming the PRD as one line. Fill in the goal and the path of the approved artefact. An open question stays in the head as `STOPP: <YYYY-MM-DD> · <question>` and blocks autonomous work.
 

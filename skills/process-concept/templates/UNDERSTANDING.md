@@ -18,6 +18,9 @@ One line: what must be true at the end.
 
 1. One observable criterion.
 
+<!-- A line changed after the approval ends with "(Addendum)" and says what changes and what is to be redone, for example:
+2. The export lists the net amount. (Addendum) Was the gross amount; redo the export query and its test. -->
+
 ## Affected
 
 - <Kind> `<Name>`
