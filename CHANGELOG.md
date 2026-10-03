@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-10-03
+
+### Fixed
+- **Changelog.** Entries for 1.6.0 and 1.6.1 added.
+- **Overview pages (en, de).** The subtitle names the current version instead of 1.5.0; the reviewer-role count, the skill count in the installation picture and the `bundled-skills` comment name the profile (17 or 19 roles, 25 or 33 skills); the areas `design` and `generated-code` are marked as profile `jardis`.
+
 ## [1.7.0] - 2026-10-03
 
 ### Added
@@ -15,6 +21,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the
 
 ### Changed
 - A fresh project without a Jardis package installs 25 skills instead of 33. Existing installations are unchanged: they keep all 33 skills and stay unmarked in the manifest until the key `profile` is set.
+
+## [1.6.1] - 2026-10-03
+
+### Changed
+- **`design-headless-mcp` and `design-draft-schema` match the MCP parity of the Builder.** `import_schema` normalises `tables` like `analyze_schema` and the UI and writes the analysis report; `save_process` keeps the stored layout when `layoutJson` is omitted; Closure catalog entries, `rename_closure`, `rename_value_list` and `set_stack_selection` state their clearing and `confirm` rules; the output directory is set with `update_project_settings` (`outputDir`).
+
+## [1.6.0] - 2026-10-03
+
+### Added
+- **`git-rules: "delegated"`.** A third value of the `git-rules` key: the session creates the branch and the commits itself, merge and push stay gates of the human. The router carries a second area (`<!-- git-rules:delegated -->`); the installer keeps exactly one of the two git areas, or none with `false`. Any other value stays strict and warns.
+- **`process-review-board`: `FINDINGS.md`.** The merged list with its rulings is written to `docs/vorhaben/<name>/FINDINGS.md`, with the new template `templates/FINDINGS.md`.
+- **`(Addendum)` mark.** A line changed after the approval ends with `(Addendum)` in `process-write-prd`, `process-write-plan` and `process-concept`.
+- **`process-write-prd`: solution in model building blocks.** The part `## Solution` is described in Aggregate, Process, Query, Rule, Value list and the like; what the model does not carry is named as hand code. The skeptic reviewer checks it.
+- **`generated-code-extend` section 10: boundary between model and hand code.** One table of what the generator owns and what is written by hand.
+- **`process-concept` and the progress template: five optional head lines.** `Title`, `Type`, `Ticket`, `BC` and `Skipped` may follow the four required lines.
+
+### Changed
+- **Project profile read earlier.** `process-concept` reads `.claude/PROJECT_PROFILE.md` before the first interview question, `process-write-prd` at entry.
+- **`process-write-plan`: tests as a step.** The order inside a stage is generated, by hand, then tests.
+- **`foundation-testing` section 6 describes the generated test scaffold** `tests/Support/{Domain}/` and `new DomainKernel(projectRoot:, connection:)`; `generated-code-extend` lists it among the ForceOverwrite files.
+- `process-run-stage`, `process-close`, `process-resume` and `docs/SKILL-FORMAT.md` name both git stances.
 
 ## [1.5.0] - 2026-10-02
 
