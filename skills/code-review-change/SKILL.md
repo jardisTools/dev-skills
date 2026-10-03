@@ -3,6 +3,7 @@ name: code-review-change
 description: Use after every coding task and before any commit — review the change for typing, security, error handling, API design, performance, clarity and shared state; returns findings graded Blocker, Major or Minor and never edits code.
 zone: process
 persona: O
+profile: core
 prerequisites: []
 next: [git-commit-change]
 ---

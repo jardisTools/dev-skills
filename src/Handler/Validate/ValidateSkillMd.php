@@ -47,9 +47,13 @@ final class ValidateSkillMd
         'description',
         'zone',
         'persona',
+        'profile',
         'prerequisites',
         'next',
     ];
+
+    /** @var list<string> */
+    private const ALLOWED_PROFILES = ['core', 'jardis'];
 
     /** @var list<string> */
     private const ALLOWED_PERSONAS = ['A', 'C', 'D', 'X', 'O'];
@@ -142,6 +146,16 @@ final class ValidateSkillMd
                     "frontmatter: invalid persona '%s', must be one of: %s",
                     $fields['persona'],
                     implode(', ', self::ALLOWED_PERSONAS),
+                );
+            }
+        }
+
+        if (isset($fields['profile']) && is_string($fields['profile'])) {
+            if (!in_array($fields['profile'], self::ALLOWED_PROFILES, true)) {
+                $errors[] = sprintf(
+                    "frontmatter: invalid profile '%s', must be one of: %s",
+                    $fields['profile'],
+                    implode(', ', self::ALLOWED_PROFILES),
                 );
             }
         }

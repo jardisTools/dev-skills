@@ -20,6 +20,8 @@ final class InstallReport
 
     private bool $agentsMdCreated = false;
 
+    private ?InstallProfile $profile = null;
+
     /** @var list<string> */
     private array $removedBundledSkills = [];
 
@@ -96,6 +98,19 @@ final class InstallReport
     public function setAgentsMdCreated(bool $created): void
     {
         $this->agentsMdCreated = $created;
+    }
+
+    public function setProfile(InstallProfile $profile): void
+    {
+        $this->profile = $profile;
+    }
+
+    /**
+     * The installation profile this run resolved; `null` before the skills part has run.
+     */
+    public function profile(): ?InstallProfile
+    {
+        return $this->profile;
     }
 
     public function installedSkillCount(): int

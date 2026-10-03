@@ -332,7 +332,10 @@ final class PluginTest extends TestCase
     public function testAbsentBundledSkillsKeyInstallsAllBundledSkills(): void
     {
         $plugin = new Plugin();
-        $plugin->activate($this->createComposer(), $this->createMock(IOInterface::class));
+        $plugin->activate(
+            $this->createComposer(['jardis/dev-skills' => ['profile' => 'jardis']]),
+            $this->createMock(IOInterface::class),
+        );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
 
         self::assertFileExists($this->project->path('.claude/skills/design-draft-schema/SKILL.md'));
@@ -372,7 +375,7 @@ final class PluginTest extends TestCase
         $plugin = new Plugin();
         $plugin->activate(
             $this->createComposer([
-                'jardis/dev-skills' => ['bundled-skills' => ['generated-code-*', 'design-*']],
+                'jardis/dev-skills' => ['bundled-skills' => ['generated-code-*', 'design-*'], 'profile' => 'jardis'],
             ]),
             $this->createMock(IOInterface::class),
         );
@@ -396,6 +399,7 @@ final class PluginTest extends TestCase
                         'include' => ['generated-code-*'],
                         'exclude' => ['generated-code-recipes'],
                     ],
+                    'profile' => 'jardis',
                 ],
             ]),
             $this->createMock(IOInterface::class),
@@ -427,7 +431,7 @@ final class PluginTest extends TestCase
 
         $plugin = new Plugin();
         $plugin->activate(
-            $this->createComposer(['jardis/dev-skills' => ['bundled-skills' => ['design-*']]]),
+            $this->createComposer(['jardis/dev-skills' => ['bundled-skills' => ['design-*'], 'profile' => 'jardis']]),
             $io,
         );
         $plugin->onComposerRun($this->createMock(ScriptEvent::class));
@@ -532,7 +536,8 @@ final class PluginTest extends TestCase
      */
     private function allBundledExtra(): array
     {
-        return ['jardis/dev-skills' => ['bundled-skills' => true]];
+        // The profile is named: these tests are about the selection of the config, not about the detection.
+        return ['jardis/dev-skills' => ['bundled-skills' => true, 'profile' => 'jardis']];
     }
 
     private function createPackageEvent(string $packageName, ?Composer $composer = null): PackageEvent

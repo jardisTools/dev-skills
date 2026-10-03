@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Shell;
 
 use Closure;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
@@ -25,13 +26,17 @@ use JardisTools\DevSkills\Handler\Manifest\ResolvePluginVersion;
  * target path (a foreign file, a folder, a link) stays as it is and is reported. A write error for one
  * shell is a warning as well; the other shells are still written. A new shell is noted in the manifest
  * after it was written: an interrupted run leaves a file the next run treats as foreign, never the
- * other way round. Never through a link: a link at the target or in a folder on the way (`.codex`,
+ * other way round. In the profile `core` the roles of `JARDIS_ROLES` get no shell; shells that already
+ * exist stay. Never through a link: a link at the target or in a folder on the way (`.codex`,
  * `.codex/agents`) is left alone, nothing is written and no folder is created behind it; the check runs
  * before the first `mkdir`, and the real path of the folder is checked once more afterwards.
  */
 final class WriteReviewerShells
 {
     public const SOURCE_DIR = 'skills/process-review-board/reviewers';
+
+    /** Roles that only serve the profile `jardis`; the profile `core` writes no shell for them. */
+    public const JARDIS_ROLES = ['plan-review-packages', 'plan-review-ddd-tactics'];
 
     /**
      * @param Closure(string, string): ?ReviewerSource $parseSource
@@ -71,6 +76,9 @@ final class WriteReviewerShells
 
         foreach ($names as $name) {
             $role = basename($name, '.md');
+            if ($report->profile() === InstallProfile::Core && in_array($role, self::JARDIS_ROLES, true)) {
+                continue;
+            }
             $content = file_get_contents($sourceDir . '/' . $name);
             $source = $content === false ? null : ($this->parseSource)($role, $content);
             if ($source === null) {

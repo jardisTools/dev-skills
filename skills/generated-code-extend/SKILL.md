@@ -3,6 +3,7 @@ name: generated-code-extend
 description: Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Generator-owned and hermetic (ForceOverwrite, never edit). The BC facade's public surface exposes `{agg}(): {Agg}Read` (read-only queries + lists), `process()`, and an optional direct method per exposed rule-guarded Command; the write facade `{Agg}` (Commands + `event()`) is family-internal via the protected kernel seam (`$this->handle()`). Developer surface: BC-level Processes under `{BC}/Process/{Name}/` (Generator-owned DTO/orchestrator/node stubs + `Event/`; Dev-owned `Query/`/`Repository/`/`Service/`) and the `{BC}/Closure/` catalog (own-BC-read-only Rule bodies, M9). Covers V1–V13 prohibitions, decision tree, generated-file modes, DomainResponse construction incl. `RuleViolation` 422. ClassVersion → `generated-code-versioning`. Workflow API → `generated-code-workflow-api`. Recipes → `generated-code-recipes`.
 zone: post-active
 persona: C
+profile: jardis
 prerequisites: []
 next: [generated-code-versioning, generated-code-workflow-api, generated-code-recipes, generated-code-wire-transport]
 ---

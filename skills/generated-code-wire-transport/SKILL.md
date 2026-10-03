@@ -3,6 +3,7 @@ name: generated-code-wire-transport
 description: Wiring Designer-generated Queries/Processes into a transport layer — bootstrap lifetime, call chain (Domain → BC → Aggregate READ facade → query, plus Domain → BC → Process facade → process for writes; the aggregate WRITE facade is family-internal only and not reachable from transport code), DomainResponse→transport mapping, error handling for HTTP / CLI / queue / worker.
 zone: post-active
 persona: D
+profile: jardis
 prerequisites: [generated-code-extend]
 next: []
 ---

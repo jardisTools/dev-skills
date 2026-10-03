@@ -3,6 +3,7 @@ name: process-verify
 description: Use when a stage is built and must be checked, or when all stages are done and the undertaking is to be accepted — one blind verifier per stage, verdict capped at 5 items and 3 red proofs, one end-to-end acceptance gate at the end.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-run-stage]
 next: [process-close]
 ---

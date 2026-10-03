@@ -25,6 +25,8 @@ final readonly class PluginConfig
         public ?string $processDocsWarning = null,
         public GitRulesMode $gitRules = GitRulesMode::Strict,
         public ?string $gitRulesWarning = null,
+        public ?InstallProfile $profile = null,
+        public ?string $profileWarning = null,
     ) {
     }
 
@@ -43,6 +45,8 @@ final readonly class PluginConfig
             $warning,
             $this->gitRules,
             $this->gitRulesWarning,
+            $this->profile,
+            $this->profileWarning,
         );
     }
 
@@ -62,6 +66,29 @@ final readonly class PluginConfig
             $this->processDocs,
             $this->processDocsWarning,
             $gitRules,
+            $warning,
+            $this->profile,
+            $this->profileWarning,
+        );
+    }
+
+    /**
+     * The same configuration with the explicitly configured installation profile (`null` = not set, the
+     * profile is resolved from the project) and the warning about its raw value.
+     */
+    public function withProfile(?InstallProfile $profile, ?string $warning): self
+    {
+        return new self(
+            $this->installAll,
+            $this->mandatoryOnly,
+            $this->includeGlobs,
+            $this->excludeGlobs,
+            $this->warning,
+            $this->processDocs,
+            $this->processDocsWarning,
+            $this->gitRules,
+            $this->gitRulesWarning,
+            $profile,
             $warning,
         );
     }

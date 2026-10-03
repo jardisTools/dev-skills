@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\GitRulesMode;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Exception\InvalidPluginConfigException;
@@ -15,6 +16,7 @@ final class ReadPluginConfig
     private const BUNDLED_KEY = 'bundled-skills';
     private const PROCESS_DOCS_KEY = 'process-docs';
     private const GIT_RULES_KEY = 'git-rules';
+    private const PROFILE_KEY = 'profile';
 
     /**
      * @param array<string, mixed> $extra the value returned by
@@ -31,9 +33,38 @@ final class ReadPluginConfig
 
         [$gitRules, $gitRulesWarning] = $this->readGitRules($root);
 
+        [$profile, $profileWarning] = $this->readProfile($root);
+
         return $this->readBundledSkills($root)
             ->withProcessDocs($mode, $modeWarning)
-            ->withGitRules($gitRules, $gitRulesWarning);
+            ->withGitRules($gitRules, $gitRulesWarning)
+            ->withProfile($profile, $profileWarning);
+    }
+
+    /**
+     * `profile` names the installation profile and is independent of `bundled-skills`. An absent key
+     * leaves the profile to the resolution in the project (`null`); any other value than the two
+     * profiles is reported and treated like an absent key.
+     *
+     * @param array<array-key, mixed> $root
+     * @return array{?InstallProfile, ?string}
+     */
+    private function readProfile(array $root): array
+    {
+        if (!array_key_exists(self::PROFILE_KEY, $root)) {
+            return [null, null];
+        }
+
+        $raw = $root[self::PROFILE_KEY];
+        $profile = is_string($raw) ? InstallProfile::tryFrom($raw) : null;
+        if ($profile !== null) {
+            return [$profile, null];
+        }
+
+        return [null, sprintf(
+            'profile must be "core" or "jardis"; got %s. The profile is resolved from the project instead.',
+            is_string($raw) ? '"' . $raw . '"' : get_debug_type($raw),
+        )];
     }
 
     /**

@@ -7,7 +7,8 @@ namespace JardisTools\DevSkills\Data;
 /**
  * Record of what this plugin manages. Pure data: `entries` maps a skill folder (project-relative path)
  * to its origin and content checksum; `selfSet` maps a foreign file the plugin changed itself
- * (project-relative path, e.g. CLAUDE.md) to what it set there.
+ * (project-relative path, e.g. CLAUDE.md) to what it set there. `profile` is the installation profile of the
+ * last run; `null` for a manifest written before the profile existed.
  */
 final class Manifest
 {
@@ -23,6 +24,7 @@ final class Manifest
         public readonly string $pluginVersion,
         public readonly array $entries = [],
         public readonly array $selfSet = [],
+        public readonly ?InstallProfile $profile = null,
     ) {
     }
 }

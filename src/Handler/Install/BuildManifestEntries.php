@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Install;
 
 use Closure;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\StagedSkill;
 
@@ -12,7 +13,7 @@ use JardisTools\DevSkills\Data\StagedSkill;
  * Builds the manifest for a finished install: one entry per installed target
  * with the checksum of the folder as it now is on disk, plus the entries of
  * the previous manifest whose folders still exist. What the plugin set in foreign
- * files (`selfSet`) is carried over unchanged: a later run must not forget it.
+ * files (`selfSet`) is carried over unchanged: a later run must not forget it. The profile of this run is recorded.
  */
 final class BuildManifestEntries
 {
@@ -34,6 +35,7 @@ final class BuildManifestEntries
         array $installed,
         string $projectRoot,
         string $pluginVersion,
+        ?InstallProfile $profile = null,
     ): Manifest {
         $realRoot = (string) realpath($projectRoot);
         $entries = [];
@@ -52,6 +54,6 @@ final class BuildManifestEntries
             ];
         }
 
-        return new Manifest(Manifest::SCHEMA_VERSION, $pluginVersion, $entries, $previous->selfSet ?? []);
+        return new Manifest(Manifest::SCHEMA_VERSION, $pluginVersion, $entries, $previous->selfSet ?? [], $profile);
     }
 }

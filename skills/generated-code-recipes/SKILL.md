@@ -3,6 +3,7 @@ name: generated-code-recipes
 description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
+profile: jardis
 prerequisites: [generated-code-extend]
 next: []
 ---

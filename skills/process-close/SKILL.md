@@ -3,6 +3,7 @@ name: process-close
 description: Use when the acceptance gate is green and the human has accepted — triage every open point, carry lessons into the pool, sync docs once, write the digest, delete the project folder, deliver once, run the retro.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-verify]
 next: [knowledge-record-decision]
 ---

@@ -3,6 +3,7 @@ name: git-commit-change
 description: Create a Conventional Commit from the current changes in a Jardis project. Use after a change is complete and reviewed.
 zone: crosscut
 persona: D
+profile: core
 disable-model-invocation: true
 argument-hint: [optional description]
 prerequisites: [git-start-branch]
