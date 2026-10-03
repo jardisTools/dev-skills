@@ -27,6 +27,7 @@ name: %1$s
 description: %2$s
 zone: crosscut
 persona: C
+profile: core
 prerequisites: []
 next: []
 ---

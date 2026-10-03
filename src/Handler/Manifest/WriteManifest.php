@@ -9,7 +9,7 @@ use JardisTools\DevSkills\Data\SelfSetEntry;
 
 /**
  * Writes the manifest atomically: temp file in the target directory, then
- * rename. The optional `selfSet` field is written only when it holds something.
+ * rename. The optional `profile` and `selfSet` fields are written only when they hold something.
  * A failure leaves an existing manifest untouched and no temp file behind.
  */
 final class WriteManifest
@@ -24,6 +24,9 @@ final class WriteManifest
             'pluginVersion' => $manifest->pluginVersion,
             'paths' => (object) $paths,
         ];
+        if ($manifest->profile !== null) {
+            $document['profile'] = $manifest->profile->value;
+        }
         if ($manifest->selfSet !== []) {
             $selfSet = $manifest->selfSet;
             ksort($selfSet, SORT_STRING);

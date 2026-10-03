@@ -59,6 +59,7 @@ final class ValidateSkillMdTest extends TestCase
         self::assertContains("frontmatter: missing required field 'description'", $errors);
         self::assertContains("frontmatter: missing required field 'zone'", $errors);
         self::assertContains("frontmatter: missing required field 'persona'", $errors);
+        self::assertContains("frontmatter: missing required field 'profile'", $errors);
         self::assertContains("frontmatter: missing required field 'prerequisites'", $errors);
         self::assertContains("frontmatter: missing required field 'next'", $errors);
     }
@@ -111,7 +112,7 @@ final class ValidateSkillMdTest extends TestCase
 
     public function testReportsBodyWithoutSectionHeading(): void
     {
-        $content = "---\nname: bare\ndescription: A short description.\nzone: crosscut\npersona: C\nprerequisites: []\nnext: []\n---\n\n# only a top-level title\n\nplain prose, no section headings.\n";
+        $content = "---\nname: bare\ndescription: A short description.\nzone: crosscut\npersona: C\nprofile: core\nprerequisites: []\nnext: []\n---\n\n# only a top-level title\n\nplain prose, no section headings.\n";
         $path = $this->writeSkill('bare', $content);
 
         $errors = (new ValidateSkillMd())($path);
@@ -205,6 +206,24 @@ final class ValidateSkillMdTest extends TestCase
             "frontmatter: invalid persona 'E', must be one of: A, C, D, X, O",
             $errors,
         );
+    }
+
+    public function testReportsInvalidProfileValue(): void
+    {
+        $path = $this->writeSkill('bad-profile', $this->validSkill('bad-profile', 'crosscut', 'C', 'full'));
+
+        $errors = (new ValidateSkillMd())($path);
+
+        self::assertContains("frontmatter: invalid profile 'full', must be one of: core, jardis", $errors);
+    }
+
+    public function testAcceptsBothProfiles(): void
+    {
+        foreach (['core', 'jardis'] as $profile) {
+            $path = $this->writeSkill('profile-' . $profile, $this->validSkill('profile-' . $profile, 'crosscut', 'C', $profile));
+
+            self::assertSame([], (new ValidateSkillMd())($path), $profile);
+        }
     }
 
     /**
@@ -303,19 +322,20 @@ final class ValidateSkillMdTest extends TestCase
         return $this->project->writeFile('skills/' . $dirName . '/SKILL.md', $content);
     }
 
-    private function validFrontmatter(string $name, string $zone, string $persona = 'C'): string
+    private function validFrontmatter(string $name, string $zone, string $persona = 'C', string $profile = 'core'): string
     {
         return sprintf(
-            "---\nname: %s\ndescription: A valid short description for tests.\nzone: %s\npersona: %s\nprerequisites: []\nnext: []\n---\n\n",
+            "---\nname: %s\ndescription: A valid short description for tests.\nzone: %s\npersona: %s\nprofile: %s\nprerequisites: []\nnext: []\n---\n\n",
             $name,
             $zone,
             $persona,
+            $profile,
         );
     }
 
-    private function validSkill(string $name, string $zone, string $persona = 'C'): string
+    private function validSkill(string $name, string $zone, string $persona = 'C', string $profile = 'core'): string
     {
-        return $this->validFrontmatter($name, $zone, $persona)
+        return $this->validFrontmatter($name, $zone, $persona, $profile)
             . "### 1. Topic\n\nBody.\n\n### 2. Reference\n\n- ref.\n";
     }
 
@@ -333,7 +353,7 @@ final class ValidateSkillMdTest extends TestCase
     private function skillWithDescription(string $name, string $zone, string $description): string
     {
         $fm = sprintf(
-            "---\nname: %s\ndescription: %s\nzone: %s\npersona: C\nprerequisites: []\nnext: []\n---\n\n",
+            "---\nname: %s\ndescription: %s\nzone: %s\npersona: C\nprofile: core\nprerequisites: []\nnext: []\n---\n\n",
             $name,
             $description,
             $zone,

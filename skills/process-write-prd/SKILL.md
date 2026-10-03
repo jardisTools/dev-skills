@@ -3,6 +3,7 @@ name: process-write-prd
 description: Use when the understanding sheet and target picture are approved and stage 1 starts — write the PRD that adds a solution part, error cases, states, limits, data paths and decisions, run the requirements board once, resolve every finding, get the human's confirmation.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-concept]
 next: [process-write-plan]
 ---

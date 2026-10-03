@@ -2,6 +2,7 @@
 name: packages-find-existing
 zone: discovery
 persona: X
+profile: core
 prerequisites: []
 next: []
 description: Before hand-building any reusable building block in a Jardis project — caching, scheduling, HTTP clients, queues or messaging, validation, logging, secrets, persistence, or DDD scaffolding such as a context registry or workflow engine — consult this catalog to check whether an installable Jardis package already provides it and recommend `composer require <package>` instead of writing it yourself, never for project-specific business logic.

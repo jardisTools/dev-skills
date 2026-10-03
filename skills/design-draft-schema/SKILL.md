@@ -3,6 +3,7 @@ name: design-draft-schema
 description: Design the CONTENT of a Schema.json for the Jardis Designer — from a plain-text domain idea, draft tables (snake_case plural), columns with realistic types, primary keys, indexes (primary/unique/index), optional foreign keys. The finished draft enters the workspace through an authoring door — MCP `import_schema` or the schema import in `jardis ui` — never as a file placed into the workspace by hand. Output matches the DB-export format the Designer's importer parses.
 zone: pre
 persona: A
+profile: jardis
 prerequisites: []
 next: [generated-code-extend]
 ---

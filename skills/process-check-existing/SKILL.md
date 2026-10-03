@@ -3,6 +3,7 @@ name: process-check-existing
 description: Use before proposing anything new — a new type, class, second track or mechanism, a claim resting on "does not exist", a requirement phrased as a rule — to learn what the environment already does, via a blind checker.
 zone: process
 persona: O
+profile: core
 prerequisites: [foundation-working-principles]
 next: []
 ---

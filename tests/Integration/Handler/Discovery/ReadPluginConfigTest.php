@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Discovery;
 
 use JardisTools\DevSkills\Data\GitRulesMode;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
@@ -296,5 +297,49 @@ final class ReadPluginConfigTest extends TestCase
         self::assertSame(['plan-*'], $config->includeGlobs);
         self::assertSame(ProcessDocsMode::Local, $config->processDocs);
         self::assertNull($config->processDocsWarning);
+    }
+
+    public function testProfileIsAbsentByDefault(): void
+    {
+        foreach ([[], ['jardis/dev-skills' => ['bundled-skills' => true]]] as $extra) {
+            $config = (new ReadPluginConfig())($extra);
+
+            self::assertNull($config->profile);
+            self::assertNull($config->profileWarning);
+        }
+    }
+
+    public function testProfileCoreAndJardisAreRead(): void
+    {
+        foreach (['core' => InstallProfile::Core, 'jardis' => InstallProfile::Jardis] as $raw => $expected) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => $raw]]);
+
+            self::assertSame($expected, $config->profile);
+            self::assertNull($config->profileWarning);
+        }
+    }
+
+    public function testInvalidProfileWarnsAndIsTreatedAsAbsent(): void
+    {
+        foreach ([['full', '"full"'], [7, 'int'], [true, 'bool'], [['core'], 'array']] as [$raw, $label]) {
+            $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => $raw]]);
+
+            self::assertNull($config->profile);
+            self::assertStringContainsString('profile must be "core" or "jardis"; got ' . $label, (string) $config->profileWarning);
+        }
+    }
+
+    public function testProfileIsIndependentOfBundledSkills(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => 'core', 'bundled-skills' => false]]);
+
+        self::assertSame(InstallProfile::Core, $config->profile);
+        self::assertTrue($config->mandatoryOnly);
+
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => 'jardis', 'bundled-skills' => ['design-*']]]);
+
+        self::assertSame(InstallProfile::Jardis, $config->profile);
+        self::assertSame(['design-*'], $config->includeGlobs);
+        self::assertSame(GitRulesMode::Strict, $config->gitRules);
     }
 }

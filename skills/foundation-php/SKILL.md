@@ -3,6 +3,7 @@ name: foundation-php
 description: Reference for PHP 8.3 code in Jardis projects — strict types, PHPStan level 8, PSR-4, no traits, Closure-Orchestrator PHP form, src/ layout, pattern syntax, test naming. Consult before writing or reviewing any PHP class or composer.json.
 zone: crosscut
 persona: C
+profile: core
 prerequisites: [foundation-architecture]
 next: [foundation-patterns, foundation-testing]
 ---

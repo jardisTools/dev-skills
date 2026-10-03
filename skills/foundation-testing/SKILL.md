@@ -3,6 +3,7 @@ name: foundation-testing
 description: Jardis testing rules — Integration over Unit, mock only at port boundaries, mandatory process for failing tests (no assertion weakening), Phase-3 test patterns for generated Domain code.
 zone: crosscut
 persona: C
+profile: core
 prerequisites: []
 next: []
 ---

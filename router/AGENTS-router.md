@@ -39,15 +39,29 @@ Merge and push are gates of the human: the session never merges or pushes on its
 | Branch, commit, push, pull request | `git-start-branch`, `git-commit-change`, `git-push-and-open-pr` |
 | Repository set-up and compliance | `git-setup-repository`, `git-check-compliance` |
 
+<!-- profile:jardis -->
 ## Jardis projects
 
 Start with `start-orientation`: it walks packages, schema, design and code and names the skill for every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
+<!-- /profile:jardis -->
+
+<!-- profile:core -->
+## PHP projects
+
+Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`. Before hand-building a reusable component, check `packages-find-existing`: every support and adapter package listed there installs on its own with Composer. After `composer require` of a `jardis*` package the plugin installs that package's skill, and with it the Jardis skills, on the next `composer install`.
+<!-- /profile:core -->
 
 ## Reviewer roles
 
 Sources live in `process-review-board/reviewers/`; the main session picks roles with a reason and runs them blind, in parallel where the tool can, otherwise one after another with a fresh context each.
 
+<!-- profile:jardis -->
 - PRD: skeptic, domain expert, strategic DDD, frontend UX
 - Plan: architecture, DDD tactics, PHP, test strategy, packages, frontend architecture, frontend types, frontend a11y, frontend tests, frontend UX
+<!-- /profile:jardis -->
+<!-- profile:core -->
+- PRD: skeptic, domain expert, strategic DDD, frontend UX
+- Plan: architecture, PHP, test strategy, frontend architecture, frontend types, frontend a11y, frontend tests, frontend UX
+<!-- /profile:core -->
 - Stage: stage verifier, acceptance gate
 - Support: existing-capability check, open-question gate, failure diagnosis

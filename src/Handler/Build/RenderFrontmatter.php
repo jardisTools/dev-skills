@@ -33,6 +33,7 @@ final class RenderFrontmatter
             'name: packages-find-existing',
             'zone: discovery',
             'persona: X',
+            'profile: core',
             'prerequisites: []',
             'next: []',
             'description: ' . self::DESCRIPTION,

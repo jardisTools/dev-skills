@@ -3,6 +3,7 @@ name: foundation-patterns
 description: Reference catalogue of the ten design patterns used in Jardis (Facade, Strategy, Adapter, Value Object, Factory, Repository, Decorator, Priority-Based Layers, Chain of Responsibility, Lazy Initialization). Consult before introducing a pattern.
 zone: crosscut
 persona: C
+profile: core
 prerequisites: []
 next: []
 ---

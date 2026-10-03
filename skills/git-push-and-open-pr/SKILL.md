@@ -3,6 +3,7 @@ name: git-push-and-open-pr
 description: Push the current branch with the quality gate and create a pull request following Gitflow. Use when committed work is ready for review.
 zone: crosscut
 persona: D
+profile: core
 disable-model-invocation: true
 prerequisites: [git-commit-change]
 next: []

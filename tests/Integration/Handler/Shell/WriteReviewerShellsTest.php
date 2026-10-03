@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Shell;
 
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\PluginConfig;
@@ -258,9 +259,52 @@ final class WriteReviewerShellsTest extends TestCase
         );
     }
 
-    private function write(): InstallReport
+    public function testCoreProfileWritesNoShellForTheTwoJardisRolesAndKeepsExistingOnes(): void
+    {
+        foreach ([...WriteReviewerShells::JARDIS_ROLES, 'test-reviewer'] as $role) {
+            $this->plugin->writeFile(
+                self::SOURCES . '/' . $role . '.md',
+                "---\nname: {$role}\ndescription: d\n---\nBody of {$role}\n",
+            );
+        }
+
+        $report = $this->write(InstallProfile::Core);
+
+        self::assertSame([], $report->warnings());
+        self::assertCount(5, $this->manifest()->selfSet);
+        foreach (WriteReviewerShells::JARDIS_ROLES as $role) {
+            foreach (ShellFormat::cases() as $format) {
+                self::assertFileDoesNotExist($this->project->path($format->pathFor($role)));
+            }
+        }
+
+        // A later run in the profile jardis writes them; one more run in core removes nothing.
+        $this->write(InstallProfile::Jardis);
+        self::assertCount(15, $this->manifest()->selfSet);
+        $this->write(InstallProfile::Core);
+        self::assertCount(15, $this->manifest()->selfSet);
+        self::assertFileExists($this->project->path('.claude/agents/plan-review-packages.md'));
+    }
+
+    public function testShippedSourcesGiveSeventeenRolesInCoreAndNineteenInJardis(): void
+    {
+        foreach (glob(dirname(__DIR__, 4) . '/' . self::SOURCES . '/*.md') ?: [] as $source) {
+            $this->plugin->writeFile(self::SOURCES . '/' . basename($source), (string) file_get_contents($source));
+        }
+
+        $this->write(InstallProfile::Core);
+        self::assertCount(17 * 5, $this->manifest()->selfSet);
+
+        $this->write(InstallProfile::Jardis);
+        self::assertCount(19 * 5, $this->manifest()->selfSet);
+    }
+
+    private function write(?InstallProfile $profile = null): InstallReport
     {
         $report = new InstallReport();
+        if ($profile !== null) {
+            $report->setProfile($profile);
+        }
         AddonFactory::writeReviewerShells($this->plugin->root)($this->project->root, $this->project->path('vendor'), $report);
 
         return $report;
