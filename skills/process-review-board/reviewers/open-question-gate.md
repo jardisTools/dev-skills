@@ -35,7 +35,7 @@ All others are delegable. If the answer contradicts the plan, say what in the pl
 
 ## Escalation
 
-UNDECIDABLE on one model is not yet a stop. The main session runs the same question again on the next stronger model. A stop goes to the human only when the strongest model at hand also returns UNDECIDABLE.
+UNDECIDABLE on one model is not yet a stop. The main session runs the same question again on the next stronger tier. A stop goes to the human only when the strongest model at hand also returns UNDECIDABLE.
 
 ## Return
 

@@ -980,7 +980,7 @@ final class BundleTest extends TestCase
         foreach (['fix run', 'follow-up run', 'STOPP:', 'does not debug', 'failure-diagnosis'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $failure, 1400), $keyword);
         }
-        foreach (['at most 2 question points', 'STOPP:', 'open-question gate', 'next stronger model'] as $keyword) {
+        foreach (['at most 2 question points', 'STOPP:', 'open-question gate', 'next stronger tier'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $question, 2200), $keyword);
         }
 
