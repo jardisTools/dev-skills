@@ -48,7 +48,7 @@ final class RenderCatalogTable
             $lines,
             '',
             'Every `jardissupport/*` and `jardisadapter/*` package installs on its own in any PHP project: '
-                . 'they depend only on each other (`contracts`, `dotenv`, `dbquery`, `classversion`, `factory`), '
+                . 'they depend only on each other (`contracts`, `dotenv`, `dbquery`), '
                 . 'and no package requires `jardiscore/*`. '
                 . '`jardiscore/kernel` and `jardiscore/app` are the application layer for generated domains '
                 . 'and presuppose a Jardis domain.',
