@@ -121,7 +121,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <div class="page">
 
 <h1><code>jardis/dev-skills</code> — der Prozess für Jardis-Projekte</h1>
-<p class="sub">Version 1.5.0 · ein Composer-Plugin, das Skills, einen Prozess-Router <code>AGENTS.md</code> und Agent-Dateien für Prüfer in ein Jardis-Projekt installiert · fünf Bereiche auf dieser Seite: Prozess-Landkarte, Wissens-Kreislauf, Skill-Karte, Installationsbild, Werkzeug-Abdeckung</p>
+<p class="sub">Version 1.7.1 · ein Composer-Plugin, das Skills, einen Prozess-Router <code>AGENTS.md</code> und Agent-Dateien für Prüfer in ein Jardis-Projekt installiert · fünf Bereiche auf dieser Seite: Prozess-Landkarte, Wissens-Kreislauf, Skill-Karte, Installationsbild, Werkzeug-Abdeckung</p>
 
 <div class="fixed"><b>Festgelegt:</b>
 <ul>
@@ -129,7 +129,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <li>Das Profil <code>core</code> installiert davon 25; ein Jardis-Package oder <code>profile</code> <code>jardis</code> bringt die anderen acht dazu</li>
 <li>Skills landen in <code>.claude/skills</code> und <code>.agents/skills</code>; ein verwalteter Block landet in <code>AGENTS.md</code></li>
 <li>Branch, Commit und Merge sind Gates des Menschen; kein Commit trägt eine Werkzeug-Attribution</li>
-<li>19 Prüfer-Rollen werden als Agent-Dateien für fünf Werkzeuge geschrieben</li>
+<li>19 Prüfer-Rollen (17 im Profil <code>core</code>) werden als Agent-Dateien für fünf Werkzeuge geschrieben</li>
 <li>Nur Claude Code ist getestet; Codex, Cursor, GitHub Copilot und Gemini CLI sind aus Doku belegt, nicht getestet</li>
 <li>Die Gruppen <code>foundation-*</code> und <code>process-*</code> werden immer installiert</li>
 <li>Der Schalter <code>process-docs</code> hält die Prozess-Arbeitsunterlagen im Commit (<code>committed</code>) oder außerhalb davon (<code>local</code>)</li>
@@ -335,12 +335,12 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code
     <div class="sk"><div class="n">git-check-compliance</div><div class="d">Prüfen, ob das Repository den Gitflow-Konventionen folgt</div></div>
   </div>
 
-  <div class="area"><h4>design <span>vor dem generierten Code</span></h4>
+  <div class="area"><h4>design <span>vor dem generierten Code · Profil jardis</span></h4>
     <div class="sk"><div class="n">design-draft-schema</div><div class="d">Den Inhalt einer <code>Schema.json</code> für den Designer aus einer Domänenidee in Klartext entwerfen</div></div>
     <div class="sk"><div class="n">design-headless-mcp</div><div class="d">Einen Jardis-Workspace ohne Browser über <code>jardis mcp</code> steuern: Tools, Resources, Fehler-Envelopes</div></div>
   </div>
 
-  <div class="area"><h4>generated-code <span>nach dem Designer</span></h4>
+  <div class="area"><h4>generated-code <span>nach dem Designer · Profil jardis</span></h4>
     <div class="sk"><div class="n">generated-code-extend</div><div class="d">Generierten Code erweitern: der hermetische, dem Generator gehörende Baum, die Entwickler-Oberfläche, die Verbote</div></div>
     <div class="sk"><div class="n">generated-code-wire-transport</div><div class="d">Generierte Queries und Prozesse in HTTP-, CLI-, Queue- oder Worker-Code einbinden</div></div>
     <div class="sk"><div class="n">generated-code-versioning</div><div class="d">ClassVersion-Auflösung und das Versionierungs-Modell</div></div>
@@ -401,7 +401,7 @@ your-project/
 │     <span class="t-now">+ zusammengeführte AGENTS.md der Jardis-Vendor-Packages</span>   <span class="t-c">Warnung über 32.768 Bytes (Codex)</span>
 ├── <span class="t-now">CLAUDE.md</span>                         <span class="t-c">verwalteter Block: importiert @AGENTS.md</span>
 ├── .claude/
-│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 mitgelieferte Skills + Vendor-Skills · Claude Code, Copilot</span>
+│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 mitgelieferte Skills (25 im Profil core) + Vendor-Skills · Claude Code, Copilot</span>
 │   ├── skills/.jardis-managed.json     <span class="t-c">Manifest: jeder Skill-Ordner, den das Plugin installiert hat</span>
 │   ├── <span class="t-now">agents/&lt;role&gt;.md</span>                <span class="t-c">Prüfer-Agent-Dateien (Claude Code)</span>
 │   └── .jardis-backup/                 <span class="t-c">Kopien von Ordnern, die vom verwalteten Zustand abwichen</span>
@@ -432,7 +432,7 @@ your-project/
 <h3>Konfiguration <code>composer.json</code></h3>
 <pre class="tree" style="white-space:pre;font-size:11.5px">"extra": { "jardis/dev-skills": {
     "bundled-skills": true,
-    <span class="t-c">// standardmäßig alle 33; eine Liste oder include/exclude schränkt ein</span>
+    <span class="t-c">// standardmäßig die Skills des Profils (33 bei jardis, 25 bei core); eine Liste oder include/exclude schränkt ein</span>
     <span class="t-c">// foundation-* und process-* werden immer installiert</span>
     "git-rules": true,
     <span class="t-c">// "delegated": die Session committet selbst, Merge und Push bleiben beim Menschen; false entfernt die Git-Sätze aus dem Router</span>
