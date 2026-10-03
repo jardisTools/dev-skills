@@ -3,6 +3,7 @@ name: design-headless-mcp
 description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
+profile: jardis
 prerequisites: []
 next: [generated-code-extend]
 ---

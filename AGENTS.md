@@ -5,7 +5,7 @@ Composer plugin that distributes Jardis skills (into `.claude/skills` and `.agen
 ## What this package contributes
 
 - **Discovery** of skills from `vendor/jardis*/*/.claude/skills/*/SKILL.md` and from this repo's own `skills/` directory.
-- **Bundle skills** — 33 folders in `skills/`, listed in `src/Data/BundleSkills.php`. All are installed unless `extra."jardis/dev-skills"."bundled-skills"` narrows them (`false` or `[]` keeps only the mandatory groups `foundation-*` and `process-*`). By area prefix:
+- **Bundle skills** — 33 folders in `skills/`, listed in `src/Data/BundleSkills.php`. Each declares `profile: core` or `profile: jardis` in its frontmatter; the installed set is the skills of the resolved profile (`core` 25, `jardis` 33 — the eight `jardis` skills are `start-orientation`, `design-*`, `generated-code-*`), unless `extra."jardis/dev-skills"."bundled-skills"` narrows it (`false` or `[]` keeps only the mandatory groups `foundation-*` and `process-*`). Resolution (`Handler/Install/ResolveInstallProfile`): the key `extra."jardis/dev-skills"."profile"`, else an installation from before 1.7.0 (manifest without `profile`, or legacy folders) keeps `jardis` and is not marked, else detection of a `vendor/jardis*/*` package other than `jardis/dev-skills`. The router (`profile:` marker areas) and the reviewer shells (17 in `core`) follow the profile. By area prefix:
   - `start-orientation` — entry point and routing into the other skills
   - `packages-find-existing` — package catalog; generated from `catalog/manifest.json` (`make generate-catalog`), never edited by hand
   - `design-draft-schema`, `design-headless-mcp` — drafting a Schema.json; driving the Designer through `jardis mcp`
@@ -26,7 +26,7 @@ Composer plugin that distributes Jardis skills (into `.claude/skills` and `.agen
 - **Plugin entry:** `src/Plugin.php` (`Composer\Plugin\PluginInterface` + `EventSubscriberInterface`) wires `post-install-cmd`, `post-update-cmd`, `pre-package-uninstall`.
 - **Tests:** Integration > Unit. New tests go under `tests/Integration/<area>/<ClassName>Test.php`. Use `tests/Support/TempProject` for filesystem fixtures.
 - **Quality gates:** `make phpunit`, `make phpstan` (Level 8), `make phpcs` (PSR-12), `make validate-skills`, `make generate-catalog-check`, `make check-public-text`. All must be green. Before a release tag: `make check-changelog-top VERSION=<x.y.z>`.
-- **Skill authoring:** Every bundled `SKILL.md` follows `docs/SKILL-FORMAT.md` v6 — frontmatter `name`/`description`/`zone`/`persona`/`prerequisites`/`next`, single-line description (≤175 words hard limit, new skills ≤45), topical numbered body sections (`### 1. …`), per-zone line budget (`crosscut` 225, `pre`/`post-reference` 250, `process` 250, `discovery` 150, `post-active` 700). Long working artefacts live in a sibling `skills/<name>/examples/` directory and do not count against the body budget.
+- **Skill authoring:** Every bundled `SKILL.md` follows `docs/SKILL-FORMAT.md` v6 — frontmatter `name`/`description`/`zone`/`persona`/`profile`/`prerequisites`/`next`, single-line description (≤175 words hard limit, new skills ≤45), topical numbered body sections (`### 1. …`), per-zone line budget (`crosscut` 225, `pre`/`post-reference` 250, `process` 250, `discovery` 150, `post-active` 700). Long working artefacts live in a sibling `skills/<name>/examples/` directory and do not count against the body budget.
 
 ## Don'ts
 

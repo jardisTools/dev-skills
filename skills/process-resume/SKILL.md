@@ -3,6 +3,7 @@ name: process-resume
 description: Use to continue a running undertaking in a fresh session — find the active progress file, honour STOPP markers, run the preflight, take up exactly one next step; also when a project folder of the same name already exists.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-choose-tier]
 next: [process-write-prd]
 ---

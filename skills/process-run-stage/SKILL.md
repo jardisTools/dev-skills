@@ -3,6 +3,7 @@ name: process-run-stage
 description: Use when the plan is released and a stage is built — one brief per phase, each implementer in a fresh session, commit, one blind verification, the QA gates of the project profile once, merge; carries the failure path and the question points.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-write-plan]
 next: [process-verify]
 ---

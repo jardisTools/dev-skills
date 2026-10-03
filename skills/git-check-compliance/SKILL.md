@@ -3,6 +3,7 @@ name: git-check-compliance
 description: Jardis project repository compliance check - 11 checks for git hooks, uncommitted secrets, Gitflow branches, CI wiring, and branch sync. Use to verify a project repo follows the Gitflow conventions.
 zone: crosscut
 persona: D
+profile: core
 disable-model-invocation: true
 prerequisites: []
 next: []

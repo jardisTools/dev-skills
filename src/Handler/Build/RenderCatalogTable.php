@@ -8,7 +8,8 @@ use JardisTools\DevSkills\Data\CatalogEntry;
 
 /**
  * Renders the Markdown body of the packages-find-existing SKILL.md: a short intro
- * paragraph followed by a four-column table listing every catalog entry.
+ * paragraph followed by a four-column table listing every catalog entry and a closing paragraph on
+ * which packages install standalone.
  * The Alternatives column is always present; entries without alternatives
  * show a consistent em-dash placeholder so the column is never absent.
  * Returns a string that ends with exactly one newline character.
@@ -42,6 +43,16 @@ final class RenderCatalogTable
                 $alternatives,
             );
         }
+
+        array_push(
+            $lines,
+            '',
+            'Every `jardissupport/*` and `jardisadapter/*` package installs on its own in any PHP project: '
+                . 'they depend only on each other (`contracts`, `dotenv`, `dbquery`), '
+                . 'and no package requires `jardiscore/*`. '
+                . '`jardiscore/kernel` and `jardiscore/app` are the application layer for generated domains '
+                . 'and presuppose a Jardis domain.',
+        );
 
         return implode("\n", $lines) . "\n";
     }

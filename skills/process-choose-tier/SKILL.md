@@ -3,6 +3,7 @@ name: process-choose-tier
 description: Use when a task arrives and you must decide how much process it needs — answer, single action, small assignment or undertaking — or when a chat ends with substance worth keeping; covers tier criteria, escalation, small-change hygiene, chat-end offer.
 zone: process
 persona: O
+profile: core
 prerequisites: [foundation-working-principles]
 next: [process-check-existing, process-concept]
 ---

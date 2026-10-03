@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
 use JardisTools\DevSkills\Data\AgentsDescriptor;
 use JardisTools\DevSkills\Data\GitRulesMode;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Handler\Install\BuildManagedBlock;
 use JardisTools\DevSkills\Handler\Install\LoadRouterText;
@@ -259,12 +260,51 @@ final class RouterTest extends TestCase
 
         // the file carries both git areas, the session reads exactly one of them: the text it reads is capped
         foreach (GitRulesMode::cases() as $mode) {
-            self::assertLessThanOrEqual(
-                self::MAX_BYTES,
-                strlen((new LoadRouterText())($this->root(), $mode)),
-                sprintf('The router text of the %s stance exceeds the cap.', $mode->name),
-            );
+            foreach (InstallProfile::cases() as $profile) {
+                self::assertLessThanOrEqual(
+                    self::MAX_BYTES,
+                    strlen((new LoadRouterText())($this->root(), $mode, $profile)),
+                    sprintf('The router text of the %s stance in the %s profile exceeds the cap.', $mode->name, $profile->name),
+                );
+            }
         }
+    }
+
+    public function testCoreRouterStatesPhpProjectsAndNoJardisOnlyLine(): void
+    {
+        $router = (new LoadRouterText())($this->root(), GitRulesMode::Strict, InstallProfile::Core);
+
+        self::assertStringContainsString('## PHP projects', $router);
+        self::assertStringContainsString('`packages-find-existing`', $router);
+        self::assertStringNotContainsString('Jardis projects', $router);
+        self::assertStringNotContainsString('start-orientation', $router);
+        self::assertStringNotContainsString('DDD tactics', $router);
+        self::assertStringNotContainsString('packages, frontend', $router);
+        self::assertStringContainsString('- PRD: skeptic, domain expert, strategic DDD, frontend UX', $router);
+        self::assertStringNotContainsString('profile:', $router);
+        foreach ($this->skillNamesIn($router) as $name) {
+            self::assertSame('core', $this->profileOf($name), sprintf('The core router names the skill "%s" of the jardis profile.', $name));
+        }
+    }
+
+    public function testJardisRouterKeepsTheJardisSectionAndRoles(): void
+    {
+        $router = (new LoadRouterText())($this->root(), GitRulesMode::Strict, InstallProfile::Jardis);
+
+        self::assertStringContainsString('## Jardis projects', $router);
+        self::assertStringNotContainsString('## PHP projects', $router);
+        self::assertStringContainsString('DDD tactics, PHP, test strategy, packages, frontend architecture', $router);
+        self::assertStringNotContainsString('profile:', $router);
+    }
+
+    private function profileOf(string $skill): ?string
+    {
+        $document = (new \JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter())(
+            (string) file_get_contents($this->root() . '/skills/' . $skill . '/SKILL.md'),
+        );
+        $profile = $document['fields']['profile'] ?? null;
+
+        return is_string($profile) ? $profile : null;
     }
 
     public function testRouterSitsInTheFirst32KiBOfTheBlock(): void

@@ -3,6 +3,7 @@ name: foundation-architecture
 description: Non-negotiable Jardis architecture rules — five constitutional pillars, hexagonal dependency direction, Closure-Orchestrator pattern. Consult before authoring any new class or reviewing existing code.
 zone: crosscut
 persona: C
+profile: core
 prerequisites: []
 next: []
 ---

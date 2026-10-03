@@ -1265,4 +1265,26 @@ final class BundleTest extends TestCase
     {
         return dirname(__DIR__, 4) . '/skills/' . $name . '/SKILL.md';
     }
+
+    public function testProfilesAreDistributedAsEightJardisAndTwentyFiveCore(): void
+    {
+        $jardis = [
+            'design-draft-schema', 'design-headless-mcp', 'generated-code-extend', 'generated-code-recipes',
+            'generated-code-versioning', 'generated-code-wire-transport', 'generated-code-workflow-api',
+            'start-orientation',
+        ];
+        $actual = ['core' => [], 'jardis' => []];
+        foreach ($this->skillFolderNames() as $name) {
+            $document = (new ParseSkillFrontmatter())((string) file_get_contents($this->skillFile($name)));
+            self::assertNotNull($document);
+            $profile = $document['fields']['profile'] ?? null;
+            self::assertContains($profile, ['core', 'jardis'], sprintf('Skill %s has no valid profile.', $name));
+            $actual[(string) $profile][] = $name;
+        }
+
+        self::assertSame($jardis, $actual['jardis']);
+        self::assertCount(33, $this->skillFolderNames());
+        self::assertCount(25, $actual['core']);
+        self::assertContains('packages-find-existing', $actual['core']);
+    }
 }

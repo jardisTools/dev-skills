@@ -4,6 +4,18 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-10-03
+
+### Added
+- **Installation profile `core | jardis`.** Every bundled skill declares `profile: core` or `profile: jardis` in its frontmatter (new required field, checked by the validator). `jardis` holds the eight skills for the Jardis Designer and its generated code (`start-orientation`, `design-*`, `generated-code-*`); the other 25 are `core`.
+- **Profile resolution** in every run: the key `extra."jardis/dev-skills"."profile"` (`"core"` or `"jardis"`; any other value warns), else an installation from before 1.7.0 keeps `jardis`, else detection of a package folder `vendor/jardis*/*` other than `jardis/dev-skills`. The manifest records the profile of the last run (optional field, schema stays 1). A Jardis package that arrives later pulls the Jardis skills in, one that goes takes them out again (changed folders are backed up).
+- **Router blocks per profile.** `router/AGENTS-router.md` carries a `profile:jardis` and a `profile:core` area; the core router has a `## PHP projects` section instead of `## Jardis projects`. Both stay within 4 KiB.
+- **Reviewer shells per profile.** In the profile `core` the roles `plan-review-packages` and `plan-review-ddd-tactics` get no agent files (17 instead of 19 roles); existing files stay.
+- **`packages-find-existing` as the bridge into Jardis.** The catalog is for any PHP project and states which packages install on their own: every `jardissupport/*` and `jardisadapter/*` package, none of which requires `jardiscore/*`.
+
+### Changed
+- A fresh project without a Jardis package installs 25 skills instead of 33. Existing installations are unchanged: they keep all 33 skills and stay unmarked in the manifest until the key `profile` is set.
+
 ## [1.5.0] - 2026-10-02
 
 ### Added

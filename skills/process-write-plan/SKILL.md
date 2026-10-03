@@ -3,6 +3,7 @@ name: process-write-plan
 description: Use when the PRD is confirmed and stage 2 starts — cut the undertaking into stages and phases with file scope, acceptance criteria and the stage lines Generated, By hand, Done when, Halt, apply cut checks, run the design board once, get the human's release.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-write-prd]
 next: [process-run-stage]
 ---

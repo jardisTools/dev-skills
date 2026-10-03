@@ -3,6 +3,7 @@ name: git-start-branch
 description: Create a Gitflow branch with issue number and type detection. Use when starting work on a feature, fix, or hotfix in a Jardis project.
 zone: crosscut
 persona: D
+profile: core
 disable-model-invocation: true
 argument-hint: [description]
 prerequisites: []

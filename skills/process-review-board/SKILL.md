@@ -3,6 +3,7 @@ name: process-review-board
 description: Use when a PRD or a plan is ready for its one review — choose roles with a reason, run them blind and in parallel, merge one deduplicated list, rule on every finding, send every fork to the human; includes fallbacks for tools without sub-agents.
 zone: process
 persona: O
+profile: core
 prerequisites: [foundation-working-principles]
 next: []
 ---
@@ -33,8 +34,8 @@ Name every chosen role and the reason in one line before anything is started. "A
 | `prd-review-frontend-ux` | requirements | The PRD has a user interface. |
 | `plan-review-architecture` | design | Default. |
 | `plan-review-test-strategy` | design | Default. |
-| `plan-review-packages` | design | The plan touches new package APIs. |
-| `plan-review-ddd-tactics` | design | The plan cuts aggregates, value objects or repositories. |
+| `plan-review-packages` | design | The plan touches new package APIs (profile jardis). |
+| `plan-review-ddd-tactics` | design | The plan cuts aggregates, value objects or repositories (profile jardis). |
 | `plan-review-php` | design | The plan is mostly PHP code with error handling and edge cases that matter. |
 | `plan-review-frontend-architecture` | design | The plan has a user interface. |
 | `plan-review-frontend-tests` | design | The plan has a user interface. |

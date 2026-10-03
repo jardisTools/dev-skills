@@ -3,6 +3,7 @@ name: knowledge-maintain-pool
 description: Use when a project keeps decisions, pitfalls and current facts in a knowledge pool under .claude/wissen/ — INDEX.md and topic page layout, size caps, condensing instead of appending, the pool check, the scaffold rule.
 zone: process
 persona: O
+profile: core
 prerequisites: [foundation-working-principles]
 next: [knowledge-record-decision]
 ---

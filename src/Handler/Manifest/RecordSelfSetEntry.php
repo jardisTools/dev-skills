@@ -49,6 +49,7 @@ final class RecordSelfSetEntry
             $current->pluginVersion,
             $current->entries,
             [...$current->selfSet, $key => $entry],
+            $current->profile,
         ));
     }
 }

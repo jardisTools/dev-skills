@@ -3,6 +3,7 @@ name: git-setup-repository
 description: One-time Gitflow setup for a Jardis project on GitHub - develop branch, repo settings, branch ruleset, git hooks. No release, no Packagist. Use once after creating the project repo.
 zone: crosscut
 persona: D
+profile: core
 disable-model-invocation: true
 argument-hint: [org/repo]
 prerequisites: []

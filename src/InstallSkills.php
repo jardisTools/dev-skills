@@ -6,10 +6,12 @@ namespace JardisTools\DevSkills;
 
 use Closure;
 use Composer\Util\Filesystem;
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\PluginConfig;
+use JardisTools\DevSkills\Data\ResolvedInstallProfile;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Data\SkillSelection;
 use JardisTools\DevSkills\Data\StaleRemovalResult;
@@ -28,10 +30,12 @@ use JardisTools\DevSkills\Handler\Install\CopySkill;
 use JardisTools\DevSkills\Handler\Install\ExpandLegacyGlobs;
 use JardisTools\DevSkills\Handler\Install\FilterBundledSkills;
 use JardisTools\DevSkills\Handler\Install\FindFreeBackupDir;
+use JardisTools\DevSkills\Handler\Install\FilterSkillsByProfile;
 use JardisTools\DevSkills\Handler\Install\FindProtectedExcludes;
 use JardisTools\DevSkills\Handler\Install\IsMandatorySkill;
 use JardisTools\DevSkills\Handler\Install\RelocateLegacyBackup;
 use JardisTools\DevSkills\Handler\Install\RemoveStaleBundledSkills;
+use JardisTools\DevSkills\Handler\Install\ResolveInstallProfile;
 use JardisTools\DevSkills\Handler\Install\ResolveSkillCollisions;
 use JardisTools\DevSkills\Handler\Install\ResolveTargets;
 use JardisTools\DevSkills\Handler\Install\SelectRedirects;
@@ -41,10 +45,12 @@ use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\ResolveManagedFolder;
 use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
+use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
 
 /**
  * Sub-orchestrator for the skills part of an install run: chains discovery,
- * config filtering (old globs act as aliases), collision resolution, staging, the redirect
+ * profile resolution and filtering, config filtering (old globs act as aliases), collision resolution,
+ * staging, the redirect
  * skills for renamed bundle skills of an update, backup of locally changed folders, the swap
  * into the resolved targets, removal of deselected bundle skills (via manifest paths, or the
  * fixed list of the old names when there is no manifest) and finally the manifest.
@@ -65,6 +71,12 @@ final class InstallSkills
 
     /** @var Closure(list<SkillDescriptor>, PluginConfig): list<string> */
     private readonly Closure $findProtectedExcludes;
+
+    /** @var Closure(PluginConfig, ?Manifest, string): ResolvedInstallProfile */
+    private readonly Closure $resolveInstallProfile;
+
+    /** @var Closure(list<SkillDescriptor>, InstallProfile): list<SkillDescriptor> */
+    private readonly Closure $filterSkillsByProfile;
 
     /** @var Closure(?Manifest, list<SkillDescriptor>): list<string> */
     private readonly Closure $computeStaleBundledSkills;
@@ -108,7 +120,7 @@ final class InstallSkills
     /** @var Closure(list<StagedSkill>): void */
     private readonly Closure $commitStagedSkills;
 
-    /** @var Closure(?Manifest, list<StagedSkill>, string, string): Manifest */
+    /** @var Closure(?Manifest, list<StagedSkill>, string, string, ?InstallProfile): Manifest */
     private readonly Closure $buildManifestEntries;
 
     /** @var Closure(string, Manifest): void */
@@ -125,6 +137,9 @@ final class InstallSkills
         $expandLegacyGlobs = (new ExpandLegacyGlobs())->__invoke(...);
         $this->filterBundledSkills = (new FilterBundledSkills($isMandatorySkill, $expandLegacyGlobs))->__invoke(...);
         $this->findProtectedExcludes = (new FindProtectedExcludes($isMandatorySkill, $expandLegacyGlobs))
+            ->__invoke(...);
+        $this->resolveInstallProfile = (new ResolveInstallProfile())->__invoke(...);
+        $this->filterSkillsByProfile = (new FilterSkillsByProfile((new ParseSkillFrontmatter())->__invoke(...)))
             ->__invoke(...);
         $this->computeStaleBundledSkills = (new ComputeStaleBundledSkills())->__invoke(...);
         $this->resolveSkillCollisions = (new ResolveSkillCollisions())->__invoke(...);
@@ -170,7 +185,18 @@ final class InstallSkills
         string $pluginVersion,
     ): array {
         $allBundled = ($this->scanPluginSkills)($this->pluginRoot);
-        $keptBundled = ($this->filterBundledSkills)($allBundled, $this->config);
+        // The previous state comes first: the profile depends on it, and the profile decides the selection.
+        $manifestPath = $projectRoot . '/' . Manifest::FILE;
+        $read = ($this->readManifest)($manifestPath, $pluginVersion);
+        $previous = ($this->selectPreviousManifest)($read) ?? ($this->buildLegacyManifest)($read, $projectRoot);
+        $resolved = ($this->resolveInstallProfile)($this->config, $previous, $vendorDir);
+        $profile = $resolved->profile;
+        $report->setProfile($profile);
+
+        $keptBundled = ($this->filterSkillsByProfile)(
+            ($this->filterBundledSkills)($allBundled, $this->config),
+            $profile,
+        );
         foreach (($this->findProtectedExcludes)($allBundled, $this->config) as $warning) {
             $report->addWarning($warning);
         }
@@ -180,10 +206,7 @@ final class InstallSkills
             $report->addWarning($warning);
         }
 
-        $manifestPath = $projectRoot . '/' . Manifest::FILE;
-        $read = ($this->readManifest)($manifestPath, $pluginVersion);
         $report->addWarningIfAny($read->warning);
-        $previous = ($this->selectPreviousManifest)($read) ?? ($this->buildLegacyManifest)($read, $projectRoot);
         $redirects = ($this->selectRedirects)($previous, $selection->skills, $this->config, $projectRoot);
         $staleKeys = ($this->computeStaleBundledSkills)($previous, [...$selection->skills, ...$redirects]);
 
@@ -216,7 +239,13 @@ final class InstallSkills
 
         ($this->writeManifest)(
             $manifestPath,
-            ($this->buildManifestEntries)($previous, $staged, $projectRoot, $pluginVersion),
+            ($this->buildManifestEntries)(
+                $previous,
+                $staged,
+                $projectRoot,
+                $pluginVersion,
+                $resolved->manifestProfile,
+            ),
         );
 
         foreach ($selection->skills as $skill) {

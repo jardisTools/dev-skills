@@ -3,6 +3,7 @@ name: knowledge-record-decision
 description: Use when a decision is made or a non-obvious bug is fixed and the knowledge pool must learn from it — entry with date, author and source, the Wissen commit note for feat and fix commits, bugfix lesson criteria.
 zone: process
 persona: O
+profile: core
 prerequisites: [foundation-working-principles, knowledge-maintain-pool]
 next: []
 ---

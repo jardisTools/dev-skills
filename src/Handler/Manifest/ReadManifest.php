@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Handler\Manifest;
 
+use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestReadResult;
 use JardisTools\DevSkills\Data\ManifestState;
@@ -84,7 +85,13 @@ final class ReadManifest
 
         return new ManifestReadResult(
             ManifestState::Healthy,
-            new Manifest($schemaVersion, $pluginVersion, $entries, $selfSet),
+            new Manifest(
+                $schemaVersion,
+                $pluginVersion,
+                $entries,
+                $selfSet,
+                is_string($data['profile'] ?? null) ? InstallProfile::tryFrom($data['profile']) : null,
+            ),
         );
     }
 

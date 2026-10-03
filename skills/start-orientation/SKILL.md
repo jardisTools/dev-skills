@@ -3,6 +3,7 @@ name: start-orientation
 description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.json authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle via a complete lookup table.
 zone: crosscut
 persona: X
+profile: jardis
 prerequisites: []
 next: []
 ---

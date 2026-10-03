@@ -3,6 +3,7 @@ name: generated-code-versioning
 description: ClassVersion resolution and versioning model for Designer-generated code — the generated `classVersion()` override in the `<Domain>Context` base class wires `LoadClassFromSubDirectory` (injects `v{N}` before the last namespace segment, per class; baseline = the generated class itself), optional `ClassVersionConfig` fallback chains, per-call `$version` argument (no domain-wide default), five guiding principles (additive before version, version changes behaviour never the API, data break = new aggregate, code rescue via service layer, one API surface per aggregate).
 zone: post-active
 persona: C
+profile: jardis
 prerequisites: [generated-code-extend]
 next: []
 ---

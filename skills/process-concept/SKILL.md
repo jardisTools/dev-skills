@@ -3,6 +3,7 @@ name: process-concept
 description: Use when a task is an undertaking (tier 3) and stage 0 starts — concept interview, understanding sheet, target picture or executable example, human approval, project folder docs/vorhaben/<name>/ with progress file, pool scaffold and project profile when missing.
 zone: process
 persona: O
+profile: core
 prerequisites: [process-choose-tier]
 next: [process-write-prd]
 ---

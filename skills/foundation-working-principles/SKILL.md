@@ -3,6 +3,7 @@ name: foundation-working-principles
 description: Working principles for every task in a Jardis project — skill first, then source code, then ask; verify values instead of guessing; check design choices against the five pillars. Consult when starting work, hitting uncertainty or a runtime error.
 zone: crosscut
 persona: C
+profile: core
 prerequisites: []
 next: [foundation-architecture]
 ---
