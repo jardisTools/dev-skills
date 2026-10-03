@@ -33,7 +33,7 @@ final class PoolCheckBinEndToEndTest extends TestCase
         self::assertDirectoryExists($pluginRoot . '/src');
 
         $this->project->writeFile('composer.json', (string) json_encode([
-            'name'              => 'jardis-test/consumer',
+            'name'              => 'acme/consumer',
             'type'              => 'project',
             'minimum-stability' => 'dev',
             'prefer-stable'     => true,

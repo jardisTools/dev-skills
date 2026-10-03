@@ -17,9 +17,9 @@ The overview in German: [overview.de.html](https://jardistools.github.io/dev-ski
 After `composer install` or `composer update`, the plugin does the following in your project root:
 
 1. **Skills.** It copies the bundled skills of the installation profile (all 33 in the profile `jardis`, 25 in the profile `core`, see [Installation profile](#installation-profile-profile)) and every skill of a `jardis*` vendor package (`vendor/<vendor>/<package>/.claude/skills/<name>/`) into two folders: `.claude/skills/` and `.agents/skills/`.
-2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then aggregates the `AGENTS.md` of every Jardis vendor package.
-3. **`CLAUDE.md`.** It adds a managed block that imports `@AGENTS.md`.
-4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName`.
+2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then aggregates the `AGENTS.md` of every Jardis vendor package. A project that is itself a `jardis*` package gets no block (see [`agents-md`](#agentsmd-in-a-jardis-package-agents-md)).
+3. **`CLAUDE.md`.** It adds a managed block that imports `@AGENTS.md` (not with `agents-md` = `none`).
+4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName` (not with `agents-md` = `none`).
 5. **Reviewer agents.** It writes the 19 reviewer roles of the `process-review-board` skill (17 in the profile `core`) as agent files for five tools (see [Reviewer agent files](#reviewer-agent-files)).
 6. **Manifest.** It records every skill folder it installed in `.claude/skills/.jardis-managed.json`; update and uninstall touch only what the manifest lists.
 7. **Git exclude block.** It writes a managed block into `.git/info/exclude` (see [`process-docs`](#where-the-generated-files-go-process-docs)).
@@ -302,6 +302,30 @@ The key has three stances. By default (`true`) the process router in `AGENTS.md`
 ```
 
 `git-start-branch` creates a branch from `origin/develop` (hotfixes from `origin/main`), so it needs a remote named `origin` and a `develop` branch.
+
+### AGENTS.md in a Jardis package (`agents-md`)
+
+The `AGENTS.md` of a Jardis package is a deliverable: dev-skills aggregates it into the projects that require the package. It must not become the workplace of the plugin. The key `agents-md` decides whether the plugin writes its managed block (router plus the aggregated `AGENTS.md` of the vendor packages) into the `AGENTS.md` of the project it runs in.
+
+| Value | Effect |
+|---|---|
+| `aggregate` | The managed block is written into `AGENTS.md`, `CLAUDE.md` imports it and `.gemini/settings.json` lists it |
+| `none` | No block in `AGENTS.md`, no import block in `CLAUDE.md`, no entry in `.gemini/settings.json` |
+| Absent | `none` if the vendor part of the root package name begins with `jardis` (`jardis/`, `jardiscore/`, `jardissupport/`, `jardisadapter/`, `jardistools/`), otherwise `aggregate` |
+| Anything else | Warning, treated like an absent key |
+
+An explicit value beats the default. With `none` the plugin also takes out what an earlier run or release left behind: the managed block in `AGENTS.md` (text outside the markers stays byte for byte; an `AGENTS.md` that is empty afterwards and was created by the plugin is deleted), the import block in `CLAUDE.md` and the Gemini entry. Skills, reviewer agent files, the manifest and the exclude block are not affected. The key is independent of the other keys. Only the name of the root package counts; the plugin does not look for other signs of a package.
+
+```json
+{
+    "name": "jardiscore/kernel",
+    "extra": {
+        "jardis/dev-skills": {
+            "agents-md": "none"
+        }
+    }
+}
+```
 
 ### Where the generated files go (`process-docs`)
 

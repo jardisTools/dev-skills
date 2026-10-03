@@ -7,6 +7,7 @@ namespace JardisTools\DevSkills;
 use Closure;
 use Composer\Util\Filesystem;
 use JardisTools\DevSkills\Data\AgentsDescriptor;
+use JardisTools\DevSkills\Data\AgentsMdMode;
 use JardisTools\DevSkills\Data\AggregateAgentsResult;
 use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallProfile;
@@ -28,9 +29,12 @@ use JardisTools\DevSkills\Handler\Install\LoadRouterText;
 use JardisTools\DevSkills\Handler\Install\PlanGeminiContextEdit;
 use JardisTools\DevSkills\Handler\Install\RecordAgentsAggregation;
 use JardisTools\DevSkills\Handler\Install\RecordAgentsMdCreated;
+use JardisTools\DevSkills\Handler\Install\RemoveManagedAgentsMd;
 use JardisTools\DevSkills\Handler\Install\ReplaceExcludeBlock;
+use JardisTools\DevSkills\Handler\Install\RetireAgentsMd;
 use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
 use JardisTools\DevSkills\Handler\Install\SyncExcludeBlock;
+use JardisTools\DevSkills\Handler\Manifest\ForgetSelfSetEntries;
 use JardisTools\DevSkills\Handler\Manifest\GuardManifestVersion;
 use JardisTools\DevSkills\Handler\Shell\BuildShellBody;
 use JardisTools\DevSkills\Handler\Shell\EncodeTomlBasicString;
@@ -46,6 +50,7 @@ use JardisTools\DevSkills\Handler\Shell\RenderShell;
 use JardisTools\DevSkills\Handler\Shell\WriteReviewerShells;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
+use JardisTools\DevSkills\Handler\Manifest\SelectPreviousManifest;
 use JardisTools\DevSkills\Handler\Manifest\WriteManifest;
 use JardisTools\DevSkills\Handler\Support\DetectLineEnding;
 use JardisTools\DevSkills\Handler\Support\IsPathBehindLink;
@@ -53,6 +58,11 @@ use JardisTools\DevSkills\Handler\Support\RunGit;
 use JardisTools\DevSkills\Handler\Support\ScanJsonArray;
 use JardisTools\DevSkills\Handler\Support\ScanJsonObject;
 use JardisTools\DevSkills\Handler\Support\SkipJsonValue;
+use JardisTools\DevSkills\Handler\Uninstall\IsEmptyGeminiScaffold;
+use JardisTools\DevSkills\Handler\Uninstall\RemoveClaudeMdImport;
+use JardisTools\DevSkills\Handler\Uninstall\RemoveGeminiContext;
+use JardisTools\DevSkills\Handler\Uninstall\ReverseTextEdit;
+use JardisTools\DevSkills\Handler\Uninstall\StripClaudeMdImport;
 use JardisTools\DevSkills\Handler\Validate\ParseSkillFrontmatter;
 
 final class SkillInstaller
@@ -68,6 +78,8 @@ final class SkillInstaller
     private readonly ?string $gitRulesWarning;
 
     private readonly ?string $profileWarning;
+
+    private readonly ?string $agentsMdWarning;
 
     private readonly GitRulesMode $gitRules;
 
@@ -89,6 +101,9 @@ final class SkillInstaller
     /** @var Closure(InstallReport, AggregateAgentsResult): void */
     private readonly Closure $recordAgentsAggregation;
 
+    /** @var Closure(string, string, list<SkillDescriptor>, InstallReport): void the AGENTS.md step of the mode */
+    private readonly Closure $agentsMdStep;
+
     public function __construct(
         ?PluginConfig $config = null,
         ?Filesystem $filesystem = null,
@@ -100,6 +115,7 @@ final class SkillInstaller
         $this->processDocsWarning = $config?->processDocsWarning;
         $this->gitRulesWarning = $config?->gitRulesWarning;
         $this->profileWarning = $config?->profileWarning;
+        $this->agentsMdWarning = $config?->agentsMdWarning;
         $this->gitRules = $config->gitRules ?? GitRulesMode::Strict;
 
         $this->installSkills = new InstallSkills(
@@ -118,6 +134,11 @@ final class SkillInstaller
             (new IsPathBehindLink())->__invoke(...),
         ))->__invoke(...);
         $this->recordAgentsAggregation = (new RecordAgentsAggregation())->__invoke(...);
+        $this->agentsMdStep = match (($config ?? PluginConfig::all())->agentsMd) {
+            AgentsMdMode::Aggregate => $this->aggregateAgentsMdStep(...),
+            AgentsMdMode::None => static function (): void {
+            },
+        };
     }
 
     /**
@@ -136,7 +157,49 @@ final class SkillInstaller
         $isPathBehindLink = (new IsPathBehindLink())->__invoke(...);
         $runGit = (new RunGit())->__invoke(...);
 
+        $agentsMdAddons = match ($config->agentsMd) {
+            AgentsMdMode::Aggregate => $this->aggregateAddons(
+                $recordSelfSet,
+                $detectLineEnding,
+                $skipValue,
+                $isPathBehindLink,
+            ),
+            AgentsMdMode::None => [
+                'agents-md-retire' => $this->retireAgentsMd($detectLineEnding, $isPathBehindLink),
+            ],
+        };
+
         return new InstallAddons([
+            ...$agentsMdAddons,
+            'reviewer-shells' => $this->reviewerShells($recordSelfSet),
+            'exclude-block' => (new SyncExcludeBlock(
+                $config->processDocs,
+                (new ResolveGitDir($runGit))->__invoke(...),
+                (new ReadManifest())->__invoke(...),
+                (new BuildExcludeLines())->__invoke(...),
+                (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),
+                (new ListTrackedPaths($runGit))->__invoke(...),
+            ))->__invoke(...),
+        ]);
+    }
+
+    /**
+     * The add-ons of `agents-md=aggregate`: the CLAUDE.md import block, the Gemini context entry and the
+     * note that the plugin created AGENTS.md.
+     *
+     * @param Closure(string, string, \JardisTools\DevSkills\Data\SelfSetEntry): void $recordSelfSet
+     * @param Closure(string): string $detectLineEnding
+     * @param Closure(string, int): int $skipValue
+     * @param Closure(string, string): bool $isPathBehindLink
+     * @return array<string, Closure(string, string, InstallReport): void>
+     */
+    private function aggregateAddons(
+        Closure $recordSelfSet,
+        Closure $detectLineEnding,
+        Closure $skipValue,
+        Closure $isPathBehindLink,
+    ): array {
+        return [
             'claude-md-import' => (new EnsureClaudeMdImport(
                 (new AnalyzeAgentsMd())->__invoke(...),
                 (new HasAgentsImport())->__invoke(...),
@@ -156,16 +219,39 @@ final class SkillInstaller
                 $isPathBehindLink,
             ))->__invoke(...),
             'agents-md-created' => (new RecordAgentsMdCreated($recordSelfSet))->__invoke(...),
-            'reviewer-shells' => $this->reviewerShells($recordSelfSet),
-            'exclude-block' => (new SyncExcludeBlock(
-                $config->processDocs,
-                (new ResolveGitDir($runGit))->__invoke(...),
-                (new ReadManifest())->__invoke(...),
-                (new BuildExcludeLines())->__invoke(...),
-                (new ReplaceExcludeBlock($detectLineEnding))->__invoke(...),
-                (new ListTrackedPaths($runGit))->__invoke(...),
+        ];
+    }
+
+    /**
+     * The add-on of `agents-md=none`: takes out what an earlier run left in AGENTS.md, CLAUDE.md and the
+     * Gemini settings.
+     *
+     * @param Closure(string): string $detectLineEnding
+     * @param Closure(string, string): bool $isPathBehindLink
+     * @return Closure(string, string, InstallReport): void
+     */
+    private function retireAgentsMd(Closure $detectLineEnding, Closure $isPathBehindLink): Closure
+    {
+        $analyze = (new AnalyzeAgentsMd())->__invoke(...);
+        $readManifest = (new ReadManifest())->__invoke(...);
+
+        return (new RetireAgentsMd(
+            $readManifest,
+            (new SelectPreviousManifest())->__invoke(...),
+            (new RemoveManagedAgentsMd($analyze, $isPathBehindLink))->__invoke(...),
+            (new RemoveClaudeMdImport(
+                $analyze,
+                $detectLineEnding,
+                (new StripClaudeMdImport())->__invoke(...),
+                $isPathBehindLink,
             ))->__invoke(...),
-        ]);
+            (new RemoveGeminiContext(
+                (new ReverseTextEdit())->__invoke(...),
+                (new IsEmptyGeminiScaffold())->__invoke(...),
+                $isPathBehindLink,
+            ))->__invoke(...),
+            (new ForgetSelfSetEntries($readManifest, (new WriteManifest())->__invoke(...)))->__invoke(...),
+        ))->__invoke(...);
     }
 
     /**
@@ -204,6 +290,7 @@ final class SkillInstaller
         $report->addWarningIfAny($this->processDocsWarning);
         $report->addWarningIfAny($this->gitRulesWarning);
         $report->addWarningIfAny($this->profileWarning);
+        $report->addWarningIfAny($this->agentsMdWarning);
 
         $report->addWarningIfAny(($this->guardManifestVersion)(
             $projectRoot,
@@ -220,6 +307,20 @@ final class SkillInstaller
     {
         $keptBundled = ($this->installSkills)($projectRoot, $vendorDir, $report, $pluginVersion);
 
+        ($this->agentsMdStep)($projectRoot, $vendorDir, $keptBundled, $report);
+
+        ($this->installAddons)($projectRoot, $vendorDir, $report);
+    }
+
+    /**
+     * @param list<SkillDescriptor> $keptBundled
+     */
+    private function aggregateAgentsMdStep(
+        string $projectRoot,
+        string $vendorDir,
+        array $keptBundled,
+        InstallReport $report,
+    ): void {
         $result = ($this->aggregateAgentsMd)(
             ($this->scanAgentsFiles)($vendorDir),
             $projectRoot,
@@ -227,7 +328,5 @@ final class SkillInstaller
             ($this->loadRouterText)($this->pluginRoot, $this->gitRules, $report->profile() ?? InstallProfile::Jardis),
         );
         ($this->recordAgentsAggregation)($report, $result);
-
-        ($this->installAddons)($projectRoot, $vendorDir, $report);
     }
 }

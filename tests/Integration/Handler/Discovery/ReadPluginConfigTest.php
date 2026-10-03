@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Discovery;
 
+use JardisTools\DevSkills\Data\AgentsMdMode;
 use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\PluginConfig;
@@ -340,6 +341,99 @@ final class ReadPluginConfigTest extends TestCase
 
         self::assertSame(InstallProfile::Jardis, $config->profile);
         self::assertSame(['design-*'], $config->includeGlobs);
+        self::assertSame(GitRulesMode::Strict, $config->gitRules);
+    }
+
+    public function testAgentsMdDefaultsToAggregateWithoutRootName(): void
+    {
+        $config = (new ReadPluginConfig())([]);
+
+        self::assertSame(AgentsMdMode::Aggregate, $config->agentsMd);
+        self::assertNull($config->agentsMdWarning);
+    }
+
+    /**
+     * @return array<string, array{string, AgentsMdMode}>
+     */
+    public static function rootPackageNames(): array
+    {
+        return [
+            'project' => ['acme/app', AgentsMdMode::Aggregate],
+            'jardis vendor' => ['jardis/foo', AgentsMdMode::None],
+            'jardiscore' => ['jardiscore/kernel', AgentsMdMode::None],
+            'jardissupport' => ['jardissupport/contracts', AgentsMdMode::None],
+            'jardisadapter' => ['jardisadapter/x', AgentsMdMode::None],
+            'jardistools' => ['jardistools/builder', AgentsMdMode::None],
+            'vendor only contains jardis' => ['notjardis/x', AgentsMdMode::Aggregate],
+            'package name contains jardis' => ['acme/jardis-app', AgentsMdMode::Aggregate],
+            'no root name' => ['', AgentsMdMode::Aggregate],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('rootPackageNames')]
+    public function testAgentsMdDefaultFollowsTheRootPackageName(string $name, AgentsMdMode $expected): void
+    {
+        $withoutRootKey = (new ReadPluginConfig())([], $name);
+        $withOtherKeys = (new ReadPluginConfig())(
+            ['jardis/dev-skills' => ['bundled-skills' => false, 'git-rules' => 'delegated', 'profile' => 'core']],
+            $name,
+        );
+
+        self::assertSame($expected, $withoutRootKey->agentsMd);
+        self::assertSame($expected, $withOtherKeys->agentsMd);
+        self::assertNull($withoutRootKey->agentsMdWarning);
+        self::assertNull($withOtherKeys->agentsMdWarning);
+    }
+
+    public function testAgentsMdExplicitValueBeatsTheDefault(): void
+    {
+        $none = (new ReadPluginConfig())(['jardis/dev-skills' => ['agents-md' => 'none']], 'acme/app');
+        $aggregate = (new ReadPluginConfig())(['jardis/dev-skills' => ['agents-md' => 'aggregate']], 'jardiscore/kernel');
+
+        self::assertSame(AgentsMdMode::None, $none->agentsMd);
+        self::assertNull($none->agentsMdWarning);
+        self::assertSame(AgentsMdMode::Aggregate, $aggregate->agentsMd);
+        self::assertNull($aggregate->agentsMdWarning);
+    }
+
+    /**
+     * @return array<string, array{mixed, string}>
+     */
+    public static function invalidAgentsMdValues(): array
+    {
+        return [
+            'unknown string' => ['merge', '"merge"'],
+            'bool' => [true, 'bool'],
+            'null' => [null, 'null'],
+            'list' => [['none'], 'array'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidAgentsMdValues')]
+    public function testAgentsMdInvalidValueWarnsAndFallsBackToTheDefault(mixed $raw, string $described): void
+    {
+        $project = (new ReadPluginConfig())(['jardis/dev-skills' => ['agents-md' => $raw]], 'acme/app');
+        $package = (new ReadPluginConfig())(['jardis/dev-skills' => ['agents-md' => $raw]], 'jardiscore/kernel');
+
+        self::assertSame(AgentsMdMode::Aggregate, $project->agentsMd);
+        self::assertSame(
+            'agents-md must be "aggregate" or "none"; got ' . $described . '. Treated as agents-md=aggregate.',
+            $project->agentsMdWarning,
+        );
+        self::assertSame(AgentsMdMode::None, $package->agentsMd);
+        self::assertStringEndsWith('Treated as agents-md=none.', (string) $package->agentsMdWarning);
+    }
+
+    public function testAgentsMdIsIndependentOfTheOtherKeys(): void
+    {
+        $config = (new ReadPluginConfig())(
+            ['jardis/dev-skills' => ['agents-md' => 'none', 'bundled-skills' => ['design-*'], 'profile' => 'core']],
+            'acme/app',
+        );
+
+        self::assertSame(AgentsMdMode::None, $config->agentsMd);
+        self::assertSame(['design-*'], $config->includeGlobs);
+        self::assertSame(InstallProfile::Core, $config->profile);
         self::assertSame(GitRulesMode::Strict, $config->gitRules);
     }
 }
