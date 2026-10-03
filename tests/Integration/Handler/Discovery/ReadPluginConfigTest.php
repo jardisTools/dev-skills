@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Discovery;
 
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
@@ -233,7 +234,7 @@ final class ReadPluginConfigTest extends TestCase
         foreach ([[], ['jardis/dev-skills' => []], ['jardis/dev-skills' => ['bundled-skills' => false]]] as $extra) {
             $config = (new ReadPluginConfig())($extra);
 
-            self::assertTrue($config->gitRules);
+            self::assertSame(GitRulesMode::Strict, $config->gitRules);
             self::assertNull($config->gitRulesWarning);
         }
     }
@@ -242,7 +243,7 @@ final class ReadPluginConfigTest extends TestCase
     {
         $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => true]]);
 
-        self::assertTrue($config->gitRules);
+        self::assertSame(GitRulesMode::Strict, $config->gitRules);
         self::assertNull($config->gitRulesWarning);
     }
 
@@ -250,17 +251,26 @@ final class ReadPluginConfigTest extends TestCase
     {
         $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => false]]);
 
-        self::assertFalse($config->gitRules);
+        self::assertSame(GitRulesMode::Off, $config->gitRules);
         self::assertNull($config->gitRulesWarning);
     }
 
-    public function testInvalidGitRulesStayOnAndWarn(): void
+    public function testGitRulesDelegatedIsTheThirdStance(): void
     {
-        foreach (['false', 'off', 0, 1, ['false'], null] as $raw) {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => 'delegated']]);
+
+        self::assertSame(GitRulesMode::Delegated, $config->gitRules);
+        self::assertNull($config->gitRulesWarning);
+    }
+
+    public function testInvalidGitRulesStayStrictAndWarn(): void
+    {
+        foreach (['false', 'off', 'strict', 'Delegated', 0, 1, ['delegated'], null] as $raw) {
             $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => $raw]]);
 
-            self::assertTrue($config->gitRules, 'an invalid value never switches the rules off');
+            self::assertSame(GitRulesMode::Strict, $config->gitRules, 'an invalid value never switches the rules off or loosens them');
             self::assertStringContainsString('git-rules', (string) $config->gitRulesWarning);
+            self::assertStringContainsString('"delegated"', (string) $config->gitRulesWarning);
             self::assertStringContainsString('git-rules=true', (string) $config->gitRulesWarning);
         }
     }
@@ -271,7 +281,7 @@ final class ReadPluginConfigTest extends TestCase
             'jardis/dev-skills' => ['bundled-skills' => false, 'process-docs' => 'nonsense', 'git-rules' => false],
         ]);
 
-        self::assertFalse($config->gitRules);
+        self::assertSame(GitRulesMode::Off, $config->gitRules);
         self::assertNull($config->gitRulesWarning);
         self::assertTrue($config->mandatoryOnly);
         self::assertSame(ProcessDocsMode::Local, $config->processDocs);
@@ -281,7 +291,7 @@ final class ReadPluginConfigTest extends TestCase
             'jardis/dev-skills' => ['bundled-skills' => ['plan-*'], 'process-docs' => 'local', 'git-rules' => 'nonsense'],
         ]);
 
-        self::assertTrue($config->gitRules);
+        self::assertSame(GitRulesMode::Strict, $config->gitRules);
         self::assertNotNull($config->gitRulesWarning);
         self::assertSame(['plan-*'], $config->includeGlobs);
         self::assertSame(ProcessDocsMode::Local, $config->processDocs);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Handler\Discovery;
 
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Exception\InvalidPluginConfigException;
@@ -36,26 +37,33 @@ final class ReadPluginConfig
     }
 
     /**
-     * `git-rules` is the opt-out of the git rules in the router and independent of the other keys.
-     * An absent key and `true` mean on; only `false` switches off. Any other value is reported and
-     * treated as on, so a typo never removes the rules.
+     * `git-rules` states the stance of the git rules in the router and is independent of the other keys.
+     * An absent key and `true` mean strict (the gates of the human), `"delegated"` lets the session create
+     * branch and commits itself, `false` switches the rules off. Any other value is reported and treated as
+     * strict, so a typo never removes or loosens the rules.
      *
      * @param array<array-key, mixed> $root
-     * @return array{bool, ?string}
+     * @return array{GitRulesMode, ?string}
      */
     private function readGitRules(array $root): array
     {
         if (!array_key_exists(self::GIT_RULES_KEY, $root)) {
-            return [true, null];
+            return [GitRulesMode::Strict, null];
         }
 
         $raw = $root[self::GIT_RULES_KEY];
-        if (is_bool($raw)) {
-            return [$raw, null];
+        if ($raw === true) {
+            return [GitRulesMode::Strict, null];
+        }
+        if ($raw === false) {
+            return [GitRulesMode::Off, null];
+        }
+        if ($raw === 'delegated') {
+            return [GitRulesMode::Delegated, null];
         }
 
-        return [true, sprintf(
-            'git-rules must be true or false; got %s. Treated as git-rules=true.',
+        return [GitRulesMode::Strict, sprintf(
+            'git-rules must be true, false or "delegated"; got %s. Treated as git-rules=true.',
             is_string($raw) ? '"' . $raw . '"' : get_debug_type($raw),
         )];
     }

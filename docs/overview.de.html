@@ -280,7 +280,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 <div class="vcard ok"><b>Mit dem Package gelieferte Werkzeuge</b> — der <code>commit-msg</code>-Hook, sein Installer <code>install-commit-msg-hook</code> und die Pool-Prüfung <code>pool-check.php</code> kommen mit <code>jardis/dev-skills</code> unter <code>scripts/</code>.</div>
 <div class="vcard ok"><b>Gerüst beim ersten Vorhaben</b> — <code>process-concept</code> kopiert nur <code>INDEX.md</code> nach <code>.claude/wissen/</code>, und nur wenn der Ordner fehlt; ein vorhandener Pool wird nie geändert.</div>
 <div class="vcard ok"><b>Angebot am Ende eines Chats</b> — ein Chat, der mehr als eine Antwort erzeugt hat, endet mit zwei Angeboten: einen Projektordner (<code>docs/vorhaben/&lt;name&gt;/</code>) anlegen und Wissen in den Pool übernehmen. Die Regel steht in <code>process-choose-tier</code>; ohne ein Ja wird nichts angelegt.</div>
-<div class="vcard ok"><b><code>PROGRESS.md</code> mit festem Kopf</b> — <code>## Kopf</code> ist die erste Überschrift, mit vier Zeilen in dieser Reihenfolge: <code>Phase</code>, <code>Stage</code>, <code>Next step</code>, <code>Open decisions</code>.</div>
+<div class="vcard ok"><b><code>PROGRESS.md</code> mit festem Kopf</b> — <code>## Kopf</code> ist die erste Überschrift, mit vier Zeilen in dieser Reihenfolge: <code>Phase</code>, <code>Stage</code>, <code>Next step</code>, <code>Open decisions</code>. Danach können fünf freiwillige Zeilen folgen: <code>Title</code>, <code>Type</code>, <code>Ticket</code>, <code>BC</code>, <code>Skipped</code>.</div>
 <div class="vcard ok"><b>Frische Session je Etappe</b> — jede Etappe und jede Umsetzer-Session darin läuft in einer frischen Agent-Session; der Kopf der Fortschrittsdatei und der Brief sind die einzige Übergabe. Die Regel steht in <code>process-run-stage</code>.</div>
 </div>
 <p class="src">Quelle: die Skills <code>knowledge-maintain-pool</code>, <code>knowledge-record-decision</code>, <code>process-concept</code>, <code>process-close</code>, <code>process-run-stage</code> und die Skripte unter <code>scripts/</code>.</p>
@@ -434,7 +434,7 @@ your-project/
     <span class="t-c">// standardmäßig alle 33; eine Liste oder include/exclude schränkt ein</span>
     <span class="t-c">// foundation-* und process-* werden immer installiert</span>
     "git-rules": true,
-    <span class="t-c">// false entfernt die Git-Sätze aus dem Router</span>
+    <span class="t-c">// "delegated": die Session committet selbst, Merge und Push bleiben beim Menschen; false entfernt die Git-Sätze aus dem Router</span>
     <span class="t-now">"process-docs": "committed"</span>
     <span class="t-c">// oder "local": Einträge in .git/info/exclude</span>
 } }</pre>

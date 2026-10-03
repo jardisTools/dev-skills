@@ -13,7 +13,7 @@ The approved understanding sheet states the requirement and the target picture s
 
 ### 1. Entry
 
-Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the understanding sheet (`UNDERSTANDING.md`) and the target picture must be approved (`KONZEPT.html` or the named executable example). If they are not, go back to `process-concept`. Do not write a PRD for a sheet or a picture the human has not accepted.
+Read `.claude/PROJECT_PROFILE.md` for the facts of the project when it exists. Read `docs/vorhaben/<name>/PROGRESS.md`. The head must say phase `prd`; the understanding sheet (`UNDERSTANDING.md`) and the target picture must be approved (`KONZEPT.html` or the named executable example). If they are not, go back to `process-concept`. Do not write a PRD for a sheet or a picture the human has not accepted.
 
 ### 2. The PRD adds, it does not translate
 
@@ -41,6 +41,8 @@ The solution part has this format:
 - **Changed:** what existing thing is altered
 ```
 
+Describe the solution in building blocks of the model: Aggregate, Process, Query, Rule, Value list and the like. Every line under `New` and `Changed` answers the check question "can the model express this?". What the model does not carry is written explicitly as hand code. The split between generated and hand-written code is in `generated-code-extend` section 10.
+
 The decisions part has this format, one block per decision:
 
 ```markdown
@@ -52,7 +54,7 @@ The decisions part has this format, one block per decision:
 - **Answer:** ...
 ```
 
-Numbers run from 1 and are never reassigned. At most one decision is `current`. `Answer` stays out while the decision is not answered. A PRD line that stems from a decision, or waits for one, ends with the mark `(Decision <n>)`.
+Numbers run from 1 and are never reassigned. At most one decision is `current`. `Answer` stays out while the decision is not answered. A PRD line that stems from a decision, or waits for one, ends with the mark `(Decision <n>)`. A line changed after the approval ends with the mark `(Addendum)` instead; the line itself says what changes and what is to be redone.
 
 Every statement is observable: a reader can tell from the result whether it holds. Where a requirement is a rule ("outwards, X holds"), name the place where X holds today; `process-check-existing` answers that when the answer is not at hand.
 
@@ -79,7 +81,7 @@ A human's "decide open points yourself" or "proceed autonomously" waives no gate
 
 ### 5. Confirmation
 
-Show the human the PRD with the list of findings and their rulings. The human confirms; no one else does. A change request goes back into the PRD and the affected rulings, without a new board run.
+Show the human the PRD with the list of findings and their rulings (`FINDINGS.md`, see `process-review-board`). The human confirms; no one else does. A change request goes back into the PRD and the affected rulings, without a new board run.
 
 On confirmation set the progress head to phase `plan`, stage `—`, next step "write the plan". An open question stays in the head as `STOPP: <YYYY-MM-DD> · <question>` and blocks autonomous work.
 

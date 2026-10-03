@@ -262,13 +262,13 @@ Installs all bundled skills except the `git-*` skills (a missing `include` means
 
 ### Git rules in the router (`git-rules`)
 
-By default the process router in `AGENTS.md` states the git rules: branch, commit and merge are gates of the human, no tool attribution in commits, and Git flow (`feature/*` and `fix/*` from `develop`, hotfixes from `main`). `"git-rules": false` takes these sentences out of the router; the git skills stay installed. Any other value than `true` or `false` keeps the rules on and prints a warning. The key is independent of `bundled-skills` and `process-docs`, and it enforces nothing: no hook rejects a commit and no `settings.json` rule is written.
+The key has three stances. By default (`true`) the process router in `AGENTS.md` states the git rules: branch, commit and merge are gates of the human, no tool attribution in commits, and Git flow (`feature/*` and `fix/*` from `develop`, hotfixes from `main`). With `"delegated"` the session creates the branch and the commits itself, after checking that every changed file belongs to the scope of the task; merge and push stay gates of the human, and the Git flow and the ban on tool attribution hold unchanged. `false` takes these sentences out of the router; the git skills stay installed in every stance. Any other value than `true`, `false` or `"delegated"` keeps the strict rules on and prints a warning. The key is independent of `bundled-skills` and `process-docs`, and it enforces nothing: no hook rejects a commit and no `settings.json` rule is written.
 
 ```json
 {
     "extra": {
         "jardis/dev-skills": {
-            "git-rules": false
+            "git-rules": "delegated"
         }
     }
 }

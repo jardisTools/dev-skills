@@ -8,6 +8,7 @@ use Closure;
 use Composer\Util\Filesystem;
 use JardisTools\DevSkills\Data\AgentsDescriptor;
 use JardisTools\DevSkills\Data\AggregateAgentsResult;
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
@@ -65,7 +66,7 @@ final class SkillInstaller
 
     private readonly ?string $gitRulesWarning;
 
-    private readonly bool $gitRules;
+    private readonly GitRulesMode $gitRules;
 
     /** @var Closure(string, string, Closure(): void): ?string */
     private readonly Closure $guardManifestVersion;
@@ -76,7 +77,7 @@ final class SkillInstaller
     /** @var Closure(list<SkillDescriptor>): bool */
     private readonly Closure $isCatalogInstalled;
 
-    /** @var Closure(string, bool): string */
+    /** @var Closure(string, GitRulesMode): string */
     private readonly Closure $loadRouterText;
 
     /** @var Closure(list<AgentsDescriptor>, string, bool, string): AggregateAgentsResult */
@@ -95,7 +96,7 @@ final class SkillInstaller
         $this->pluginRoot = $pluginRoot ?? dirname(__DIR__);
         $this->processDocsWarning = $config?->processDocsWarning;
         $this->gitRulesWarning = $config?->gitRulesWarning;
-        $this->gitRules = $config->gitRules ?? true;
+        $this->gitRules = $config->gitRules ?? GitRulesMode::Strict;
 
         $this->installSkills = new InstallSkills(
             $config ?? PluginConfig::all(),

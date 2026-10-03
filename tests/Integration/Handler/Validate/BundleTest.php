@@ -509,6 +509,12 @@ final class BundleTest extends TestCase
                 'only when the router of the project does not name them',
                 'follows the git rules of the project',
                 'also when unsure',
+                // the third stance: with "delegated" the session creates branch and commits itself, the merge stays a gate
+                '"git-rules": "delegated"',
+                'only the branch and the commit lapse',
+                'creates the branch and makes the commits (steps 3 and 8) itself',
+                'reports the hash it has seen in `git log`',
+                'the merge (step 9) stays a gate of the human',
             ] as $keyword
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
@@ -539,6 +545,8 @@ final class BundleTest extends TestCase
         // the delivery step of process-close points at the same gate, with no second wording of the rule
         $close = (string) file_get_contents($this->skillFile('process-close'));
         self::assertStringContainsString('human gate (`process-run-stage`)', $close);
+        self::assertStringContainsString('with the delegated git rules the session makes the commits itself', $close);
+        self::assertStringContainsString('with the delegated git rules the session makes the commits itself', (string) file_get_contents($this->skillFile('process-resume')));
         self::assertStringNotContainsString('<!-- rule:commit-is-human-gate -->', $close);
     }
 
