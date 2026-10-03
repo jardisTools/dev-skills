@@ -39,7 +39,7 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
    dedicated AI skill for this step (`docs/SKILL-FORMAT.md` §3a). Drive the same step headless
    instead via `jardis mcp` → `design-headless-mcp`.
 4. **Implement** — write the behaviour inside the generated Command/Handler/Action stubs.
-   → `generated-code-extend` (plus its siblings, see the routing map below).
+   → `generated-code-extend` (plus its siblings, see the routing map below); the order of work from model to QA is its §11 "The way".
 
 ### 2. Running the Builder
 

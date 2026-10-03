@@ -25,7 +25,7 @@ Every open point from `## Open points` and from the open decisions (the progress
 | Fix now | Done in this closing, with the gates of the project profile |
 | Let the human decide now | A line in the list of rulings for the human, not in a backlog |
 | Strike | With the reason in one line |
-| Own item | Only when it names a trigger ("how to tell it is due") and a consequence ("what breaks if never") |
+| Own item | Only when it names a trigger ("how to tell it is due") and a consequence ("what breaks if never"); one line per item in the backlog file named by the line "Backlog file" of `.claude/PROJECT_PROFILE.md`, no fixed path |
 
 A point without a nameable consequence is struck. Collective blocks are forbidden: no "remaining items", "follow-ups" or "leftover debts" of an undertaking.
 

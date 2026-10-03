@@ -10,6 +10,7 @@
 - **Ticket:** <free text>
 - **BC:** <comma-separated>
 - **Skipped:** <comma-separated: concept, prd, plan, stage, acceptance>
+- **Verdict:** <optional, free: `green E<n> <date>` or `red E<n> <date>`; written after the verifier, deleted at the merge; delete this line when unused>
 
 ## Goal
 
@@ -25,7 +26,7 @@ Path of the understanding sheet (`UNDERSTANDING.md`) and of the picture (`KONZEP
 
 ## Stages
 
-- none yet; the plan lists them. A finished stage shrinks to `E<n> done <commit>`.
+- none yet; the plan lists them. A finished stage shrinks to `E<n> done <commit>` (the `Verdict` head line goes with it).
 
 ## Decisions delegated
 

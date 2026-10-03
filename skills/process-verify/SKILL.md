@@ -57,7 +57,7 @@ The verdict is one of `GREEN` or `RED`. Read it against the files: check the nam
 
 The gate runs **once per undertaking**, after the last stage is merged, and checks the result end to end against the whole PRD. All stages green does not mean the PRD is met: the gate looks for the gaps between the parts. Its source is `../process-review-board/reviewers/acceptance-gate.md`.
 
-1. The main session runs the QA gates of `.claude/PROJECT_PROFILE.md` once for the whole undertaking and keeps the log path and the exit code. The gate does not run them itself.
+1. The main session runs the checks of `.claude/PROJECT_PROFILE.md` once for the whole undertaking, first the model checks of the profile, then the gates, and keeps the log path and the exit code. The gate does not run them itself.
 2. Start the gate in a fresh session and give it the PRD, the understanding sheet, the progress file, and the log path and exit code. Nothing else: no reasoning of implementers or verifiers.
 3. It returns, per PRD criterion and per acceptance criterion of the understanding sheet, `MET` with evidence or `GAP`, and one overall verdict `GREEN` or `RED`.
 
