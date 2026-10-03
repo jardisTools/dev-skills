@@ -18,7 +18,7 @@ final class RenderFrontmatter
      * kept under 175 words.
      */
     private const DESCRIPTION =
-        'Before hand-building any reusable building block in a Jardis project'
+        'Before hand-building any reusable building block in any PHP project'
         . ' — caching, scheduling, HTTP clients, queues or messaging, validation,'
         . ' logging, secrets, persistence, or DDD scaffolding such as a context'
         . ' registry or workflow engine — consult this catalog to check whether an'

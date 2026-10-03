@@ -34,6 +34,7 @@ name: <kebab-case-name>
 description: <One sentence in English. Names the situation + key trigger terms.>
 zone: pre | post-active | post-reference | crosscut | discovery | process
 persona: A | C | D | X | O
+profile: core | jardis
 prerequisites: [<other-skill-name>, ...]   # may be empty []
 next: [<other-skill-name>, ...]            # may be empty []
 ---
@@ -47,6 +48,7 @@ next: [<other-skill-name>, ...]            # may be empty []
 | `description` | yes | **One sentence**, single line, English. ≤175 words (hard limit of the validator); **new skills ≤45 words** (convention, see below). Starts with the situation or artefact (`"Use when …"`, `"Reference for …"`, `"Extending …"`, `"Wiring …"`). Dense comma- or em-dash-separated trigger terms are welcome — the sentence is both the trigger prompt for the loader and the first piece of context the AI sees. |
 | `zone` | yes | One of six values. See §3. |
 | `persona` | yes | One of `A`, `C`, `D`, `X`, `O`. See §3a — every skill must serve exactly one persona. Values `B` (Designer-Companion, retired) and `E` (Builder-Dev, lives in `tools-builder-engine`) are deliberately not part of the bundle. |
+| `profile` | yes | `core` (any PHP project) or `jardis` (projects that work with the Jardis Designer and its generated code). The installer installs the `jardis` skills only in the installation profile `jardis`; `core` skills in both. Checked by `ValidateSkillMd`. |
 | `prerequisites` | yes | Array of skill names that should have run before this skill is useful. Use `[]` if independent. |
 | `next` | yes | Array of skill names that typically follow. Use `[]` if terminal. |
 
