@@ -4,6 +4,15 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-10-03
+
+### Added
+- **Key `extra."jardis/dev-skills"."agents-md"`** (`"aggregate"` or `"none"`; any other value warns and counts as absent). `none` keeps the plugin's managed block out of the `AGENTS.md` of the project, and also the import block in `CLAUDE.md` and the entry in `.gemini/settings.json`.
+- **Default by root package name.** Without the key, a project whose root package has a vendor part beginning with `jardis` (`jardis/`, `jardiscore/`, `jardissupport/`, `jardisadapter/`, `jardistools/`) gets `none`; every other project gets `aggregate`, as before. An explicit value beats the default.
+
+### Changed
+- Jardis packages get no managed block in their `AGENTS.md` any more, which is a deliverable and no workplace. A block, import block or Gemini entry an earlier release wrote there is removed at the next install (text outside the block stays byte for byte; an `AGENTS.md` the plugin created and that is empty afterwards is deleted). Skills, reviewer agent files, manifest and exclude block are unchanged; projects with another root package name see no difference.
+
 ## [1.7.1] - 2026-10-03
 
 ### Fixed

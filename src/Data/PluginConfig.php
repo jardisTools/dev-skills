@@ -27,6 +27,8 @@ final readonly class PluginConfig
         public ?string $gitRulesWarning = null,
         public ?InstallProfile $profile = null,
         public ?string $profileWarning = null,
+        public AgentsMdMode $agentsMd = AgentsMdMode::Aggregate,
+        public ?string $agentsMdWarning = null,
     ) {
     }
 
@@ -47,6 +49,8 @@ final readonly class PluginConfig
             $this->gitRulesWarning,
             $this->profile,
             $this->profileWarning,
+            $this->agentsMd,
+            $this->agentsMdWarning,
         );
     }
 
@@ -69,6 +73,8 @@ final readonly class PluginConfig
             $warning,
             $this->profile,
             $this->profileWarning,
+            $this->agentsMd,
+            $this->agentsMdWarning,
         );
     }
 
@@ -89,6 +95,32 @@ final readonly class PluginConfig
             $this->gitRules,
             $this->gitRulesWarning,
             $profile,
+            $warning,
+            $this->agentsMd,
+            $this->agentsMdWarning,
+        );
+    }
+
+    /**
+     * The same configuration with the `agents-md` mode (`Aggregate` = the managed block goes into AGENTS.md,
+     * `None` = nothing the plugin manages in AGENTS.md, CLAUDE.md or the Gemini settings) and the warning about
+     * its raw value.
+     */
+    public function withAgentsMd(AgentsMdMode $agentsMd, ?string $warning): self
+    {
+        return new self(
+            $this->installAll,
+            $this->mandatoryOnly,
+            $this->includeGlobs,
+            $this->excludeGlobs,
+            $this->warning,
+            $this->processDocs,
+            $this->processDocsWarning,
+            $this->gitRules,
+            $this->gitRulesWarning,
+            $this->profile,
+            $this->profileWarning,
+            $agentsMd,
             $warning,
         );
     }

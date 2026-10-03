@@ -23,7 +23,7 @@ final class ComposerFixture
             : new \stdClass();
 
         $json = [
-            'name'              => 'jardis-test/consumer',
+            'name'              => 'acme/consumer',
             'description'       => 'E2E test consumer project',
             'type'              => 'project',
             'minimum-stability' => 'dev',

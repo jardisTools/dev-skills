@@ -46,7 +46,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
         $this->io = $io;
 
         $extra = $composer->getPackage()->getExtra();
-        $this->config = (new ReadPluginConfig())($extra);
+        $this->config = (new ReadPluginConfig())($extra, $composer->getPackage()->getName());
 
         $this->installer = new SkillInstaller(config: $this->config);
         $this->uninstaller = new SkillUninstaller();
