@@ -17,7 +17,7 @@ next: [generated-code-extend]
 
 Handing the draft over — two doors, same result:
 
-- **MCP** (`jardis mcp`): call `import_schema` with the drafted JSON in its `yaml` argument (wire-key kept for contract stability — it carries JSON content), plus `domain`/`subdomain`/`bc`. It writes `{domain}/{subdomain}/{bc}/Schema.json` for you.
+- **MCP** (`jardis mcp`): call `import_schema` with the drafted JSON in its `yaml` argument (wire-key kept for contract stability — it carries JSON content), plus `domain`/`subdomain`/`bc`. It writes `{domain}/{subdomain}/{bc}/Schema.json` for you. The import runs the same normalisation as `analyze_schema` and the UI (columns, indexes, foreign keys per table; a column-level `unique` becomes an index) and writes the analysis report, so you need not pre-normalise the draft.
 - **Browser UI** (`jardis ui`): upload the draft as a `.json` schema source in the bounded context's schema-import surface, then pick the tables the BC governs.
 
 Never place the block into the workspace as a hand-written file — that is not a supported input path.
