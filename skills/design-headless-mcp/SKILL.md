@@ -1,6 +1,6 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (OutputDir via update_domain_manifest, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
 prerequisites: []
@@ -40,15 +40,21 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    introspection or from a schema drafted for a domain idea (see `design-draft-schema`), whose
    JSON you pass in the `yaml` argument (wire-key kept for contract stability — it carries JSON
    content). This Tool **is** the authoring door: a `Schema.json` is never placed into the
-   workspace as a hand-written file.
+   workspace as a hand-written file. It normalises `tables` the same way `analyze_schema` and the
+   UI do (columns, indexes, foreign keys per table; a column-level `unique` becomes an index)
+   and, when `reportMd` is omitted, writes `SchemaReport.md` from that analysis.
 3. **`save_aggregate`** — persist the aggregate's designer graph (entities, relations, keys).
    Returns a mtime `CONFLICT` if the on-disk graph moved under you — reload and retry, or pass
-   the force flag once you have confirmed the overwrite is intended.
+   the force flag once you have confirmed the overwrite is intended. Node positions and the
+   viewport are optional: when absent, the value in `Layout.json` is kept. A node's optional
+   `path` (as returned by the aggregate load) is accepted, so a table placed at more than one
+   position survives load then save.
 4. **`save_naming`** — apply/confirm the field-mapping naming conventions for the bounded
    context before building.
 5. **`create_process`** / **`save_process`** / **`validate_process`** — model a BC-level
    process graph (if the change is process-level behaviour rather than aggregate structure),
-   iterate, and check it for structural findings before building.
+   iterate, and check it for structural findings before building. On `save_process`, omitting
+   `layoutJson` keeps the stored layout; passing `null` deletes it.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6).
@@ -93,6 +99,11 @@ human- or agent-confirmed single step.
 `generated-code-extend`) is fully MCP-reachable, same as everything above — no browser-only
 capability here. `save_closures` persists the whole catalog+bindings document (LockedSave — a
 `CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`);
+Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
+`messageKey` is never cleared — omitted or `""` keeps the stored key, and an empty one on a
+verdict closure without `compose` is derived as `{lcfirst(bc)}.{lcfirst(name)}`. Bindings: omit a
+command's entry to leave it unbound; `chain: []` is a deliberately empty guard (the guard class is
+still generated, the drift report lists it as an empty chain).
 `validate_closures` checks a not-yet-saved catalog/bindings set against the V-RULE-* rules
 (read-only, no write). Read side: the `closures` Resource template returns the catalog+bindings
 as-is, plus `dockable` (per closure: `guard` — commands whose chain it may still join; `ruleNode` —
@@ -107,10 +118,11 @@ anchoring closure at all when the usage scan failed, since that fact is Usage-in
 `empty_chain` — mirroring the Context-Map drift-check pattern (computed on demand, never
 persisted, no bulk-align tool here either). Lifecycle tools mirror `rename_query`/`delete_query`/
 `duplicate_query`'s pattern: `rename_closure` (`confirm=true` required, or `dryRun=true` for a
-no-write preview; cascades the rename into every binding chain naming it, every Closure's `uses`
+no-write preview that needs no `confirm`; cascades the rename into every binding chain naming it, every Closure's `uses`
 list — Set member or free sub-closure reference alike — and every process Rule-node's `rule`
 field — a materialised stub or `Closure/v{N}/` override is never moved, only reported in
-`warnings`), `delete_closure` (blocked with a `409 IN_USE` by >=1 bound chain, >=1 Closure's `uses`
+`warnings`; the closure's `messageKey` follows the rename when it was the derived key of the old
+name, a hand-set key stays), `delete_closure` (blocked with a `409 IN_USE` by >=1 bound chain, >=1 Closure's `uses`
 (Set membership or a free sub-closure reference), or >=1 process Rule-node — `force=true` overrides it, stripping the name
 from every binding chain and `uses` list and dropping a chain row it empties; deleting a Rule-Set
 itself leaves its members untouched in the catalog), `duplicate_closure` (`newName` optional — a
@@ -170,6 +182,11 @@ a free `{name}Copy`/`{name}CopyN` name, visibility always falls back to `interna
 never an error); `queries-usage` lists which Rules/process nodes reference a given query — the
 same computation `rename_query`/`delete_query` use for their `consequences`, not a second one.
 
+**Other confirm gates:** `rename_value_list` (like `rename_closure`) needs `confirm=true` for a real
+rename, while `dryRun=true` runs without `confirm`. `set_stack_selection` needs `confirm=true` when
+the selection switches the project's database (read the current one from the `runtime-stack`
+resource); every other change, and re-sending the same database, needs none.
+
 **Schema→SQL export:** `export_schema_sql` returns one dialect's DDL as
 text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
 the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
@@ -182,7 +199,9 @@ export.
 Some browser-UI affordances have no MCP button; they become a plain data operation instead:
 
 - **Choosing an output directory** — the UI opens a native file dialog; an MCP client instead
-  calls `update_domain_manifest` with the `outputDir` field directly.
+  calls `update_project_settings` with `outputDir`. It is a workspace-level setting (not per
+  domain) and, for a jardis-app-template clone, is `<root>/src`. Changing an already-set value
+  needs `confirm=true` (nothing is moved; the old tree stays on disk).
 - **"Open in editor"** — the UI opens the generated file in an IDE; an MCP client reads it via
   the `code-file` Resource template instead (chunked, offset/limit).
 - **Switching projects** — the UI has a workspace switcher; an MCP client instead starts a
