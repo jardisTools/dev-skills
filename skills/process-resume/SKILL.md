@@ -23,7 +23,7 @@ List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` whose `## Kopf` says `Pha
 
 ### 2. Read the head first
 
-Read the whole `PROGRESS.md`. The head holds `Phase`, `Stage`, `Next step` and `Open decisions`. Open other files only when the next step needs them (the understanding sheet, the PRD with its decisions, the stage plan with its line `Halt`); the progress file points to them and is not the archive.
+Read the whole `PROGRESS.md`. The head holds `Phase`, `Stage`, `Next step` and `Open decisions`, and may carry the optional lines `Title`, `Type`, `Ticket`, `BC` and `Skipped`. Open other files only when the next step needs them (the understanding sheet, the PRD with its decisions, the stage plan with its line `Halt`); the progress file points to them and is not the archive.
 
 **Hard stop:** a `STOPP:` entry under `Open decisions` blocks all autonomous work. Put the open question to the human. Only the human's answer clears the entry; then the main session removes it.
 
@@ -56,7 +56,7 @@ When the progress file has its own `## Preflight` section, run those checks as w
 | `acceptance` | `process-verify` |
 | `close` | `process-close` |
 
-3. The guard rails of the progress file hold unchanged: scope, prohibitions, rulings; commit and merge stay a human gate (`process-run-stage`) in every resumed phase.
+3. The guard rails of the progress file hold unchanged: scope, prohibitions, rulings; commit and merge stay a human gate (`process-run-stage`) in every resumed phase; with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human.
 4. After each building block update the progress file: move the head on, shrink a finished stage to one line, do not append a chronicle. The file stays at most 60 lines and only the main session writes it.
 
 ### 5. Reference

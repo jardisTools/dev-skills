@@ -35,7 +35,7 @@ Create `.claude/PROJECT_PROFILE.md` from `templates/PROJECT_PROFILE.md` only whe
 
 ### 4. Interview
 
-Clarify one point at a time.
+Clarify one point at a time. Before the first question, read `.claude/PROJECT_PROFILE.md` when it exists (section 3 creates it only when it is missing); it holds the QA entry, ports and build facts, so the interview does not ask for what it already states.
 
 1. Ask one question. Ask the next only when the current one is answered unambiguously.
 2. Accept no silent assumption. Where the human has not said it, ask; where the project can answer, read it first (code, knowledge pool, `process-check-existing` for what the environment already does).
@@ -73,12 +73,18 @@ For a bug, two sections follow `## Goal`: `## Reproduced` and `## Cause`.
 The human accepts the sheet and the picture or example; no one else does. Show them, name what it fixes and what it leaves open, and ask for a yes.
 
 - **No yes, no next stage.** A change request goes back into the interview. The next stage, the PRD, starts from the approved sheet, not from the conversation.
+- **Change after the approval.** A sheet line changed after the approval ends with the mark `(Addendum)`; the line itself says what changes and what is to be redone.
 - On approval, save a screenshot of the picture as `docs/vorhaben/<name>/KONZEPT.png` with the browser tool at hand. If none is available, say so and ask the human to save it.
 - Set the progress head to phase `prd`, stage `—`, and a next step naming the PRD as one line. Fill in the goal and the path of the approved artefact. An open question stays in the head as `STOPP: <YYYY-MM-DD> · <question>` and blocks autonomous work.
 
 ### 7. Progress file rules
 
-- `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Free lines may follow.
+- `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Five free lines may follow, each optional, in this form:
+  - `- **Title:**` the display name;
+  - `- **Type:**` one of `feature`, `bug`, `project`;
+  - `- **Ticket:**` free text;
+  - `- **BC:**` comma-separated;
+  - `- **Skipped:**` comma-separated, with the keys `concept`, `prd`, `plan`, `stage`, `acceptance`.
 - `Phase` is one of `concept`, `prd`, `prd-review`, `plan`, `plan-review`, `stage`, `acceptance`, `close`.
 - `Stage` is `—` before phase `stage` and `E<n>/<total>` from phase `stage` on, for example `E1/3`.
 - `Next step` is one action in one line.

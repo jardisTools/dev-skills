@@ -23,7 +23,7 @@ final readonly class PluginConfig
         public ?string $warning,
         public ProcessDocsMode $processDocs = ProcessDocsMode::Committed,
         public ?string $processDocsWarning = null,
-        public bool $gitRules = true,
+        public GitRulesMode $gitRules = GitRulesMode::Strict,
         public ?string $gitRulesWarning = null,
     ) {
     }
@@ -47,10 +47,11 @@ final readonly class PluginConfig
     }
 
     /**
-     * The same configuration with the `git-rules` switch (`true` = the router states the git rules)
-     * and the warning about its raw value.
+     * The same configuration with the `git-rules` stance (`Strict` = the router states the gates of the human,
+     * `Delegated` = the session commits itself, `Off` = no git rules in the router) and the warning about
+     * its raw value.
      */
-    public function withGitRules(bool $gitRules, ?string $warning): self
+    public function withGitRules(GitRulesMode $gitRules, ?string $warning): self
     {
         return new self(
             $this->installAll,

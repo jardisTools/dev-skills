@@ -22,6 +22,7 @@ The PRD, and the understanding sheet and the target picture it extends. Check:
 - assumptions without a basis in the PRD or the picture;
 - signal words such as "of course", "obviously", "naturally", "clearly", "as usual": each one hides a requirement nobody wrote down;
 - acceptance criteria that are open to interpretation instead of measurable: a reader must be able to tell from the result whether it holds;
+- a line under `New` or `Changed` of the solution part that is not a building block of the model (Aggregate, Process, Query, Rule, Value list and the like) and not marked as hand code: the check question "can the model express this?" has no answer;
 - scope that grows quietly: a requirement, state or data path that is not in the goal or in the out-of-scope list.
 
 ## Return

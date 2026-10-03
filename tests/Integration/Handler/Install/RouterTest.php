@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Install;
 
 use JardisTools\DevSkills\Data\AgentsDescriptor;
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\RenamedSkills;
 use JardisTools\DevSkills\Handler\Install\BuildManagedBlock;
 use JardisTools\DevSkills\Handler\Install\LoadRouterText;
@@ -46,7 +47,8 @@ final class RouterTest extends TestCase
     /**
      * Keywords of the git rules (E7 P7.4): branch, commit and merge are gates of the human, no tool attribution,
      * Gitflow. They stand between the marker lines `<!-- git-rules -->` and `<!-- /git-rules -->`; the opt-out
-     * `git-rules=false` in composer.json `extra` removes exactly this area.
+     * `git-rules=false` in composer.json `extra` removes exactly this area, `git-rules="delegated"` swaps it for the
+     * delegated area (`GIT_RULE_DELEGATED_KEYWORDS`).
      */
     public const GIT_RULE_KEYWORDS = [
         'human gates' => 'Branch, commit and merge are gates of the human',
@@ -58,8 +60,27 @@ final class RouterTest extends TestCase
         'next gate after log' => 'the next one only once the step before stands in `git log`',
         'human starts branch' => 'the human starts the branch (`git-start-branch`), the session never offers to create it itself',
     ];
+    /**
+     * Keywords of the delegated git rules (`git-rules="delegated"`): the session creates branch and commits itself,
+     * merge and push stay gates of the human. They stand between `<!-- git-rules:delegated -->` and
+     * `<!-- /git-rules:delegated -->`.
+     */
+    public const GIT_RULE_DELEGATED_KEYWORDS = [
+        'human gates' => 'Merge and push are gates of the human',
+        'no own merge' => 'never merges or pushes on its own',
+        'own branch and commits' => 'The session creates the branch and the commits itself',
+        'gitflow' => 'work happens on a `feature/*` or `fix/*` branch cut from `develop`, a hotfix on a `hotfix/*` branch cut from `main`',
+        'gitflow never' => 'never directly on `develop` or `main`',
+        'scope check' => 'only after checking that every changed file belongs to the scope of the task',
+        'commit seen in log' => 'reports a commit only once it stands in `git log`',
+        'no attribution' => 'no commit carries a `Co-Authored-By` line or any other tool attribution',
+        'one gate per halt' => 'A halt names exactly one git gate (merge or push)',
+        'git skills' => 'the `git-*` skills stay started by the human',
+    ];
     private const GIT_RULES_START = '<!-- git-rules -->';
     private const GIT_RULES_END = '<!-- /git-rules -->';
+    private const DELEGATED_START = '<!-- git-rules:delegated -->';
+    private const DELEGATED_END = '<!-- /git-rules:delegated -->';
     private const FIRST_32_KIB = 32768;
     private const AREA_PREFIXES = [
         'start-', 'packages-', 'design-', 'generated-code-', 'foundation-', 'git-', 'knowledge-', 'process-', 'code-review-',
@@ -146,7 +167,9 @@ final class RouterTest extends TestCase
         self::assertLessThan((int) strpos($raw, '## Tiers'), $end, 'the area ends before the tier table');
 
         $area = substr($raw, $start, $end - $start);
-        $outside = substr($raw, 0, $start) . substr($raw, $end);
+        $delegatedStart = (int) strpos($raw, self::DELEGATED_START);
+        $delegatedEnd = (int) strpos($raw, self::DELEGATED_END);
+        $outside = substr($raw, 0, $start) . substr($raw, $end, $delegatedStart - $end) . substr($raw, $delegatedEnd);
         foreach (self::GIT_RULE_KEYWORDS as $label => $keyword) {
             self::assertStringContainsString($keyword, $area, sprintf('The %s rule is not inside the git-rules area.', $label));
             self::assertStringNotContainsString($keyword, $outside, sprintf('The %s rule also stands outside the area.', $label));
@@ -156,7 +179,7 @@ final class RouterTest extends TestCase
 
     public function testRouterWithTheOptOutKeepsEveryOtherRuleAndDropsTheGitRules(): void
     {
-        $router = (new LoadRouterText())($this->root(), false);
+        $router = (new LoadRouterText())($this->root(), GitRulesMode::Off);
         $cut = strpos($router, '## Tiers');
         self::assertIsInt($cut);
         $preface = substr($router, 0, $cut);
@@ -174,12 +197,74 @@ final class RouterTest extends TestCase
         self::assertStringNotContainsString("\n\n\n", $router, 'no blank-line gap where the area was');
     }
 
-    public function testRouterIsAtMostFourKib(): void
+    public function testGitRulesStandInTheStrictAreaAndTheDelegatedAreaExactlyOnceEach(): void
     {
-        $file = $this->root() . '/' . LoadRouterText::RELATIVE_PATH;
+        $raw = (string) file_get_contents($this->root() . '/' . LoadRouterText::RELATIVE_PATH);
 
-        self::assertFileExists($file);
-        self::assertLessThanOrEqual(self::MAX_BYTES, (int) filesize($file));
+        self::assertSame(1, substr_count($raw, "\n" . self::DELEGATED_START . "\n"));
+        self::assertSame(1, substr_count($raw, "\n" . self::DELEGATED_END . "\n"));
+        $start = (int) strpos($raw, self::DELEGATED_START);
+        $end = (int) strpos($raw, self::DELEGATED_END);
+        self::assertLessThan($end, $start);
+        self::assertGreaterThan((int) strpos($raw, self::GIT_RULES_END), $start, 'the delegated area follows the strict one');
+        self::assertLessThan((int) strpos($raw, '## Tiers'), $end, 'the delegated area ends before the tier table');
+
+        $area = substr($raw, $start, $end - $start);
+        $outside = substr($raw, 0, $start) . substr($raw, $end);
+        foreach (self::GIT_RULE_DELEGATED_KEYWORDS as $label => $keyword) {
+            self::assertStringContainsString($keyword, $area, sprintf('The %s rule is not inside the delegated area.', $label));
+        }
+        self::assertStringNotContainsString('Merge and push are gates of the human', $outside);
+    }
+
+    public function testRouterWithDelegatedRulesStatesThemInsteadOfTheStrictOnesBeforeTheTierTable(): void
+    {
+        $router = (new LoadRouterText())($this->root(), GitRulesMode::Delegated);
+        $cut = strpos($router, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($router, 0, $cut);
+
+        foreach ([...self::TIER_RULE_KEYWORDS, ...self::GATE_RULE_KEYWORDS, ...self::GIT_RULE_DELEGATED_KEYWORDS] as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('The delegated router lacks the %s rule.', $label));
+        }
+        self::assertSame(1, substr_count($router, self::POOL_SENTENCE));
+        self::assertStringNotContainsString(self::GIT_RULE_KEYWORDS['human gates'], $router);
+        self::assertStringNotContainsString(self::GIT_RULE_KEYWORDS['no own git'], $router);
+        self::assertStringNotContainsString('git-rules', $router);
+        self::assertStringContainsString('`git-start-branch`, `git-commit-change`, `git-push-and-open-pr`', $router, 'the phase table keeps the git skills');
+        self::assertStringNotContainsString("\n\n\n", $router);
+    }
+
+    public function testRouterStrictStatesNoDelegatedRule(): void
+    {
+        $router = (new LoadRouterText())($this->root());
+
+        self::assertStringNotContainsString(self::GIT_RULE_DELEGATED_KEYWORDS['human gates'], $router);
+        self::assertStringNotContainsString(self::GIT_RULE_DELEGATED_KEYWORDS['own branch and commits'], $router);
+        self::assertStringNotContainsString("\n\n\n", $router);
+    }
+
+    public function testRouterOffStatesNeitherGitStance(): void
+    {
+        $router = (new LoadRouterText())($this->root(), GitRulesMode::Off);
+
+        self::assertStringNotContainsString(self::GIT_RULE_DELEGATED_KEYWORDS['human gates'], $router);
+        self::assertStringNotContainsString(self::GIT_RULE_KEYWORDS['human gates'], $router);
+        self::assertStringNotContainsString('Co-Authored-By', $router);
+    }
+
+    public function testEveryStanceOfTheRouterIsAtMostFourKib(): void
+    {
+        self::assertFileExists($this->root() . '/' . LoadRouterText::RELATIVE_PATH);
+
+        // the file carries both git areas, the session reads exactly one of them: the text it reads is capped
+        foreach (GitRulesMode::cases() as $mode) {
+            self::assertLessThanOrEqual(
+                self::MAX_BYTES,
+                strlen((new LoadRouterText())($this->root(), $mode)),
+                sprintf('The router text of the %s stance exceeds the cap.', $mode->name),
+            );
+        }
     }
 
     public function testRouterSitsInTheFirst32KiBOfTheBlock(): void

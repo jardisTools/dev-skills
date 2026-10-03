@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration;
 
+use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestState;
@@ -442,7 +443,7 @@ final class SkillInstallerTest extends TestCase
     {
         $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
 
-        $report = $this->installer(PluginConfig::all()->withGitRules(false, null));
+        $report = $this->installer(PluginConfig::all()->withGitRules(GitRulesMode::Off, null));
 
         $agents = (string) file_get_contents($this->project->path('AGENTS.md'));
         $cut = strpos($agents, '## Tiers');
@@ -460,6 +461,27 @@ final class SkillInstallerTest extends TestCase
         self::assertSame([], $report->warnings(), 'the opt-out is a choice, not a warning');
     }
 
+    public function testGitRulesDelegatedWritesTheDelegatedSentencesAndNotTheStrictOnesIntoTheInstalledBlock(): void
+    {
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', $this->shippedRouter());
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['git-rules' => 'delegated']]);
+
+        $report = $this->installer($config);
+
+        $agents = (string) file_get_contents($this->project->path('AGENTS.md'));
+        $cut = strpos($agents, '## Tiers');
+        self::assertIsInt($cut);
+        $preface = substr($agents, 0, $cut);
+        $keywords = [...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS, ...RouterTest::GIT_RULE_DELEGATED_KEYWORDS];
+        foreach ($keywords as $label => $keyword) {
+            self::assertStringContainsString($keyword, $preface, sprintf('Delegated AGENTS.md lacks the %s rule.', $label));
+        }
+        self::assertStringNotContainsString(RouterTest::GIT_RULE_KEYWORDS['human gates'], $agents);
+        self::assertStringNotContainsString(RouterTest::GIT_RULE_KEYWORDS['no own git'], $agents);
+        self::assertStringNotContainsString('git-rules', $agents, 'the marker lines never reach AGENTS.md');
+        self::assertSame([], $report->warnings(), 'delegated is a valid stance, not a warning');
+    }
+
     public function testSwitchingGitRulesOnOffOnRewritesTheBlockAndLeavesTheRestOfAgentsMdAlone(): void
     {
         $this->project->writeFile('vendor/jardisadapter/cache/AGENTS.md', "# cache\nCache rules.\n");
@@ -470,7 +492,7 @@ final class SkillInstallerTest extends TestCase
 
         $this->installer(PluginConfig::all());
         $on = (string) file_get_contents($this->project->path('AGENTS.md'));
-        $this->installer(PluginConfig::all()->withGitRules(false, null));
+        $this->installer(PluginConfig::all()->withGitRules(GitRulesMode::Off, null));
         $off = (string) file_get_contents($this->project->path('AGENTS.md'));
         $this->installer(PluginConfig::all());
         $onAgain = (string) file_get_contents($this->project->path('AGENTS.md'));

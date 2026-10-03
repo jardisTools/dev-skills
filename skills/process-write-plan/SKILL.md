@@ -22,6 +22,7 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 3. Give every stage a stage plan with: goal, dependencies, the four lines `Generated`, `By hand`, `Done when` and `Halt`, phase list, file scope per phase, acceptance criteria (AK) per phase, dependencies between phases.
 4. Do not cut phases finer than needed and never split a phase afterwards. If the context of a phase does not suffice, the implementer's turn ends with a restart point; the assignment is not torn into two briefs. If a cut proves wrong, correct the plan itself before the next brief is written.
 5. Keep the derivation of a cut out of the plan; it belongs in its own evidence file, linked from the plan.
+6. A plan line changed after its release ends with the mark `(Addendum)`; the line itself says what changes and what is to be redone.
 
 ```markdown
 ## E1 <stage title>
@@ -29,12 +30,14 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 **Depends on:** none | E<n>.
 **Generated:** Query `ordersByPeriod`; Process `ExportOrders` · skeleton | none.
 **By hand:** <Kind> `<Name>` · <note> | none.
-**Done when:** observable, names the tests that hold it.
+**Done when:** observable; names the tests that hold the result.
 **Halt:** none | one sentence on what the human looks at after the stage.
 ### P1.1 <phase title>
 **Scope:** files, each one named; new or changed.
 **AK:** numbered, each one checkable by a command or a file.
 ```
+
+Inside a stage the work runs in this order: first what is generated, then what is written by hand, then the tests as a step of their own. `Done when` names those tests: one test per acceptance criterion and per error case, written against the product of the undertaking, not against the mechanics of the generator (`foundation-testing` section 6). The four lines stay four; tests get no line of their own. Which work is generated and which is by hand: `generated-code-extend` section 10.
 
 `Generated` is what a generator or tool produces, `By hand` what is written by hand. Both lines use one entry form: per thing `` <Kind> `<Name>` ``, optionally followed by ` · <note>`; several things are separated by `; `; nothing is `none`. It is the form of the lines under `## Affected` in the understanding sheet (`process-concept`).
 
@@ -75,7 +78,7 @@ Merge the answers into one list, rule on every finding (work it into the plan or
 
 ### 6. Release
 
-Show the human the plan with the findings and their rulings. The human releases it; no one else does. Where the undertaking has a surface, the target picture is stored as `KONZEPT.png` before the first stage.
+Show the human the plan with the findings and their rulings (`FINDINGS.md`, see `process-review-board`). The human releases it; no one else does. Where the undertaking has a surface, the target picture is stored as `KONZEPT.png` before the first stage.
 
 On release set the progress head to phase `stage`, stage `E1/<total>` (the form is `E<n>/<total>`, `<total>` the number of stages in the plan), next step "brief for P1.1", and list the stages in the progress file as one line each.
 

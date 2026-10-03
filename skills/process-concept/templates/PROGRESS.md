@@ -5,6 +5,11 @@
 - **Stage:** —
 - **Next step:** Run the concept interview with the human and draft UNDERSTANDING.md and KONZEPT.html
 - **Open decisions:** —
+- **Title:** <display name>
+- **Type:** feature
+- **Ticket:** <free text>
+- **BC:** <comma-separated>
+- **Skipped:** <comma-separated: concept, prd, plan, stage, acceptance>
 
 ## Goal
 

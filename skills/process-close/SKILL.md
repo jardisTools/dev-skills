@@ -70,7 +70,7 @@ Before the delete, no source of a pool page may point into `docs/vorhaben/<name>
 
 ### 7. Delivery
 
-Deliver **once**, at the end, over the release path of the project (`git-push-and-open-pr`, commits per `git-commit-change`); commit and merge are a human gate (`process-run-stage`). No tag or release per phase; several releases only when the plan names release milestones. The protective stops of the release path apply unchanged. A `feat:` or `fix:` commit carries its `Wissen:` note line.
+Deliver **once**, at the end, over the release path of the project (`git-push-and-open-pr`, commits per `git-commit-change`); commit and merge are a human gate (`process-run-stage`); with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human. No tag or release per phase; several releases only when the plan names release milestones. The protective stops of the release path apply unchanged. A `feat:` or `fix:` commit carries its `Wissen:` note line.
 
 ### 8. Retro
 

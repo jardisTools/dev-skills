@@ -67,22 +67,27 @@ External dependencies are part of the package. Canonical templates → `docker-c
 - [ ] AAA separated? No shared state? No `@depends`?
 - [ ] Mocked only the interface — Fake preferred?
 - [ ] Docker service for every external dep?
-- [ ] Green via `make phpunit` after `make start`, no manual prep?
+- [ ] Green via `make phpunit` after `make start`, no manual prep? (Generated app: unit tests via `make phpunit`, door tests in `tests/Integration/` via `make integration-test`.)
+- [ ] Door test written by hand, `Schema.sqlite.sql` exported (`export_schema_sql_files`) before the first run?
 - [ ] Failing test: §3 followed, assertions not weakened?
 
 ### 6. Testing generated Domain code (Phase 3)
 
-The generated Domain facade (e.g. `MeterDevice`) is `final` and
-JardisCore-free — it holds only the DomainKernel (`DomainKernelInterface $kernel`)
-via constructor; `JardisApp`/`DomainApp` do not exist. It cannot be
-subclassed — a "`TestMeterDevice extends MeterDevice`" idiom breaks at
-compile time. Use **composition, not inheritance**: a plain test wrapper
-class holds a real Domain-facade instance and delegates:
+Every build generates the test scaffold under `tests/Support/{Domain}/` (namespace `Tests\Support\{Domain}`). Jardis owns these files — ForceOverwrite, never hand-edited; hand-written files in the same folder (Fakes) stay untouched. Three kinds:
+
+| File | Per | Purpose |
+|---|---|---|
+| `{Domain}TestCase.php` | domain | Abstract base: `createKernel()`, `createDomain()`, a fresh in-memory SQLite per `setUp()` |
+| `Test{Domain}.php` | domain | Wrapper around the `final` Domain facade: `{bc}()` (read chain) and `{bc}Write()` (harness) per BC with an aggregate |
+| `{BC}WriteHarness.php` | built BC with an aggregate | `{agg}Write()` per aggregate, over the inherited `protected` kernel seam |
+
+A BC without an aggregate and a planned BC get nothing. Jardis generates no tests and no test data.
+
+The generated Domain facade (e.g. `MeterDevice`) is `final` and JardisCore-free — it holds only the DomainKernel (`DomainKernelInterface $kernel`) via constructor; `JardisApp`/`DomainApp` do not exist. It cannot be subclassed — a "`TestMeterDevice extends MeterDevice`" idiom breaks at compile time. The scaffold uses **composition, not inheritance**: the wrapper holds a real Domain-facade instance and delegates.
 
 ```php
-// tests/Support/TestMeterDevice.php (or inline in the TestCase file) —
-// NOT a subclass (MeterDevice is final) — holds the DomainKernel + a real
-// MeterDevice instance, delegates its public accessors 1:1.
+// tests/Support/MeterDevice/TestMeterDevice.php — generated shape. NOT a subclass
+// (MeterDevice is final): holds the DomainKernel + a real MeterDevice, delegates 1:1.
 final class TestMeterDevice
 {
     private DomainKernelInterface $kernel;
@@ -94,35 +99,29 @@ final class TestMeterDevice
         $this->domain = new MeterDevice($kernel);
     }
 
-    public function counter(): Counter { return $this->domain->counter(); }          // read chain, unchanged
+    public function counter(): Counter { return $this->domain->counter(); }          // read chain, one per BC
 
     public function counterWrite(): CounterWriteHarness { return new CounterWriteHarness($this->kernel); }
 }
 ```
 
-**Write access needs a family-internal harness.** The BC accessor (`$app->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context family). Tests that drive a command (arrange/seed or under test) go through a `{Bc}WriteHarness` in `tests/Support/` — a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` kernel seam (no Reflection tricks; a subclass can call an inherited `protected` method). The harness is built directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`), **not** via the test wrapper's `$this->handle(...)` — the wrapper above is not part of the Context family (it extends nothing generated), so it has no `handle()` of its own to delegate through.
-
-**A. Full 4-hop chain (integration)** — real Domain Facade, real DB from `make start`, schema reset in `setUp()`:
+**Write access needs a family-internal harness.** The BC accessor (`$domain->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context family). Hence the generated `{BC}WriteHarness`: a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` kernel seam (no Reflection tricks). The wrapper builds it directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`); it has no `handle()` of its own — it extends nothing generated.
 
 ```php
-// tests/Support/CounterWriteHarness.php — write facade via family-internal kernel seam
-// (genuine subclass of the generated, non-final BC facade — unaffected by the
-// Domain facade's final-ification)
+// tests/Support/MeterDevice/CounterWriteHarness.php — generated shape
 final class CounterWriteHarness extends Counter {   // the generated Counter BC class
     public function counterWrite(): CounterAggregate { return $this->handle(CounterAggregate::class); }
 }
+```
 
-final class CreateCounterTest extends TestCase
+**Door tests are hand-written.** The AI writes the tests at the door — reads via `{Agg}Read` over `Test{Domain}`, commands via `{BC}WriteHarness`, persistence proven by a second read — under `tests/Integration/{Domain}/{BC}/`. In the app template `make phpunit` runs only `tests/Unit`; door tests run with `make integration-test`.
+
+**A. Full 4-hop chain (integration)** — real Domain facade on a real database. The generated base opens a fresh `new PDO('sqlite::memory:')` in every `setUp()`, imports `<projectRoot>/.jardis/{Domain}/*/{BC}/Schema.sqlite.sql` for each built BC, and builds `new DomainKernel(projectRoot: …, connection: $pdo)`. `projectRoot` is the project root (three levels above `tests/Support/{Domain}/`), not the test's `__DIR__`. No static `$pdo`, no `setUpBeforeClass`; the project's `.env` is never read. Call MCP tool `export_schema_sql_files` (dialect `sqlite`) once before the first test; a missing file aborts the test loudly and names that tool — no skip. Green on SQLite is not green on the production engine (`FULL JOIN`, `unsigned`, `SQLITE_BUSY`).
+
+```php
+// tests/Integration/MeterDevice/Counter/CreateCounterTest.php — hand-written door test
+final class CreateCounterTest extends MeterDeviceTestCase   // generated base
 {
-    protected function createKernel(): DomainKernelInterface
-    {
-        // Build the DomainKernel manually in tests (no .env cascade in this context) —
-        // see core-kernel for DomainKernel/Bootstrap-Packer details.
-        return new DomainKernel(domainRoot: __DIR__, connection: self::$pdo);
-    }
-
-    protected function createDomain(): TestMeterDevice { return new TestMeterDevice($this->createKernel()); }
-
     public function testCreateCounterWithValidDataReturnsCreated(): void
     {
         $domain   = $this->createDomain();
@@ -135,7 +134,7 @@ final class CreateCounterTest extends TestCase
 }
 ```
 
-Never assert SQL / PDO calls — assert the response and persisted state via a second query / `Get…` handler. Reads stay on the public chain: `$domain->counter()->getCounterById(...)` — the harness is for writes only.
+Never assert SQL / PDO calls — assert the response and the persisted state via a second read: `$domain->counter()->counter()->getCounterById(...)`. Reads stay on the public chain; the harness is for writes only.
 
 **B. v2 override** — register v2 via a dedicated `ClassVersionConfig` on the DomainKernel's container (see `support-classversion`). Assert only the behaviour the override adds:
 
@@ -201,5 +200,6 @@ This Unit test does **not** replace an integration test — PRD A16 makes both m
 
 - Mock `DomainKernelInterface` / the generated `{Domain}Context` (the former `BoundedContext`, now generated per domain — see `core-kernel`/`generated-code-extend`) — too broad, leaks everywhere.
 - Assert a command's events via a dispatcher listener — the handler collects, it doesn't dispatch; assert `$response->getEvents(EventScope::…)` instead. (`EventCollector` is for listener / transport-side tests only.)
+- Hand-edit `tests/Support/{Domain}/{Domain}TestCase.php`, `Test{Domain}.php` or `{BC}WriteHarness.php` — every build overwrites them. Put Fakes and helpers in their own files next to them.
 - Test generated files directly — they are covered at the generator level. Test your overrides, custom Commands/Queries, Services.
 - Test only a Rule's pure predicate and call it done — the endpoint-chain integration test (Guard wiring, 422 shape, short-circuit) is a separate, mandatory assertion surface (A16).
