@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Handler\Discovery;
 
+use JardisTools\DevSkills\Data\AgentsMdMode;
 use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\PluginConfig;
@@ -17,17 +18,25 @@ final class ReadPluginConfig
     private const PROCESS_DOCS_KEY = 'process-docs';
     private const GIT_RULES_KEY = 'git-rules';
     private const PROFILE_KEY = 'profile';
+    private const AGENTS_MD_KEY = 'agents-md';
+
+    private readonly ResolveAgentsMdMode $resolveAgentsMdMode;
+
+    public function __construct(?ResolveAgentsMdMode $resolveAgentsMdMode = null)
+    {
+        $this->resolveAgentsMdMode = $resolveAgentsMdMode ?? new ResolveAgentsMdMode();
+    }
 
     /**
-     * @param array<string, mixed> $extra the value returned by
-     *                                    $composer->getPackage()->getExtra()
+     * @param array<string, mixed> $extra           the value returned by
+     *                                              $composer->getPackage()->getExtra()
+     * @param string               $rootPackageName the name of the root package ($composer->getPackage()->getName());
+     *                                              decides the default of `agents-md`
      */
-    public function __invoke(array $extra): PluginConfig
+    public function __invoke(array $extra, string $rootPackageName = ''): PluginConfig
     {
         $root = $extra[self::ROOT_KEY] ?? null;
-        if (!is_array($root)) {
-            return PluginConfig::all();
-        }
+        $root = is_array($root) ? $root : [];
 
         [$mode, $modeWarning] = $this->readProcessDocs($root);
 
@@ -35,10 +44,29 @@ final class ReadPluginConfig
 
         [$profile, $profileWarning] = $this->readProfile($root);
 
+        [$agentsMd, $agentsMdWarning] = $this->readAgentsMd($root, $rootPackageName);
+
         return $this->readBundledSkills($root)
             ->withProcessDocs($mode, $modeWarning)
             ->withGitRules($gitRules, $gitRulesWarning)
-            ->withProfile($profile, $profileWarning);
+            ->withProfile($profile, $profileWarning)
+            ->withAgentsMd($agentsMd, $agentsMdWarning);
+    }
+
+    /**
+     * `agents-md` is independent of the other keys. A valid value wins; an absent or invalid key leaves the
+     * mode to the name of the root package (see ResolveAgentsMdMode).
+     *
+     * @param array<array-key, mixed> $root
+     * @return array{AgentsMdMode, ?string}
+     */
+    private function readAgentsMd(array $root, string $rootPackageName): array
+    {
+        return ($this->resolveAgentsMdMode)(
+            array_key_exists(self::AGENTS_MD_KEY, $root),
+            $root[self::AGENTS_MD_KEY] ?? null,
+            $rootPackageName,
+        );
     }
 
     /**

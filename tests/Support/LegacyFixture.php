@@ -109,7 +109,7 @@ final class LegacyFixture
         array $settings = ['bundled-skills' => true],
     ): void {
         $json = [
-            'name'              => 'jardis-test/consumer',
+            'name'              => 'acme/consumer',
             'description'       => 'E2E update test consumer project',
             'type'              => 'project',
             'minimum-stability' => 'dev',
