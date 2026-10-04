@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.2] - 2026-10-04
+
+### Changed
+- `process-concept`: the progress head line `Type` is `feature` or `bug` only (the former `project` is gone; a head without a valid type shows "type missing"), and `BC` names exactly one bounded context — a workshop never spans more than one BC (Jardis builder, decision 2026-10-04).
+
 ## [1.8.1] - 2026-10-04
 
 ### Added

@@ -8,7 +8,7 @@
 - **Title:** <display name>
 - **Type:** feature
 - **Ticket:** <free text>
-- **BC:** <comma-separated>
+- **BC:** <exactly one bounded context>
 - **Skipped:** <comma-separated: concept, prd, plan, stage, acceptance>
 - **Verdict:** <optional, free: `green E<n> <date>` or `red E<n> <date>`; written after the verifier, deleted at the merge; delete this line when unused>
 
