@@ -53,6 +53,10 @@ gh pr create --base main \
   --title "fix(<scope>): <description>"
 ```
 
+### Merge method
+
+The pull request is merged by **squash**, never by merge commit or rebase: one commit lands on the base branch. The branch is deleted on merge (`delete_branch_on_merge`). The human merges.
+
 ### Rules
 
 - The PR title follows the Conventional Commits format

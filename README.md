@@ -53,7 +53,7 @@ Claude Code 2.1.286, runs on 2026-09-30 and 2026-10-01. Each of these checks pas
 - **Failing check:** a red verification leads to one fix run and then to green.
 - **Fresh verifier:** the verifier receives only the target artefact, the acceptance criteria and the code.
 - **Questions:** at most two points per question; an open question ends in a stop marker or in a gate.
-- **Closing:** a digest is written, the work folder is deleted, lessons are recorded through `knowledge-record-decision` with a note.
+- **Closing:** a digest is written, the work folder is archived before the delivery (moved to `tmp/archiv/<name>/`), lessons are recorded through `knowledge-record-decision` with a note.
 - **Hook:** the `commit-msg` hook warns (exit code 0) on a `feat:` commit without a `Wissen:` note and stays silent with one. Checked by deterministic hook tests, not by a smoke run.
 - **Honesty:** the verdict names every deviation.
 - **Git gates:** the session creates no commit, merge or branch of its own, asks for the commit at each gate, and adds no tool attribution.
@@ -289,7 +289,7 @@ A fresh project without a Jardis package therefore gets `core`. After `composer 
 
 ### Git rules in the router (`git-rules`)
 
-The key has three stances. By default (`true`) the process router in `AGENTS.md` states the git rules: branch, commit and merge are gates of the human, no tool attribution in commits, and Git flow (`feature/*` and `fix/*` from `develop`, hotfixes from `main`). With `"delegated"` the session creates the branch and the commits itself, after checking that every changed file belongs to the scope of the task; merge and push stay gates of the human, and the Git flow and the ban on tool attribution hold unchanged. `false` takes these sentences out of the router; the git skills stay installed in every stance. Any other value than `true`, `false` or `"delegated"` keeps the strict rules on and prints a warning. The key is independent of `bundled-skills` and `process-docs`, and it enforces nothing: no hook rejects a commit and no `settings.json` rule is written.
+The key has three stances. By default (`true`) the process router in `AGENTS.md` states the git rules: branch, commit and merge are gates of the human, no tool attribution in commits, and Git flow (`feature/*` and `fix/*` from `develop`, hotfixes from `main`). With `"delegated"` the session creates the branch and the commits itself, after checking that every changed file belongs to the scope of the task; merge and push stay gates of the human, pull requests are merged by squash (one commit on the base, the branch is deleted on merge), and the Git flow and the ban on tool attribution hold unchanged. `false` takes these sentences out of the router; the git skills stay installed in every stance. Any other value than `true`, `false` or `"delegated"` keeps the strict rules on and prints a warning. The key is independent of `bundled-skills` and `process-docs`, and it enforces nothing: no hook rejects a commit and no `settings.json` rule is written.
 
 ```json
 {
@@ -329,7 +329,7 @@ An explicit value beats the default. With `none` the plugin also takes out what 
 
 ### Where the generated files go (`process-docs`)
 
-The files the plugin generates (the skill folders, `AGENTS.md`, the reviewer agent files, the manifest) are meant to be committed, so the whole team gets the same skills. The folder `.claude/.jardis-backup/` is never meant for a commit; the exclude block lists it in both modes.
+The files the plugin generates (the skill folders, `AGENTS.md`, the reviewer agent files, the manifest) are meant to be committed, so the whole team gets the same skills. The folder `.claude/.jardis-backup/` is never meant for a commit; the exclude block lists it, and `tmp/archiv/` (the archive of closed workshops), in both modes.
 
 ```json
 {
@@ -343,11 +343,13 @@ The files the plugin generates (the skill folders, `AGENTS.md`, the reviewer age
 
 | Value | Effect |
 |---|---|
-| `committed` (default, also when the key is absent) | Everything is left to the commit; the exclude block holds only the backup folder |
-| `local` | The exclude block in `.git/info/exclude` also keeps the process document folders (`docs/vorhaben/`, `docs/digests/`, `.claude/wissen/`), the skill folders and files the plugin installed, and the manifest out of the commit |
+| `committed` (default, also when the key is absent) | Everything is left to the commit; the exclude block holds only the backup folder and `tmp/archiv/` |
+| `local` | The exclude block in `.git/info/exclude` (besides the two folders above) also keeps the process document folders (`docs/vorhaben/`, `docs/digests/`, `.claude/wissen/`), the skill folders and files the plugin installed, and the manifest out of the commit |
 | Anything else | Warning, treated as `local` |
 
-`.gitignore` is never touched, and the plugin never stages, commits or untracks anything. Git cannot hide files it already tracks; the plugin lists those in a warning, and you run `git rm --cached` yourself. Without a Git repository at the project root (or with the project below the top of a larger work tree) the exclude block is not written and the plugin warns; the rest of the install runs normally.
+At the close of a workshop, `process-close` archives the folder: `docs/vorhaben/<name>/` is moved to `tmp/archiv/<name>/` before the delivery (not deleted), so `main` carries only code, pool pages and the digest.
+
+`.gitignore` is never touched by the plugin, and the plugin never stages, commits or untracks anything. Git cannot hide files it already tracks; the plugin lists those in a warning, and you run `git rm --cached` yourself. Without a Git repository at the project root (or with the project below the top of a larger work tree) the exclude block is not written and the plugin warns; the rest of the install runs normally.
 
 ### Skill listing budget
 

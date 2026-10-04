@@ -411,12 +411,12 @@ final class BundleTest extends TestCase
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
         }
-        // the marker sits in section 6, after the delete order and before the retro of section 7
-        self::assertGreaterThan((int) strpos($content, '### 6. Delete the folder'), $marker);
-        self::assertLessThan((int) strpos($content, '### 7. Retro'), $marker);
-        self::assertGreaterThan((int) strpos($content, '**delete** `docs/vorhaben/<name>/`'), $marker);
-        // DS5: the delete comes after the delivery (the folder is deleted only after it has been delivered)
-        self::assertLessThan((int) strpos($content, '### 6. Delete the folder'), (int) strpos($content, '### 5. Delivery'));
+        // the marker sits in section 5, after the archive order and before the retro of section 7
+        self::assertGreaterThan((int) strpos($content, '### 5. Archive the folder'), $marker);
+        self::assertLessThan((int) strpos($content, '### 6. Delivery'), $marker);
+        self::assertGreaterThan((int) strpos($content, '**Move** `docs/vorhaben/<name>/`'), $marker);
+        // the archive comes before the delivery (the delivery carries no working papers)
+        self::assertLessThan((int) strpos($content, '### 6. Delivery'), (int) strpos($content, '### 5. Archive the folder'));
     }
 
     public function testReviewBoardSendsAnOpenQuestionToTheGateBeforeAStop(): void
@@ -1067,7 +1067,7 @@ final class BundleTest extends TestCase
                 'docs/digests/digest-<name>-<jjjj-mm>.md',
                 '`process-docs` set to `local`',
                 'never stage it',
-                '**delete** `docs/vorhaben/<name>/`',
+                '**Move** `docs/vorhaben/<name>/`',
                 'Deliver **once**',
                 'Retro',
             ] as $keyword
@@ -1092,7 +1092,7 @@ final class BundleTest extends TestCase
         }
 
         $close = (string) file_get_contents($this->skillFile('process-close'));
-        $order = ['### 2. Carry-over triage', '### 3. Lessons into the pool', '### 4. Docs sync and digest', '### 5. Delivery', '### 6. Delete the folder'];
+        $order = ['### 2. Carry-over triage', '### 3. Lessons into the pool', '### 4. Docs sync and digest', '### 5. Archive the folder', '### 6. Delivery'];
         $last  = -1;
         foreach ($order as $heading) {
             $position = strpos($close, $heading);
