@@ -429,3 +429,14 @@ What the model expresses is generated and hermetic; what it cannot express is wr
 | Hand | Reads, repositories, Domain Services and value objects a process needs | `{BC}/Process/{Name}/Query/`, `Repository/`, `Service/` |
 | Hand | Versioned variants of a generated class | `v{N}/` next to the class (`generated-code-versioning`) |
 | Hand | Wiring outside the output tree (transport, bootstrap, listeners) | project code (`generated-code-wire-transport`) |
+
+### 11. The way
+
+The order of work for a change to a Jardis domain. Each step has one skill; do not skip ahead.
+
+1. **Model.** Express the change in the model first (schema, aggregate, process, queries, closures), through the authoring doors. → `design-headless-mcp`, `design-draft-schema`.
+2. **Check.** Validate the model before building; fix findings in the model, never in the output. → `design-headless-mcp` (the `validate_*` tools).
+3. **Build.** Generate the code; the hermetic tree is overwritten on every build (§2). → `design-headless-mcp`.
+4. **Hand code.** Write only what the model cannot express, in the developer-owned segments (§10). → this skill, §5 and §6; recipes in `generated-code-recipes`.
+5. **Tests.** Test behaviour through the doors, with the generated scaffold. → `foundation-testing` §6.
+6. **QA.** Run the gates of the project profile, model checks first, then the gates. → `process-run-stage` §7.

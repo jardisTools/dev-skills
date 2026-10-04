@@ -96,7 +96,7 @@ final class BundleReviewersTest extends TestCase
             self::assertSame(
                 0,
                 preg_match('/\b(opus|sonnet|haiku|fable)\b/i', $content),
-                $role . ' names a model; say "the next stronger model".',
+                $role . ' names a model; say "the next stronger tier".',
             );
         }
     }

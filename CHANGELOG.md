@@ -4,6 +4,24 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-10-04
+
+### Added
+- `generated-code-extend` section 11 "The way": model, check, build, hand code, tests, QA, one skill per step; linked from `process-run-stage` and `start-orientation` (DS4).
+- Brief template: input line "Skills of the phase", gates line "Model check". Project profile template: lines "Door tests", "Model check", "Model per tier", "Backlog file" (DS4).
+- FINDINGS format: third value `- **Finding <n>:** decided — <one sentence: what the human decided>` (DS4).
+- Progress head: free line `- **Verdict:** green|red E<n> <date>`, written by step 8 of `process-run-stage`, deleted at the merge (DS4).
+- `process-run-stage`: stop wish read before each new phase (tool-neutral); model checks run before the gates; a gate that cannot run leaves the stage unchecked (DS4).
+- PROGRESS.md template: three closing sections with exact line grammars — `## Acceptance check` (`- <n>: met|gap|deferred — <evidence>`), `## Open points` (`- <text> — resolved|backlog|rejected — <due sentence>`), `## Knowledge` (`- yes|no — <entry>`); a missing line or missing evidence means "not checked" (DS5).
+- `design-headless-mcp`: `run_qa`, `run_make_target`, `stop_make_target`, `post_workshop_card`, the workshop resources (`jardis://workshops[/{name}]`, `jardis://closed-workshops`, `jardis://project/make-targets`) and the section "Workshop build control" (DS6).
+
+### Changed
+- `process-run-stage`: one branch per undertaking, created only when missing; the merge per stage keeps the branch (DS4).
+- `process-close`: the backlog location comes from the profile line "Backlog file"; order triage → lessons → acceptance → docs sync and digest → delivery → delete the folder after the delivery (DS4, DS5).
+- `process-verify`/acceptance gate: the gate returns CRITERION/VERDICT, the main session writes them as `## Acceptance check`; phase `close` is written only when the human accepts (DS5).
+- `process-resume`: a folder is active until the closing deletes it (DS5).
+- Open-question gate: escalation names the next stronger tier, not a model (the tool shells write no model).
+
 ## [1.8.0] - 2026-10-03
 
 ### Added
