@@ -199,7 +199,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-art">One brief per phase (≤ 6 KB, ≤ 8 commitments, ≤ 30 KB context load) · one commit per phase</div>
   <div class="r-art">Verdict GREEN or RED (≤ 5 items, ≤ 3 red proofs) · screenshot · merge</div>
   <div class="r-art">Per criterion MET or GAP · verdict GREEN or RED</div>
-  <div class="r-art">Digest <span class="mono">docs/digests/…</span> · delivery once · folder deleted after it</div>
+  <div class="r-art">Digest <span class="mono">docs/digests/…</span> · folder archived · delivery once</div>
 </div>
 
 <div class="band"><div class="bl">Stage loop</div><div>Per phase: brief → implementer (fresh session) → commit. Per stage: verifier → QA gates → sight gate → head update → merge. After RED: <b>one</b> fix run and <b>one</b> follow-up run of the verifier, then <span class="mono">STOPP:</span> in the progress head.</div></div>
@@ -228,7 +228,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
     <div class="secs"><span>Stand</span><span>Entscheide</span><span>Fallen</span><span>Ersetzt</span><span>Verweise</span></div>
     condensed, not appended · a decision carries date, author and source · page ≤ 16,384 bytes and 160 lines, index &lt; 10,240 bytes</div>
   <div class="place"><h4>WHERE · account</h4>
-    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> holds PROGRESS, UNDERSTANDING, KONZEPT, PRD, PLAN<br>→ at close: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, the folder is deleted after the delivery, no archive</div>
+    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> holds PROGRESS, UNDERSTANDING, KONZEPT, PRD, PLAN<br>→ at close: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, the folder is archived (moved to tmp/archiv/) before the delivery</div>
   <div class="place"><h4>WHERE · skills (what)</h4>
     <span class="mono">.claude/skills</span> and <span class="mono">.agents/skills</span> arrive through Composer. The plugin writes the skills and never writes the pool; the agent creates the pool scaffold through <span class="mono">process-concept</span>.</div>
   <div class="place"><h4>IN THE REPO?</h4>
@@ -245,7 +245,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
     <div class="step"><span class="k r">R</span>The <b>brief</b> names the pool pages that touch the area, chosen from INDEX.md<span class="o">INDEX.md → pages</span></div>
     <div class="step"><span class="k w">W</span><span class="k g">G</span>A decision becomes one line in <i>Entscheide</i>; the <code>feat:</code> commit carries the note<span class="o">Wissen: &lt;page&gt;#&lt;section&gt;</span></div>
     <div class="step"><span class="k r">R</span>The <b>verifier</b> receives the knowledge pages the briefs named</div>
-    <div class="step"><span class="k w">W</span><span class="k d">D</span><b>Close:</b> triage · lessons into the pool · digest · delivery · folder deleted after it<span class="o">docs/digests/</span></div>
+    <div class="step"><span class="k w">W</span><span class="k d">D</span><b>Close:</b> triage · lessons into the pool · digest · folder archived · delivery<span class="o">docs/digests/</span></div>
   </div>
   <div class="repo">Pool and docs committed · mode local: all of it under the exclude block, the digest too</div>
 </div>
@@ -315,7 +315,7 @@ The area says where in the lifecycle a skill is used: <code>start</code>, <code>
       <div>
         <div class="sk"><div class="n">process-run-stage</div><div class="d">One brief per phase, a fresh implementer, commit, blind verification, QA gates, merge</div></div>
         <div class="sk"><div class="n">process-verify</div><div class="d">One blind verifier per stage and one end-to-end acceptance gate at the end</div></div>
-        <div class="sk"><div class="n">process-close</div><div class="d">Triage open points, carry lessons into the pool, write the digest, deliver once, delete the folder after the delivery</div></div>
+        <div class="sk"><div class="n">process-close</div><div class="d">Triage open points, carry lessons into the pool, write the digest, archive the folder, deliver once (squash merge)</div></div>
         <div class="sk"><div class="n">process-resume</div><div class="d">Continue a running undertaking in a fresh session from its progress file</div></div>
         <div class="sk"><div class="n">code-review-change</div><div class="d">After every coding task and before any commit: findings graded Blocker, Major or Minor, never edits code</div></div>
       </div>

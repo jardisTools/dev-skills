@@ -109,7 +109,7 @@ An undertaking (tier 3) runs in five stages. Every stage has one skill; each nam
 | 2 Plan | Stages and phases with acceptance criteria and the lines generated, by hand, done when and halt, one review board, human release | `process-write-plan` |
 | 3 Build | One brief per phase, implementers in fresh sessions, QA gates, merge | `process-run-stage` |
 | 3 Check | One blind verifier per stage, one acceptance gate at the end | `process-verify` |
-| 4 Close | Triage and lessons into the pool before the acceptance, digest, delivery, then delete the project folder | `process-close` |
+| 4 Close | Triage and lessons into the pool before the acceptance, digest, archive the project folder, then delivery | `process-close` |
 
 Supporting skills: `process-review-board` (the review roles and their sources), `process-resume` (continue a running undertaking in a fresh session), `knowledge-record-decision` (record a decision in the pool).
 

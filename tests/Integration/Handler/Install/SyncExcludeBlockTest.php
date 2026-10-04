@@ -47,7 +47,7 @@ final class SyncExcludeBlockTest extends TestCase
 
         self::assertSame([], $report->warnings());
         self::assertSame(
-            self::BEGIN . "\n.claude/.jardis-backup/\n" . self::END . "\n",
+            self::BEGIN . "\n.claude/.jardis-backup/\ntmp/archiv/\n" . self::END . "\n",
             $this->blockOf($this->exclude()),
         );
         self::assertSame(
@@ -78,7 +78,7 @@ final class SyncExcludeBlockTest extends TestCase
         self::assertSame([], $report->warnings());
         self::assertSame(
             self::BEGIN . "\n"
-            . ".claude/.jardis-backup/\ndocs/vorhaben/\ndocs/digests/\n.claude/wissen/\n"
+            . ".claude/.jardis-backup/\ntmp/archiv/\ndocs/vorhaben/\ndocs/digests/\n.claude/wissen/\n"
             . ".agents/skills/foo\n.claude/skills/bar\n.claude/skills/foo\n.claude/skills/.jardis-managed.json\n"
             . "/.gemini/settings.json\n/CLAUDE.md\n"
             . self::END . "\n",
@@ -128,7 +128,7 @@ final class SyncExcludeBlockTest extends TestCase
         $committed = $this->exclude();
         self::assertStringStartsWith($foreign, $committed);
         self::assertSame(
-            $foreign . self::BEGIN . "\r\n.claude/.jardis-backup/\r\n" . self::END . "\r\n",
+            $foreign . self::BEGIN . "\r\n.claude/.jardis-backup/\r\ntmp/archiv/\r\n" . self::END . "\r\n",
             $committed,
         );
     }
@@ -146,7 +146,7 @@ final class SyncExcludeBlockTest extends TestCase
         $this->sync(ProcessDocsMode::Committed);
 
         self::assertSame(
-            $before . self::BEGIN . "\n.claude/.jardis-backup/\n" . self::END . "\n" . $after,
+            $before . self::BEGIN . "\n.claude/.jardis-backup/\ntmp/archiv/\n" . self::END . "\n" . $after,
             $this->exclude(),
         );
     }
@@ -158,7 +158,7 @@ final class SyncExcludeBlockTest extends TestCase
         $this->sync(ProcessDocsMode::Committed);
 
         self::assertSame(
-            "*.log\n" . self::BEGIN . "\n.claude/.jardis-backup/\n" . self::END . "\n",
+            "*.log\n" . self::BEGIN . "\n.claude/.jardis-backup/\ntmp/archiv/\n" . self::END . "\n",
             $this->exclude(),
         );
     }
@@ -222,7 +222,7 @@ final class SyncExcludeBlockTest extends TestCase
 
         self::assertSame([], $report->warnings());
         self::assertSame(
-            "*.log\n" . self::BEGIN . "\n.claude/.jardis-backup/\n" . self::END . "\n",
+            "*.log\n" . self::BEGIN . "\n.claude/.jardis-backup/\ntmp/archiv/\n" . self::END . "\n",
             $this->exclude(),
         );
         self::assertContains('.claude/skills/foo/SKILL.md', $this->visiblePaths(), 'untracked again, not committed');

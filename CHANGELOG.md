@@ -4,6 +4,13 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-10-04
+
+### Changed
+- `process-close`: new order archive before delivery: docs sync and digest (4) → archive the folder (5) → delivery (6) → retro (7); the delivery carries no working papers.
+- `process-close`: the workshop folder is archived instead of deleted: `docs/vorhaben/<name>/` is moved to `tmp/archiv/<name>/` (`tmp/archiv/` sits in the managed block of `.git/info/exclude` in both modes, `.gitignore` is never touched); in committed mode only the removal is committed, with `process-docs: local` it is moved without a commit.
+- Squash merge is the rule: `git-push-and-open-pr` states the merge method, `git-setup-repository` sets `allow_merge_commit` and `allow_rebase_merge` to `false`.
+
 ## [1.8.2] - 2026-10-04
 
 ### Changed

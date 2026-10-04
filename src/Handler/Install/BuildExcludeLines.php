@@ -8,16 +8,18 @@ use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 
 /**
- * The lines of the plugin's exclude block. In both modes the block holds the backup folder, which
- * is never meant for a commit. `local` adds the process document folders, the paths of the
- * manifest, the manifest itself, and the files the plugin set something in only when it created them
- * (AGENTS.md, CLAUDE.md, the Gemini settings).
+ * The lines of the plugin's exclude block. In both modes the block holds the backup folder and the archive
+ * folder of closed workshops, which are never meant for a commit. `local` adds the process document folders,
+ * the paths of the manifest, the manifest itself, and the files the plugin set something in only when it
+ * created them (AGENTS.md, CLAUDE.md, the Gemini settings).
  * Every line is a plain path (no pattern characters), so it can also serve as a Git pathspec;
  * a manifest path that is not a plain relative path is left out.
  */
 final class BuildExcludeLines
 {
     public const BACKUP_FOLDER = '.claude/.jardis-backup/';
+
+    public const ARCHIVE_FOLDER = 'tmp/archiv/';
 
     private const PROCESS_FOLDERS = ['docs/vorhaben/', 'docs/digests/', '.claude/wissen/'];
 
@@ -26,7 +28,7 @@ final class BuildExcludeLines
      */
     public function __invoke(ProcessDocsMode $mode, ?Manifest $manifest): array
     {
-        $lines = [self::BACKUP_FOLDER];
+        $lines = [self::BACKUP_FOLDER, self::ARCHIVE_FOLDER];
         if ($mode === ProcessDocsMode::Committed) {
             return $lines;
         }
