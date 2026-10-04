@@ -92,13 +92,15 @@ gh api repos/{org}/{repo} --method PATCH --input - <<'EOF'
   "default_branch": "main",
   "delete_branch_on_merge": true,
   "allow_squash_merge": true,
-  "allow_merge_commit": true,
-  "allow_rebase_merge": true,
+  "allow_merge_commit": false,
+  "allow_rebase_merge": false,
   "has_wiki": false,
   "has_projects": false
 }
 EOF
 ```
+
+Only squash merges are allowed: one commit per pull request keeps the history of `main` and `develop` free of intermediate commits.
 
 ### Phase 4: Branch protection ruleset
 
@@ -218,4 +220,5 @@ Then run `/git-check-compliance` for the full check list.
 - Daily work happens on `feature|fix/*` branches into `develop`
   (`/git-start-branch` → `/git-commit-change` → `/git-push-and-open-pr`), hotfixes into `main`.
 - Never force-push to `main` or `develop`.
+- Pull requests are merged by squash only.
 - This skill is idempotent: re-running it skips what already exists.

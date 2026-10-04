@@ -46,7 +46,7 @@ final class ProcessDocsEndToEndTest extends TestCase
 
         self::assertSame([], $report->warnings());
         self::assertSame(
-            ReplaceExcludeBlock::BEGIN . "\n.claude/.jardis-backup/\n" . ReplaceExcludeBlock::END . "\n",
+            ReplaceExcludeBlock::BEGIN . "\n.claude/.jardis-backup/\ntmp/archiv/\n" . ReplaceExcludeBlock::END . "\n",
             $this->excludeBlock(),
         );
         self::assertContains('AGENTS.md', GitRepo::visiblePaths($this->project->root));

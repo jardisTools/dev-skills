@@ -55,7 +55,7 @@ When the progress file has its own `## Preflight` section, run those checks as w
 | `plan` | `process-write-plan` |
 | `stage` | `process-run-stage` |
 | `acceptance` | `process-verify`; its triage and lessons are `process-close` sections 2 and 3, they run before the human accepts |
-| `close` | `process-close` from section 4: docs sync and digest, delivery, then the folder deletion after the delivery |
+| `close` | `process-close` from section 4: docs sync and digest, archive the folder, then the delivery |
 
 3. The guard rails of the progress file hold unchanged: scope, prohibitions, rulings; commit and merge stay a human gate (`process-run-stage`) in every resumed phase; with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human.
 4. After each building block update the progress file: move the head on, shrink a finished stage to one line (`E<n> done <commit>`; the free head line `Verdict` is written after the verifier and deleted at the merge), do not append a chronicle. The file stays at most 60 lines and only the main session writes it.

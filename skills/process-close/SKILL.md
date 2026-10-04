@@ -1,6 +1,6 @@
 ---
 name: process-close
-description: Use when the acceptance gate is green — triage every open point and carry lessons into the pool before the human accepts; after the acceptance sync docs once, write the digest, deliver once, delete the project folder after the delivery, run the retro.
+description: Use when the acceptance gate is green — triage every open point and carry lessons into the pool before the human accepts; after the acceptance sync docs once, write the digest, archive the project folder, deliver once, run the retro.
 zone: process
 persona: O
 profile: core
@@ -10,9 +10,9 @@ next: [knowledge-record-decision]
 
 ## Scope
 
-Closing runs **once per undertaking** and the same way in every repository. Afterwards nothing of the undertaking is left open, nothing is lost and nothing is kept twice: the lessons sit in the pool, the account sits in one page, the folder is gone. The main session runs it; a single stage without a folder of its own is one line in the digest.
+Closing runs **once per undertaking** and the same way in every repository. Afterwards nothing of the undertaking is left open, nothing is lost and nothing is kept twice: the lessons sit in the pool, the account sits in one page, the folder is archived. The main session runs it; a single stage without a folder of its own is one line in the digest.
 
-The order is fixed: triage (2) → lessons (3) → the human accepts, the head becomes `close` → docs sync and digest (4) → delivery (5) → delete the folder (6). Triage and lessons are data in the progress file and come before the acceptance, so the human accepts with them in sight. The folder is deleted only after the delivery.
+The order is fixed: triage (2) → lessons (3) → the human accepts, the head becomes `close` → docs sync and digest (4) → archive the folder (5) → delivery (6). Triage and lessons are data in the progress file and come before the acceptance, so the human accepts with them in sight. The folder is archived before the delivery, so that the delivery carries no working papers.
 
 ### 1. Entry
 
@@ -78,18 +78,25 @@ Runs only after the human accepted, with the head phase `close`.
 
 If the project keeps its documents out of the commit (switch `process-docs` set to `local`), the digest stays out of the commit too: write it at the same path, never stage it and never touch the project's ignore files.
 
-Commit the docs sync and the digest per `git-commit-change`. The folder is still there; it goes only after the delivery.
+Commit the docs sync and the digest per `git-commit-change`. The folder is still there; it is archived next, before the delivery.
 
-### 5. Delivery
+### 5. Archive the folder
 
-Deliver **once**, at the end, over the release path of the project (`git-push-and-open-pr`, commits per `git-commit-change`); commit and merge are a human gate (`process-run-stage`); with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human. No tag or release per phase; several releases only when the plan names release milestones. The protective stops of the release path apply unchanged. A `feat:` or `fix:` commit carries its `Wissen:` note line. The delivery carries the digest and the undertaking folder as they stand; the deletion of section 6 is a step of its own after it.
+Runs after section 4 is committed and before any delivery. The archive keeps the working papers at hand on the machine; `main` carries only code, pool pages and the digest.
 
-### 6. Delete the folder
+1. Bring the project's docs index, if it has one, to the final state.
+2. `mkdir -p tmp/archiv`. The archive folder is covered by the managed block in `.git/info/exclude` (both modes); if the line `tmp/archiv/` is missing there, append it to `.git/info/exclude` once — never touch `.gitignore`.
+3. **Move** `docs/vorhaben/<name>/` to `tmp/archiv/<name>/` (project-relative). The folder is not deleted.
+4. Committed mode: commit only the staged removal of `docs/vorhaben/<name>/` per `git-commit-change`. With `process-docs: local` the folder never was in the index: move it without a commit.
 
-Runs only after the delivery of section 5 is done and the deletion is called for, by the human or by the tool that delivered; never before. Bring the project's docs index, if it has one, to the final state. Then **delete** `docs/vorhaben/<name>/`. There is no archive: the git history carries the account and the digest is the history within reach. A folder that stayed local needs no commit for its deletion; otherwise commit the deletion per `git-commit-change`.
+The digest stays where section 4 put it, in `docs/digests/`.
 
 <!-- rule:close-pool-check-after-delete -->
-Before the delete, no source of a pool page may point into `docs/vorhaben/<name>/`: a source names a commit hash or the digest. Run `php vendor/jardis/dev-skills/scripts/pool-check.php` on the final state only after the delete, and report "no errors" only from this run, never from one made before the delete.
+Before the delete (the move into the archive), no source of a pool page may point into `docs/vorhaben/<name>/`: a source names a commit hash or the digest. Run `php vendor/jardis/dev-skills/scripts/pool-check.php` on the final state only after the delete, and report "no errors" only from this run, never from one made before the delete.
+
+### 6. Delivery
+
+The delivery goes out only after the folder is archived (section 5). Deliver **once**, at the end, over the release path of the project (`git-push-and-open-pr`, commits per `git-commit-change`); commit and merge are a human gate (`process-run-stage`); with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human. The pull request is merged by **squash**: one commit on the base, the branch is deleted on merge. No tag or release per phase; several releases only when the plan names release milestones. The protective stops of the release path apply unchanged. A `feat:` or `fix:` commit carries its `Wissen:` note line. The delivery carries the digest and the code, never the working papers of the undertaking.
 
 ### 7. Retro
 
