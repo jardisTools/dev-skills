@@ -11,6 +11,7 @@
 2. `<path/to/second-input>:<from>-<to>`
 3. `.claude/PROJECT_PROFILE.md` (when QA, ports or stack matter)
 4. `.claude/wissen/<topic-page>.md` (only pages that touch this area)
+5. Skills of the phase: `<skill names, for example foundation-testing §6 for tests>`
 
 Context load: <measured bytes> of 30 KB. Measure it, do not estimate it.
 
@@ -30,6 +31,7 @@ Context load: <measured bytes> of 30 KB. Measure it, do not estimate it.
 ## Gates
 
 - Run the gates of your scope: <quick gate commands from the project profile>, then the code review of the change.
+- Model check: `<validate command of the profile, when the phase touches the model>`
 - Do not run the full QA entry of the project.
 - No Git operation that changes state; you may read `git status` and `git diff`.
 - Do not write to the progress file.

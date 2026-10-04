@@ -81,7 +81,7 @@ Do not grant write permission to these runs. The assignment is the review and no
 2. **Rule on every finding:** resolve it in the document, or reject it with a reason in one sentence. No finding stays unruled, and a minor finding is ruled like a major one.
 3. **Every fork goes to the human.** A finding that names a fork or an open decision, and everything the roles list under OPEN FORKS, is not decided by the main session, not even a minor one.
 4. Things a role marked as not checked are read as questions: answer them from the document, or carry them to the human.
-5. Write the merged list with its rulings to `docs/vorhaben/<name>/FINDINGS.md` from `templates/FINDINGS.md`: one section per board (`## PRD`, `## Plan`), one line per finding, `- **Finding <n>:** resolved — <one sentence>` or `- **Finding <n>:** rejected — <reason>`; the numbers run from 1 per board. Show the human the list with the rulings. The rulings are the gate.
+5. Write the merged list with its rulings to `docs/vorhaben/<name>/FINDINGS.md` from `templates/FINDINGS.md`: one section per board (`## PRD`, `## Plan`), one line per finding, `- **Finding <n>:** resolved — <one sentence>`, `- **Finding <n>:** rejected — <reason>` or `- **Finding <n>:** decided — <one sentence: what the human decided>`; the numbers run from 1 per board. Show the human the list with the rulings. The rulings are the gate.
 
 The board does not run a second time. A change the human asks for afterwards goes into the document and the affected rulings.
 

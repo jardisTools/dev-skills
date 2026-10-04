@@ -411,10 +411,12 @@ final class BundleTest extends TestCase
         ) {
             self::assertStringContainsString($keyword, $rule, $keyword);
         }
-        // the marker sits in section 6, after the delete order and before the delivery of section 7
+        // the marker sits in section 6, after the delete order and before the retro of section 7
         self::assertGreaterThan((int) strpos($content, '### 6. Delete the folder'), $marker);
-        self::assertLessThan((int) strpos($content, '### 7. Delivery'), $marker);
+        self::assertLessThan((int) strpos($content, '### 7. Retro'), $marker);
         self::assertGreaterThan((int) strpos($content, '**delete** `docs/vorhaben/<name>/`'), $marker);
+        // DS5: the delete comes after the delivery (the folder is deleted only after it has been delivered)
+        self::assertLessThan((int) strpos($content, '### 6. Delete the folder'), (int) strpos($content, '### 5. Delivery'));
     }
 
     public function testReviewBoardSendsAnOpenQuestionToTheGateBeforeAStop(): void
@@ -980,7 +982,7 @@ final class BundleTest extends TestCase
         foreach (['fix run', 'follow-up run', 'STOPP:', 'does not debug', 'failure-diagnosis'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $failure, 1400), $keyword);
         }
-        foreach (['at most 2 question points', 'STOPP:', 'open-question gate', 'next stronger model'] as $keyword) {
+        foreach (['at most 2 question points', 'STOPP:', 'open-question gate', 'next stronger tier'] as $keyword) {
             self::assertStringContainsString($keyword, substr($content, $question, 2200), $keyword);
         }
 
@@ -1071,6 +1073,32 @@ final class BundleTest extends TestCase
             ] as $keyword
         ) {
             self::assertStringContainsString($keyword, $content, $keyword);
+        }
+    }
+
+    public function testClosingResultsAreLinesInTheProgressFileInTheDs5Order(): void
+    {
+        // DS5: the three line grammars are the contract between the skills, the template and the reader of the progress file.
+        $grammar = [
+            'process-concept/templates/PROGRESS.md' => ['- <n>: met|gap|deferred — <evidence>', '- <text> — resolved|backlog|rejected — <due sentence>', '- yes|no — <entry>', '## Acceptance check', '## Open points', '## Knowledge'],
+            'process-verify/SKILL.md'               => ['`- <n>: met|gap|deferred — <evidence>`', 'not checked', 'Only when the human accepts'],
+            'process-close/SKILL.md'                => ['`- <text> — resolved|backlog|rejected — <due sentence>`', '`- yes|no — <entry>`', 'nothing to propose'],
+        ];
+        foreach ($grammar as $file => $keywords) {
+            $content = (string) file_get_contents(dirname(__DIR__, 4) . '/skills/' . $file);
+            foreach ($keywords as $keyword) {
+                self::assertStringContainsString($keyword, $content, $file . ': ' . $keyword);
+            }
+        }
+
+        $close = (string) file_get_contents($this->skillFile('process-close'));
+        $order = ['### 2. Carry-over triage', '### 3. Lessons into the pool', '### 4. Docs sync and digest', '### 5. Delivery', '### 6. Delete the folder'];
+        $last  = -1;
+        foreach ($order as $heading) {
+            $position = strpos($close, $heading);
+            self::assertIsInt($position, $heading);
+            self::assertGreaterThan($last, $position, $heading);
+            $last = $position;
         }
     }
 

@@ -25,3 +25,5 @@ One line per criterion, then the overall verdict.
 CRITERION: <PRD or sheet criterion> — MET (evidence) | GAP (what is missing, where)
 VERDICT: GREEN | RED
 ```
+
+You write no file. The main session turns each `CRITERION:` line into a line `- <n>: met|gap|deferred — <evidence>` under `## Acceptance check` of the progress file (`MET` is `met`, `GAP` is `gap`, `deferred` is only the human's). A `MET` without evidence is not a `MET`: it counts as "not checked" and cannot be accepted.

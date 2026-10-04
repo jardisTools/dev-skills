@@ -14,7 +14,7 @@ A fresh session knows nothing of the last one. The progress file is the single l
 
 ### 1. Find the active progress file
 
-List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` whose `## Kopf` says `Phase` other than `close` is active.
+List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` is active until the closing deletes the folder; its `## Kopf` says `Phase`, and phase `close` is still active: docs sync, delivery and the deletion come after the human's acceptance.
 
 - The human named the undertaking: use `docs/vorhaben/<name>/PROGRESS.md` and skip the search.
 - Exactly one is active: that is the run.
@@ -24,7 +24,7 @@ List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` whose `## Kopf` says `Pha
 
 ### 2. Read the head first
 
-Read the whole `PROGRESS.md`. The head holds `Phase`, `Stage`, `Next step` and `Open decisions`, and may carry the optional lines `Title`, `Type`, `Ticket`, `BC` and `Skipped`. Open other files only when the next step needs them (the understanding sheet, the PRD with its decisions, the stage plan with its line `Halt`); the progress file points to them and is not the archive.
+Read the whole `PROGRESS.md`. The sections `## Acceptance check`, `## Open points` and `## Knowledge` hold the closing results line by line; a criterion without a line or an evidence is "not checked". The head holds `Phase`, `Stage`, `Next step` and `Open decisions`, and may carry the optional lines `Title`, `Type`, `Ticket`, `BC` and `Skipped`. Open other files only when the next step needs them (the understanding sheet, the PRD with its decisions, the stage plan with its line `Halt`); the progress file points to them and is not the archive.
 
 **Hard stop:** a `STOPP:` entry under `Open decisions` blocks all autonomous work. Put the open question to the human. Only the human's answer clears the entry; then the main session removes it.
 
@@ -54,11 +54,11 @@ When the progress file has its own `## Preflight` section, run those checks as w
 | `prd-review`, `plan-review` | `process-review-board` |
 | `plan` | `process-write-plan` |
 | `stage` | `process-run-stage` |
-| `acceptance` | `process-verify` |
-| `close` | `process-close` |
+| `acceptance` | `process-verify`; its triage and lessons are `process-close` sections 2 and 3, they run before the human accepts |
+| `close` | `process-close` from section 4: docs sync and digest, delivery, then the folder deletion after the delivery |
 
 3. The guard rails of the progress file hold unchanged: scope, prohibitions, rulings; commit and merge stay a human gate (`process-run-stage`) in every resumed phase; with the delegated git rules the session makes the commits itself and only the merge stays a gate of the human.
-4. After each building block update the progress file: move the head on, shrink a finished stage to one line, do not append a chronicle. The file stays at most 60 lines and only the main session writes it.
+4. After each building block update the progress file: move the head on, shrink a finished stage to one line (`E<n> done <commit>`; the free head line `Verdict` is written after the verifier and deleted at the merge), do not append a chronicle. The file stays at most 60 lines and only the main session writes it.
 
 ### 5. Reference
 

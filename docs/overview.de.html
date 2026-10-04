@@ -199,7 +199,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
   <div class="r-art">Ein Brief je Phase (≤ 6 KB, ≤ 8 Zusagen, ≤ 30 KB Kontextlast) · ein Commit je Phase</div>
   <div class="r-art">Verdikt GREEN oder RED (≤ 5 Posten, ≤ 3 Rot-Belege) · Screenshot · Merge</div>
   <div class="r-art">Je Kriterium MET oder GAP · Verdikt GREEN oder RED</div>
-  <div class="r-art">Digest <span class="mono">docs/digests/…</span> · Ordner gelöscht · einmalige Auslieferung</div>
+  <div class="r-art">Digest <span class="mono">docs/digests/…</span> · einmalige Auslieferung · danach Ordner gelöscht</div>
 </div>
 
 <div class="band"><div class="bl">Etappen-Schleife</div><div>Je Phase: Brief → Umsetzer (frische Session) → Commit. Je Etappe: Verifier → QA-Gates → Sicht-Gate → Kopf aktualisieren → Merge. Nach RED: <b>ein</b> Fix-Lauf und <b>ein</b> Nachlauf des Verifiers, dann <span class="mono">STOPP:</span> im Kopf der Fortschrittsdatei.</div></div>
@@ -228,7 +228,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
     <div class="secs"><span>Stand</span><span>Entscheide</span><span>Fallen</span><span>Ersetzt</span><span>Verweise</span></div>
     verdichtet, nicht angehängt · ein Entscheid trägt Datum, Urheber und Quelle · Themenseite ≤ 16.384 Bytes und 160 Zeilen, Index &lt; 10.240 Bytes</div>
   <div class="place"><h4>WO · Rechenschaft</h4>
-    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> enthält PROGRESS, UNDERSTANDING, KONZEPT, PRD, PLAN<br>→ beim Abschluss: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, der Ordner wird gelöscht, kein Archiv</div>
+    <span class="mono">docs/vorhaben/&lt;name&gt;/</span> enthält PROGRESS, UNDERSTANDING, KONZEPT, PRD, PLAN<br>→ beim Abschluss: <span class="mono">docs/digests/digest-&lt;name&gt;-&lt;yyyy-mm&gt;.md</span>, der Ordner wird nach der Auslieferung gelöscht, kein Archiv</div>
   <div class="place"><h4>WO · Skills (Was)</h4>
     <span class="mono">.claude/skills</span> und <span class="mono">.agents/skills</span> kommen über Composer. Das Plugin schreibt die Skills und nie den Pool; das Pool-Gerüst legt der Agent über <span class="mono">process-concept</span> an.</div>
   <div class="place"><h4>IM REPO?</h4>
@@ -245,7 +245,7 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
     <div class="step"><span class="k r">R</span>Der <b>Brief</b> nennt die Themenseiten des Pools, die den Bereich berühren, ausgewählt aus INDEX.md<span class="o">INDEX.md → Themenseiten</span></div>
     <div class="step"><span class="k w">W</span><span class="k g">G</span>Ein Entscheid wird eine Zeile unter <i>Entscheide</i>; der <code>feat:</code>-Commit trägt den Vermerk<span class="o">Wissen: &lt;page&gt;#&lt;section&gt;</span></div>
     <div class="step"><span class="k r">R</span>Der <b>Verifier</b> erhält die Themenseiten, die die Briefe genannt haben</div>
-    <div class="step"><span class="k w">W</span><span class="k d">D</span><b>Abschluss:</b> Lehren in den Pool · Digest · Ordner gelöscht<span class="o">docs/digests/</span></div>
+    <div class="step"><span class="k w">W</span><span class="k d">D</span><b>Abschluss:</b> Sichtung · Lehren in den Pool · Digest · Auslieferung · danach Ordner gelöscht<span class="o">docs/digests/</span></div>
   </div>
   <div class="repo">Pool und docs committed · Modus local: alles unter dem Exclude-Block, auch der Digest</div>
 </div>
@@ -315,7 +315,7 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code
       <div>
         <div class="sk"><div class="n">process-run-stage</div><div class="d">Ein Brief je Phase, ein frischer Umsetzer, Commit, blinde Verifikation, QA-Gates, Merge</div></div>
         <div class="sk"><div class="n">process-verify</div><div class="d">Ein blinder Verifier je Etappe und am Ende ein Ende-zu-Ende-Akzeptanz-Gate</div></div>
-        <div class="sk"><div class="n">process-close</div><div class="d">Offene Punkte sichten, Lehren in den Pool übernehmen, den Digest schreiben, den Ordner löschen, einmal ausliefern</div></div>
+        <div class="sk"><div class="n">process-close</div><div class="d">Offene Punkte sichten, Lehren in den Pool übernehmen, den Digest schreiben, einmal ausliefern, danach den Ordner löschen</div></div>
         <div class="sk"><div class="n">process-resume</div><div class="d">Ein laufendes Vorhaben in einer frischen Session anhand seiner Fortschrittsdatei fortsetzen</div></div>
         <div class="sk"><div class="n">code-review-change</div><div class="d">Nach jeder Codieraufgabe und vor jedem Commit: Befunde nach Blocker, Major oder Minor eingestuft, ändert nie Code</div></div>
       </div>
