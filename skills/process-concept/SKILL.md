@@ -82,9 +82,9 @@ The human accepts the sheet and the picture or example; no one else does. Show t
 
 - `## Kopf` is the first heading after the title, with four lines in this order: `Phase`, `Stage`, `Next step`, `Open decisions`. Five free lines may follow, each optional, in this form:
   - `- **Title:**` the display name;
-  - `- **Type:**` one of `feature`, `bug`, `project`;
+  - `- **Type:**` one of `feature`, `bug` (no other value; a head without a valid type shows "type missing" on its tile);
   - `- **Ticket:**` free text;
-  - `- **BC:**` comma-separated;
+  - `- **BC:**` exactly one bounded context (a workshop never spans more than one BC);
   - `- **Skipped:**` comma-separated, with the keys `concept`, `prd`, `plan`, `stage`, `acceptance`.
 - `Phase` is one of `concept`, `prd`, `prd-review`, `plan`, `plan-review`, `stage`, `acceptance`, `close`.
 - `Stage` is `—` before phase `stage` and `E<n>/<total>` from phase `stage` on, for example `E1/3`.
