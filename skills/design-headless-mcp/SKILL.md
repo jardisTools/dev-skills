@@ -26,8 +26,8 @@ addresses next. The stretch is the transport (MCP calls instead of UI clicks), n
   are read-only projections of the current on-disk state — call them again after a write to
   see the effect, there is no push/subscribe.
 
-Build-control surface of the control center (workshops = the project's undertakings under
-`docs/vorhaben`), see §2 "Workshop build control":
+Build-control surface of the board (studios = the project's undertakings under
+`docs/vorhaben`), see §2 "Studio build control":
 
 - `run_qa` (Tool) — runs one allow-listed QA command (`make qa`, `make phpunit`, `make phpstan`,
   `make phpcs`, `make integration-test`) in the project root; returns exit code, a bounded tail
@@ -35,11 +35,11 @@ Build-control surface of the control center (workshops = the project's undertaki
 - `run_make_target` (Tool) — runs any target the project Makefile currently offers; read the
   `project-make-targets` Resource (`jardis://project/make-targets`) first for the live list and
   each target's kind.
-- `post_workshop_card` (Tool) — puts ONE decision card (question, recommendation, answers) into
-  the current room of a workshop; answering it is the human's gate, no tool.
-- `jardis://workshops/{name}` (Resource template) — one workshop: its record, rooms, documents
-  and the cards with their state; `jardis://workshops` lists all open workshops.
-- `jardis://closed-workshops` (Resource) — the closed and discarded workshops, newest first;
+- `post_studio_card` (Tool) — puts ONE decision card (question, recommendation, answers) into
+  the current room of a studio; answering it is the human's gate, no tool.
+- `jardis://studios/{name}` (Resource template) — one studio: its record, rooms, documents
+  and the cards with their state; `jardis://studios` lists all open studios.
+- `jardis://closed-studios` (Resource) — the closed and discarded studios, newest first;
   read-only.
 
 The full catalogue (on the order of 80 tools plus 70+ resources/templates — do not hardcode them
@@ -79,17 +79,17 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (chunked reads with an offset/limit window; large files stay well inside the response cap).
    This replaces "open it in the editor" from the browser flow.
 
-**Workshop build control.** When a workshop (Vorhaben) of the control center drives the build,
+**Studio build control.** When a studio (Vorhaben) of the board drives the build,
 the AI reports to the human through cards, not chat:
 
-- **Cards you post** (`post_workshop_card` with `workshop`): kinds `question`, `acceptance`,
+- **Cards you post** (`post_studio_card` with `studio`): kinds `question`, `acceptance`,
   `release`, `addendum`, `sight` (a surface to look at), `red` (a check stays red after the one
   fix run), `merge` (a stage is green and committed) and `delivery`. A card needs a
   recommendation `{lead, reason}` and two to three answers `{id, label}` with `recommended`;
   without them the call is refused and the question goes as ordinary chat. Keep the `STOPP:`
   line of the progress file as the trace and remove it once the answer is recorded. At most one
-  card is open per workshop, more queue behind it. Without `workshop` only the kinds `start`
-  and `notice` exist (they belong to the control center); `conflict` is Jardis's own and refused.
+  card is open per studio, more queue behind it. Without `studio` only the kinds `start`
+  and `notice` exist (they belong to the board); `conflict` is Jardis's own and refused.
 - **Fixed answer ids** (Jardis sets answers and labels; answers you pass are discarded, you only
   give `recommended` as one of the fixed ids): acceptance card in the room Acceptance
   `approve` / `change`; `delivery` `pullRequest` / `push`; `red` `tryAgain` / `defer` /
@@ -97,11 +97,11 @@ the AI reports to the human through cards, not chat:
   point is triaged and the knowledge lines are complete.
 - **Human gates:** you never merge, push or answer a card. The human decides on the `merge`
   card and Jardis merges; on the `delivery` card Jardis pushes or opens the pull request.
-  Creating a workshop (`start` card), the answers, discarding and deleting are the human's
-  handles with no MCP tool. Read card state in the `cards` list of `jardis://workshops/{name}`.
+  Creating a studio (`start` card), the answers, discarding and deleting are the human's
+  handles with no MCP tool. Read card state in the `cards` list of `jardis://studios/{name}`.
 - **`run_qa` preconditions:** Docker available, the target present in the project's `make help`,
   and for `make integration-test` the stack running. A missing one is a 409 with
-  `details.code` `dockerMissing`, `stackDown` or `targetMissing`; while a workshop builds,
+  `details.code` `dockerMissing`, `stackDown` or `targetMissing`; while a studio builds,
   Jardis then puts the card "QA nicht ausführbar" in front of the human. `run_qa` is
   long-running and cancellable; read the full output through its `logResourceUri`.
 - **`run_make_target`:** the live allow-list is `jardis://project/make-targets`; kinds `plain`,
@@ -290,10 +290,10 @@ supply the confirmation, then retry.
 
 - Full Tool/Resource catalogue: `tools/list`, `resources/list`, `resources/templates/list` on the
   running server — the live surface is the only catalogue, there is no inventory document.
-- Build control of the control center: Tools `run_qa`, `run_make_target`, `stop_make_target`,
-  `post_workshop_card`; Resources `jardis://project/make-targets`, `jardis://workshops`,
-  `jardis://workshops/{name}`, `jardis://closed-workshops`, `jardis://mcp-log/{name}` (full log
-  of a prior `build`/`build_process`/`run_qa` call) — see §2 "Workshop build control".
+- Build control of the board: Tools `run_qa`, `run_make_target`, `stop_make_target`,
+  `post_studio_card`; Resources `jardis://project/make-targets`, `jardis://studios`,
+  `jardis://studios/{name}`, `jardis://closed-studios`, `jardis://mcp-log/{name}` (full log
+  of a prior `build`/`build_process`/`run_qa` call) — see §2 "Studio build control".
 - Once generated code exists and you are implementing behaviour inside it: `generated-code-extend`.
 - Designing a schema's content from a domain idea instead of introspecting a live database, then
   feeding it through `import_schema`: `design-draft-schema`.
