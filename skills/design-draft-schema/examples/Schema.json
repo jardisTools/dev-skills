@@ -6,7 +6,6 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
@@ -14,38 +13,32 @@
           "length": 36,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "name": "counterGatewayId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "length": 100,
           "name": "configurationIdentification",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "name": "registerId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "name": "activeFrom",
           "nullable": false,
-          "phpType": "datetime",
           "type": "date"
         },
         {
           "name": "activeUntil",
           "nullable": true,
-          "phpType": "datetime",
           "type": "date"
         }
       ],
@@ -98,39 +91,33 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
         {
           "name": "counterId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "name": "gatewayId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "name": "activeFrom",
           "nullable": false,
-          "phpType": "datetime",
           "type": "date"
         },
         {
           "name": "activeUntil",
           "nullable": true,
-          "phpType": "datetime",
           "type": "date"
         },
         {
           "length": 36,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         }
       ],
@@ -183,7 +170,6 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
@@ -191,40 +177,34 @@
           "length": 36,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 36,
           "name": "clientIdentifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 50,
           "name": "meterLocationIdentifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 50,
           "name": "counterNumber",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "name": "activeFrom",
           "nullable": false,
-          "phpType": "datetime",
           "type": "date"
         },
         {
           "name": "activeUntil",
           "nullable": true,
-          "phpType": "datetime",
           "type": "date"
         }
       ],
@@ -252,7 +232,6 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
@@ -260,14 +239,12 @@
           "length": 50,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 20,
           "name": "type",
           "nullable": true,
-          "phpType": "string",
           "type": "varchar"
         }
       ],
@@ -288,7 +265,6 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
@@ -296,38 +272,32 @@
           "length": 36,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "name": "relatedId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "length": 20,
           "name": "relatedType",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "name": "registerId",
           "nullable": false,
-          "phpType": "int",
           "type": "int"
         },
         {
           "name": "activeFrom",
           "nullable": false,
-          "phpType": "datetime",
           "type": "date"
         },
         {
           "name": "activeUntil",
           "nullable": true,
-          "phpType": "datetime",
           "type": "date"
         }
       ],
@@ -368,7 +338,6 @@
           "autoincrement": true,
           "name": "id",
           "nullable": false,
-          "phpType": "int",
           "primary": true,
           "type": "int"
         },
@@ -376,21 +345,18 @@
           "length": 36,
           "name": "clientIdentifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 20,
           "name": "obis",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         },
         {
           "length": 36,
           "name": "identifier",
           "nullable": false,
-          "phpType": "string",
           "type": "varchar"
         }
       ],

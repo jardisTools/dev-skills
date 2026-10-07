@@ -37,6 +37,8 @@ Facade chain: Domain → BC → **Aggregate Read facade** (`{Agg}Read`, reached 
 | `Set{Something}` | `PUT /{bc}/{aggs}/{identifier}/{something}` |
 | Process | `POST /{bc}/{name}` *(lcfirst of the process name — `processes/` no longer appears in the path; `operationId` is unchanged, still `{bc}_processes_{name}`)* |
 
+**Exposing child commands.** Exposure is not limited to root commands: every aggregate command — root (`Update{Agg}`, `Remove{Agg}`) and child (`Add{Child}`, `Set{Entity}`, `Update{Entity}`, `Remove{Child}`) — can be exposed on the BC facade by binding it in `Closures.json` with `expose: true` (e.g. `addGoodsReceiptLine()` on the generated `Purchasing` facade). An exposed command without a bound Rule only raises the warning `V-RULE-5`; only the Create command is never exposable (`V-RULE-6`, below).
+
 **There is deliberately no create route.** The create command DTO is named after the entity (it *is* the aggregate's data shape — the verb lives on the handler `Create{Agg}`), so it can never be exposed as a direct facade method (its method name would collide with the read accessor `{agg}()`, caught by `V-RULE-6`). **Creation at the public surface runs exclusively through a Process** — model one, expose it, and it appears as `POST /{bc}/{name}`.
 
 **`Remove{Agg}{Child}` is not emitted for every child.** The table above gives the route *shape*; whether the command exists at all depends on the child. Two independent rules suppress the remove mutation of an `erm:one` child — and when either applies, there is **no** `Aggregate/Action/Remove{Child}.php`, **no** AggregateHandler method, **no** command and therefore **no** route:
