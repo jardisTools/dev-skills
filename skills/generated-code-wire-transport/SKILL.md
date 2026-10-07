@@ -58,8 +58,8 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 | 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs) — `data` is `{"@type":"validation","fields":[{field,reason,message}]}` (one form for route guard, aggregate command and Process; `field` is the outer name per FieldMap as a dot path without list index, e.g. `customer.customerName` where the column is called `name`; `reason` is `missing` for an absent value (validator text "can not be empty"), otherwise `invalid`) |
 | 401 | 401 Unauthorized | 2 | Auth missing |
 | 403 | 403 Forbidden | 2 | Auth insufficient |
-| 404 | 404 Not Found | 2 | Target absent |
-| 409 | 409 Conflict | 2 | Stale write / state conflict — `data` is `{"@type":"concurrencyConflict","reason","aggregate","context"}` |
+| 404 | 404 Not Found | 2 | A single read found nothing — `data` is `{"@type":"notFound","context":{<route parameter>}}`; a bulk read never answers 404 (200 with `items: []`); the router's own 404/405 is the contract's `BoundaryEnvelope` |
+| 409 | 409 Conflict | 2 | Stale write / state conflict — `data` is `{"@type":"concurrencyConflict","reason","aggregate","context"}` — `reason` is `stale_write`, `stale_delete` or `duplicate` (a unique-key duplicate, typed from the repository package; an FK violation stays 500); `context` carries the root's outer-door identifier under its FieldMap name (`id` only without a unique key), never primary-key or column internals |
 | 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — `data` is `{"@type":"ruleViolation","rule","messageKey","context"}` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
 | 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422); the message is in `errors` |
 
@@ -77,7 +77,7 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 // Query (e.g. getCounterById / getCounterByIdentifier) → 200, flat projected record
 {
   "status": 200,
-  "data":   { "@type": "counter", "id": 1, "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01" },
+  "data":   { "@type": "counter", "id": 1, "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01", "recordedAt": "2026-10-07T10:00:00+00:00", "price": "19.90" },
   "errors": {},
   "meta":   { "duration": 8.1, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
 }
@@ -97,7 +97,7 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 { "status": 422, "data": { "@type": "ruleViolation", "rule": "…", "messageKey": "counter.must_be_active", "context": { "identifier": "018e..." } }, "errors": {}, "meta": { … } }
 ```
 
-A single read that finds nothing answers with an empty `data` (no `@type`). A list read through the aggregate read facade (`{agg}List(...)`) returns a plain array `{items, total, limit, offset}`, not a `DomainResponse`; the generated route wraps it as `data = {"@type":"<agg>List", items, total, limit, offset}` — a hand-written transport that wants the same outer shape does the same.
+Time leaves the door as an ISO string in UTC (`date` `Y-m-d`, `date-time` ATOM with `+00:00`; never a `DateTime` object), a decimal as a string (`format: decimal`, pattern `^-?\d+(\.\d+)?$`), a column bound to a Werteliste as a member of a closed `enum`. A single read that finds nothing answers 404 `{"@type":"notFound","context":{<route parameter>}}` at the outer door (inside the family, through the kernel seam, the payload stays empty). A list read through the aggregate read facade (`{agg}List(...)`) returns a plain array `{items, total, limit, offset}`, not a `DomainResponse`; the generated route wraps it as `data = {"@type":"<agg>List", items, total, limit, offset}` — a hand-written transport that wants the same outer shape does the same.
 
 CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle (the single-aggregate-record projection is key-conformant either way); only an aggregate **without** a unique key leads list items with the root `id`. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
 

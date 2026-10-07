@@ -420,6 +420,8 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **Recipe 11 — Invariant as state: securing a uniqueness invariant across process boundaries**
 
+> Where a database UNIQUE index exists on the key, use Recipe 12 instead (typed `UniqueViolationException` → 409 `duplicate`, no gatekeeper node).
+
 A decision node that checks for absence via a query ("is there already an invoice for this
 order?") and writes afterwards is check-then-act — racy under concurrency, two
 simultaneous runs can both pass the check. The replacement: uniqueness is not
@@ -513,6 +515,22 @@ in front of the previous write logic, remove the racy read check, declare the 40
 as terminal. The business pre-check ("delivered?", "does the order exist at all?") remains
 in place as a read decision BEFORE the gatekeeper — only the uniqueness half moves into the
 gatekeeper.
+
+**Recipe 12 — Duplicate on a unique key → 409 `duplicate` (instead of a gatekeeper node)**
+
+Where the database holds a UNIQUE index on the key (the aggregate's public unique key or any
+unique column), the generated persist already turns a collision into the business answer — no
+gatekeeper node, no check-then-act query. The repository package types the unique-constraint
+hit as `JardisSupport\Contract\Repository\Exception\UniqueViolationException` (contracts ≥ v2.2.0,
+repository ≥ v1.3.0); every generated Persist catches it per transaction bracket BEFORE the general
+catch, rolls back (own transaction) or to its savepoint (open bracket), and throws
+`ConcurrencyConflictException('duplicate', …)`. The Command/Process answers 409
+`{"@type":"concurrencyConflict","reason":"duplicate","aggregate":"…","context":{<outer-door identifier>}}`;
+an FK violation stays a technical 500. No driver knowledge in the generate, nothing to write.
+
+- Use Recipe 11 (gatekeeper) only where NO database UNIQUE index can carry the invariant (a state over several rows, a counter, a status transition).
+- Dev code that writes OUTSIDE the generated persist (own `Repository/` or `Service/` under `{BC}/Process/{Name}/`) catches `UniqueViolationException` itself and translates it to its own business answer (e.g. a 409 `DomainResponse`); it never inspects driver error codes or SQLSTATE.
+- Keep the DB UNIQUE index in `Schema.json` — it is the only carrier; without it nothing throws and the duplicate is stored.
 
 ### 3. Troubleshooting
 
