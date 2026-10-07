@@ -39,7 +39,8 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
           "enumValues": ["<only for type enum>"],
           "nullable": "<true | false>",
           "primary": "<true | false>",
-          "autoincrement": "<true | false>"
+          "autoincrement": "<true | false>",
+          "auto": "<optional: created | modified — only on datetime/timestamp>"
         }
       ],
       "indexes": [
@@ -62,6 +63,7 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
 ```
 
 **Column required:** `name`, `type`, `nullable`. `length` required for `varchar`. `enumValues` (non-empty, no duplicates) for `type: enum`. `primary`/`autoincrement` only on PK. **Never write `phpType`** — the importer rejects a schema carrying it (hard load error, rule CUT3); the PHP type is derived from `type`.
+**`auto` marker (rule S23, Blocker):** optional, value `created` or `modified`, only on a `datetime`/`timestamp` column, each value at most once per table, never on a primary key, a unique column or an FK. The generated persist then stamps the column server-side in UTC (`created` on insert; `modified` on insert and on every change, also a child change of the root) — the column is name-independent and absent from the Command DTO. Mark the creation and last-change columns instead of relying on a database default; a datetime column named `updated_at` without the marker draws a suggestion.
 **Index required:** `name`, `columns`, `type`. PK index = `PRIMARY`.
 **FKs empty:** use `{}` (matches real DB exports) or `[]`.
 
