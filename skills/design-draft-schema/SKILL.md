@@ -35,8 +35,8 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
         {
           "name": "<column_name>",
           "type": "<SQL type, see catalogue>",
-          "phpType": "<int | string | datetime | float | bool>",
           "length": "<optional integer, for varchar/char>",
+          "enumValues": ["<only for type enum>"],
           "nullable": "<true | false>",
           "primary": "<true | false>",
           "autoincrement": "<true | false>"
@@ -61,28 +61,28 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
 }
 ```
 
-**Column required:** `name`, `type`, `phpType`, `nullable`. `length` required for `varchar`. `primary`/`autoincrement` only on PK.
+**Column required:** `name`, `type`, `nullable`. `length` required for `varchar`. `enumValues` (non-empty, no duplicates) for `type: enum`. `primary`/`autoincrement` only on PK. **Never write `phpType`** — the importer rejects a schema carrying it (hard load error, rule CUT3); the PHP type is derived from `type`.
 **Index required:** `name`, `columns`, `type`. PK index = `PRIMARY`.
 **FKs empty:** use `{}` (matches real DB exports) or `[]`.
 
 ### 2. Types
 
-| `type` | `phpType` | Use for | Notes |
-|---|---|---|---|
-| `int` | `int` | numeric IDs, counts | `autoincrement: true` on PKs |
-| `bigint` | `int` | large IDs, counts | Row count > 2^31 |
-| `varchar` | `string` | identifiers, names, short text | `length` mandatory; common 36/50/100/255 |
-| `text` | `string` | long-form text | No `length` |
-| `date` | `datetime` | dates, timestamps | `datetime` covers both date-only and timestamp values in PHP |
-| `decimal` | `string` | money, precise numerics | Own column keys `precision: <int>` (total digits) + `scale: <int>` (decimal places), **not** `length` |
-| `float` | `float` | imprecise numerics | Avoid for currency |
-| `bool` | `bool` | flags | |
-| `json` | `string` | semi-structured payloads | Use sparingly |
+The `type` vocabulary is closed (`column_type_vocabulary.go`); a token outside it is a warning (S22) and would render as PHP `mixed`:
+
+| Family | Allowed `type` tokens | Notes |
+|---|---|---|
+| integer / numeric | `int`, `integer`, `tinyint`, `smallint`, `mediumint`, `bigint`, `decimal`, `numeric`, `float`, `double`, `real` | `autoincrement: true` on PKs; `bigint` for row count > 2^31; `float`/`double`/`real` imprecise, avoid for currency; `decimal`/`numeric` take `precision: <int>` (total digits) + `scale: <int>`, **not** `length` |
+| string | `varchar`, `char`, `text`, `tinytext`, `mediumtext`, `longtext` | `varchar` needs `length` (common 36/50/100/255); `text` family no `length` |
+| bool | `bool`, `boolean` | flags |
+| date / time | `date`, `time`, `datetime`, `timestamp` | `date` = calendar date without time/TZ; `time` = time of day without date/TZ; `datetime` = point in time without TZ binding; `timestamp` = TZ-bound instant |
+| json | `json` | semi-structured payloads, use sparingly |
+| binary | `blob`, `binary`, `varbinary` | |
+| other | `uuid`, `enum` | `enum` requires non-empty `enumValues`; a ValueList bound to a column requires that column to be `type: enum` (V-VL-6, Blocker) |
 
 ### 3. Modelling heuristics
 
 - **Identifier columns:** every business object typically has an internal `int` PK (`id`) **and** a public business identifier (`identifier`, often `varchar(36)` UUID7). Unique index on the business identifier.
-- **Active period:** "active period" in the idea → `activeFrom` (`date`, not nullable) + `activeUntil` (`date`, nullable = open period).
+- **Active period:** "active period" in the idea → `activeFrom` (`date` or `datetime`, per whether a time of day matters; not nullable) + `activeUntil` (same type, nullable = open period).
 - **Lookup tables:** categories/types/statuses get their own table even when described as enums.
 - **Single PK only:** exactly **one** PK column per table. A composite (multi-column) PK is a hard build error (S7). Junction/N:M tables therefore get a surrogate PK + two FKs, never a composite PK.
 - **Junctions:** many-to-many → explicit junction table with surrogate PK + two FK columns.
@@ -97,12 +97,12 @@ Idea: *"Track meter readings. A counter has a number and an active period, lives
   "tables": {
     "counters": {
       "columns": [
-        { "name": "id", "type": "int", "phpType": "int", "nullable": false, "primary": true, "autoincrement": true },
-        { "name": "identifier", "type": "varchar", "phpType": "string", "length": 36, "nullable": false },
-        { "name": "meterLocationIdentifier", "type": "varchar", "phpType": "string", "length": 50, "nullable": false },
-        { "name": "counterNumber", "type": "varchar", "phpType": "string", "length": 50, "nullable": false },
-        { "name": "activeFrom", "type": "date", "phpType": "datetime", "nullable": false },
-        { "name": "activeUntil", "type": "date", "phpType": "datetime", "nullable": true }
+        { "name": "id", "type": "int", "nullable": false, "primary": true, "autoincrement": true },
+        { "name": "identifier", "type": "varchar", "length": 36, "nullable": false },
+        { "name": "meterLocationIdentifier", "type": "varchar", "length": 50, "nullable": false },
+        { "name": "counterNumber", "type": "varchar", "length": 50, "nullable": false },
+        { "name": "activeFrom", "type": "date", "nullable": false },
+        { "name": "activeUntil", "type": "date", "nullable": true }
       ],
       "indexes": [
         { "name": "PRIMARY", "columns": ["id"], "type": "primary" },
@@ -113,8 +113,8 @@ Idea: *"Track meter readings. A counter has a number and an active period, lives
     },
     "registers": {
       "columns": [
-        { "name": "id", "type": "int", "phpType": "int", "nullable": false, "primary": true, "autoincrement": true },
-        { "name": "identifier", "type": "varchar", "phpType": "string", "length": 36, "nullable": false }
+        { "name": "id", "type": "int", "nullable": false, "primary": true, "autoincrement": true },
+        { "name": "identifier", "type": "varchar", "length": 36, "nullable": false }
       ],
       "indexes": [
         { "name": "PRIMARY", "columns": ["id"], "type": "primary" },
