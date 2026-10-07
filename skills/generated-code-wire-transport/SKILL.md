@@ -55,7 +55,7 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 |---|---|---|---|
 | 200 | 200 OK | 0 | Success — every successful read and every successful Process answers 200 (a Process never answers 201, even when its Create node ran; the 201 of an aggregate Create handler stays family-internal) |
 | 204 | 204 No Content | 0 | Success, empty body |
-| 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs) — `data` is `{"@type":"validation","fields":[{field,reason,message}]}` (one form for route guard, aggregate command and Process; `field` is the field path without list index) |
+| 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs) — `data` is `{"@type":"validation","fields":[{field,reason,message}]}` (one form for route guard, aggregate command and Process; `field` is the outer name per FieldMap as a dot path without list index, e.g. `customer.customerName` where the column is called `name`; `reason` is `missing` for an absent value (validator text "can not be empty"), otherwise `invalid`) |
 | 401 | 401 Unauthorized | 2 | Auth missing |
 | 403 | 403 Forbidden | 2 | Auth insufficient |
 | 404 | 404 Not Found | 2 | Target absent |

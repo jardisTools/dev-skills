@@ -58,7 +58,7 @@ End nodes (empty routing map `[]`) let the engine terminate properly.
 
 A Designer node can be marked as **Event ◇** instead of **Action** (`mode: async`). In the Designer the author declares an **event field binding** on the node — a list `eventFields: [{label, source}]`, where each `source` points to a command field of the process input (`ProcessEventFieldEditor.svelte`, details tab of the ticket panel).
 
-**There is no dev task on the generated node body** — the only author activity is the field binding **in the Designer**, not in code. Rules for binding (V-EVT-*): at least one binding, source must be identity-bearing, no name collision, union branches same chain depth. Publication after commit is the caller's concern (event transport recipes: `generated-code-recipes` §1).
+**There is no dev task on the generated node body** — the only author activity is the field binding **in the Designer**, not in code. Rules for binding (V-EVT-*): at least one binding, source must be identity-bearing, no name collision, union branches same chain depth. The generated `logic()` returns the event object(s) in the reserved channel — `'data' => ['__jardis' => ['events' => [new <EventClass>(…)]]]` — and reads the event identity **flat** from the preceding node (`$context->getLatest(<PersistNode>::class)->getData()['<idProp>'] ?? throw …`, no handler-name or root level). `ResolveProcessOutcome` harvests the events from the chain and the orchestrator adds each with `addEvent($event, EventScope::Domain)`. Publication after commit is the caller's concern (event transport recipes: `generated-code-recipes` §1).
 
 ### Rule-node
 
@@ -90,14 +90,13 @@ The engine aborts without a throw if
 
 In all three cases the caller receives the complete `WorkflowContext` back; the responsibility for "was that an intended end or a configuration error?" lies with the orchestrator shell (typically: `try/catch` + checking `$context->getException()` and `$context->getPrevious()`).
 
-### 6. `responseStatus` and the status derivation at run end
+### 6. The node channel `__jardis` and the status derivation at run end
 
-The node body additionally puts `'responseStatus' => $response->getStatus()` into its
-return map (next to `status`/`data`); both are generator emission, not engine behaviour.
+A node body may return `'responseStatus' => $response->getStatus()` and `'errors' => list<string>` next to `status`/`data` from `logic()`. The generated `__invoke` moves them into the **reserved channel** `data['__jardis'] = {status, errors, events}`; they never sit beside the business payload in `data`. Only the key `__jardis` is reserved — business fields named `responseStatus` or `domain` pass through unchanged. The orchestrator hands the executed chain (`$ctx->getChain()`) to the generated, hermetic `{Domain}\Response\ResolveProcessOutcome`, which reads only that channel and strips it from the answer. Channel and status choice are generator emission, not engine behaviour.
 
 This is a refinement of the three-level separation from §1: **branching** (`ON_SUCCESS`/`ON_FAIL`
 = true/false) remains unchanged pure path selection; **response status** still always comes from the
-actual `DomainResponse`, but from the last decisive execution of the node, not from the
+actual `DomainResponse` (carried in `__jardis.status`), but from the last decisive execution of the node (a retried node counts with its last status only; the first node whose last status is a 4xx wins, typed as `validation` / `concurrencyConflict` / `ruleViolation`; without one the Process answers 200), not from the
 edge declaration and not simply from the first or last chain member — a
 convergent No terminal (several predecessor nodes lead into the same reject node) makes "last
 chain member" structurally wrong, a healed retry of the same node makes "any earlier
