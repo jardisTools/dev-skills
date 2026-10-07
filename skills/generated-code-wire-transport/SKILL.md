@@ -53,36 +53,51 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 
 | Status | HTTP | CLI exit | Meaning |
 |---|---|---|---|
-| 200 | 200 OK | 0 | Success with data |
-| 201 | 201 Created | 0 | Resource created |
+| 200 | 200 OK | 0 | Success — every successful read and every successful Process answers 200 (a Process never answers 201, even when its Create node ran; the 201 of an aggregate Create handler stays family-internal) |
 | 204 | 204 No Content | 0 | Success, empty body |
-| 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs) — payload carries `data.request.fields[{field,reason}]` |
+| 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs) — `data` is `{"@type":"validation","fields":[{field,reason,message}]}` (one form for route guard, aggregate command and Process; `field` is the field path without list index) |
 | 401 | 401 Unauthorized | 2 | Auth missing |
 | 403 | 403 Forbidden | 2 | Auth insufficient |
 | 404 | 404 Not Found | 2 | Target absent |
-| 409 | 409 Conflict | 2 | State conflict |
-| 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — payload carries `{rule, messageKey, context}` under `data` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
-| 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422) |
+| 409 | 409 Conflict | 2 | Stale write / state conflict — `data` is `{"@type":"concurrencyConflict","reason","aggregate","context"}` |
+| 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — `data` is `{"@type":"ruleViolation","rule","messageKey","context"}` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
+| 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422); the message is in `errors` |
 
-Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). Per X-1 the generator emits a minimal payload — **Command** echoes only the affected identifier, **Query** returns the projected scalar tree under the aggregate root key (see also `generated-code-recipes` for the full response-shape table). Examples:
+Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). **`getData()` is flat:** it is the business object itself, typed by its own `@type` field — there is no handler-name or aggregate-root level in between. **`getErrors()` is context-keyed** (`array<string, list<string>>`, e.g. `['counter' => ['message']]`); on the wire `errors` is an object `{<context>: [message, …]}`, an empty `{}` when nothing failed (never `[]`). `meta` carries `duration`, `contexts`, `timestamp`, `version`. Per X-1 the generator emits a minimal payload — **Command** echoes only the reference values (root business key, plus the affected child key), **Query** returns the projected scalar tree of the aggregate record, flat. `@type` per answer kind (full table: `generated-code-recipes` Recipe 6): the aggregate's root key (`counter`) for a single read and a Command, `<agg>List` for list and bulk reads, the aggregate of the success command for a Process, `validation` / `concurrencyConflict` / `ruleViolation` for 400 / 409 / 422. Examples:
 
 ```json
-// Command (e.g. CreateCounter) → 201
-{
-  "status": 201,
-  "data":   { "identifier": "018e..." },
-  "errors": [],
-  "meta":   { "duration_ms": 12, "version": "v1.0" }
-}
-
-// Query (e.g. getCounterById / getCounterByIdentifier) → 200
+// Command via a Process (e.g. createCounter) → 200, reference value only
 {
   "status": 200,
-  "data":   { "counter": { "id": 1, "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01" } },
-  "errors": [],
-  "meta":   { "duration_ms": 8, "version": "v1.0" }
+  "data":   { "@type": "counter", "counterIdentifier": "018e..." },
+  "errors": {},
+  "meta":   { "duration": 12.4, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
 }
+
+// Query (e.g. getCounterById / getCounterByIdentifier) → 200, flat projected record
+{
+  "status": 200,
+  "data":   { "@type": "counter", "id": 1, "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01" },
+  "errors": {},
+  "meta":   { "duration": 8.1, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
+}
+
+// Bulk read (getCounterByIds / getCounterByIdentifiers) → 200
+{ "status": 200, "data": { "@type": "counterList", "items": [ { "id": 1, "identifier": "018e..." } ] }, "errors": {}, "meta": { … } }
+
+// Validation failure → 400
+{
+  "status": 400,
+  "data":   { "@type": "validation", "fields": [ { "field": "counterNumber", "reason": "missing", "message": "Field is required." } ] },
+  "errors": { "<context>": [ "…" ] },
+  "meta":   { … }
+}
+
+// Rule rejection → 422
+{ "status": 422, "data": { "@type": "ruleViolation", "rule": "…", "messageKey": "counter.must_be_active", "context": { "identifier": "018e..." } }, "errors": {}, "meta": { … } }
 ```
+
+A single read that finds nothing answers with an empty `data` (no `@type`). A list read through the aggregate read facade (`{agg}List(...)`) returns a plain array `{items, total, limit, offset}`, not a `DomainResponse`; the generated route wraps it as `data = {"@type":"<agg>List", items, total, limit, offset}` — a hand-written transport that wants the same outer shape does the same.
 
 CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle (the single-aggregate-record projection is key-conformant either way); only an aggregate **without** a unique key leads list items with the root `id`. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
 
@@ -109,9 +124,10 @@ final class CreateCounterController implements RequestHandlerInterface
 
         // Envelope is your app's mapper — build it inline from the DomainResponse getters:
         return (new JsonResponse([
-            'data'   => $response->getData(),
-            'errors' => $response->getErrors(),
             'status' => $response->getStatus(),
+            'data'   => $response->getData() ?: new \stdClass(),      // flat business object, typed by `@type`
+            'errors' => $response->getErrors() ?: new \stdClass(),    // object {<context>: [message]}, never []
+            'meta'   => $response->getMetadata(),
         ]))->withStatus($response->getStatus());
     }
 }
@@ -130,9 +146,10 @@ final class GetCounterController implements RequestHandlerInterface
         $response = $this->app->counter()->counter()->getCounterById(new QueryCounterById(id: $id));
 
         return (new JsonResponse([
-            'data'   => $response->getData(),
-            'errors' => $response->getErrors(),
             'status' => $response->getStatus(),
+            'data'   => $response->getData() ?: new \stdClass(),      // flat business object, typed by `@type`
+            'errors' => $response->getErrors() ?: new \stdClass(),    // object {<context>: [message]}, never []
+            'meta'   => $response->getMetadata(),
         ]))->withStatus($response->getStatus());
     }
 }
@@ -167,7 +184,7 @@ public function __invoke(CreateCounterMessage $msg): void
 
 ### 5. Error handling
 
-- 4xx business/validation errors → already in `DomainResponse::getErrors()`. Serialise, do not rethrow.
+- 4xx business/validation errors → already in the response: the typed `data` (`validation` / `concurrencyConflict` / `ruleViolation`, §3) and `DomainResponse::getErrors()`. Serialise both, do not rethrow; `errors` stays an object (`{}` when empty).
 - Infrastructure exceptions → let them escape to framework middleware / CLI default handler. No bespoke envelope.
 - Never `catch (\Throwable)` in the controller to build a custom error body.
 
@@ -183,6 +200,6 @@ public function __invoke(CreateCounterMessage $msg): void
 
 - Aggregate facade layout / V-rules / process modelling: `generated-code-extend` §1, §4, §5
 - Response shapes per use-case kind (X-1 table): `generated-code-recipes`
-- `DomainResponse` / `ContextResponse` / `DomainResponseTransformer`: generated per domain (`{Domain}\Response\`, Response-Trio) — not package classes; `ResponseStatus` + response/context interfaces: `jardissupport/contracts`
+- `DomainResponse` / `ContextResponse` / `DomainResponseTransformer` (+ `ResolveProcessOutcome`, which decides how a Process answers): generated per domain (`{Domain}\Response\`) — not package classes; `ResponseStatus` + response/context interfaces: `jardissupport/contracts`
 - ENV-driven DomainKernel assembly + one-time App entry point (`App/bootstrap.php`): `core-kernel` (Bootstrap-Packer `BuildDomainKernelFromEnv`) — `jardiscore/foundation` does not exist; never reach for it
 - HTTP delivery (routing, PSR-15 middleware, canonical envelope mapper `MapDomainResponse`): `core-app` (`jardiscore/app`) — optional, one of several valid transports (§4)
