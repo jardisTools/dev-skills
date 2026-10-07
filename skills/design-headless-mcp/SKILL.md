@@ -62,7 +62,7 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    and, when `reportMd` is omitted, writes `SchemaReport.md` from that analysis.
 3. **`save_aggregate`** — persist the aggregate's designer graph (entities, relations, keys).
    Returns a mtime `CONFLICT` if the on-disk graph moved under you — reload and retry, or pass
-   the force flag once you have confirmed the overwrite is intended. Node positions and the
+   the force flag once you have confirmed the overwrite is intended. A node's optional `identifier {stage, column}` declares its public Identifier (omit = keep the stored declaration, `{}` = delete it after the merge, invalid = 422 `VALIDATION_FAILED` before anything is written). Node positions and the
    viewport are optional: when absent, the value in `Layout.json` is kept. A node's optional
    `path` (as returned by the aggregate load) is accepted, so a table placed at more than one
    position survives load then save.
@@ -204,6 +204,8 @@ the SAME service method and returns the SAME JSON shape; the contract itself is 
 `save_closures` — Resource and HTTP route only compose a read-friendly, AI-facing view of the same
 data.
 
+**Aggregate delete takes its queries along:** `delete_aggregate` removes the queries the aggregate owns from `Queries.json` (the delete preview lists them as `affectedQueries`; duplicated-root queries are `unassignableQueries` and stay); declared readers (`reads:`) of such a query block with 409 `details.queryReaders`, one `force` overrides every block, the answer carries `removedQueries`. `validate_definitions_all` also checks each BC's Queries (rows with `aggregate ""`), and the process validator rejects colliding PHP class names derived from one process (Blocker `V-PROC-CLASS-UNIQUE`).
+
 **Queries-Layer — full MCP parity:** a BC's
 `Queries.json` (declarative read queries — `root:` entity, visibility `internal`/`public`,
 condition tree, parameters, joins; every query is a paginated list answering
@@ -212,7 +214,7 @@ is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
 pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_closures`; a draft with findings still writes, `valid`/`errors`/
 `warnings`/`suggestions` travel in the response); `validate_queries` checks a not-yet-saved query
-set against V-QDEF-1..16, 18..24 plus RB1 (name collision with the read base, Blocker) —
+set against V-QDEF-1..16, 18..25 (25 = `limit` above 500, warning) plus RB1 (name collision with the read base, Blocker) —
 read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
