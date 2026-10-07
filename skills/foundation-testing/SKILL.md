@@ -129,11 +129,24 @@ final class CreateCounterTest extends MeterDeviceTestCase   // generated base
         $response = $domain->counterWrite()->counterWrite()
             ->createCounter(new CommandCounter(name: 'M-1', obis: '1-0:1.8.0*255'));
 
+        // family-internal Create handler: 201; `data` is flat, typed by `@type`
         self::assertSame(201, $response->getStatus());
-        self::assertArrayHasKey('identifier', $response->getData());
+        self::assertSame('counter', $response->getData()['@type']);
+        self::assertArrayHasKey('counterIdentifier', $response->getData());
+    }
+
+    public function testCreateCounterProcessAnswers200WithReferenceValue(): void
+    {
+        $response = $this->createDomain()->counter()->process()->createCounter(new CreateCounter(/* … */));
+
+        self::assertSame(200, $response->getStatus());   // a Process answers 200, never 201
+        self::assertSame('counter', $response->getData()['@type']);
+        self::assertArrayHasKey('counterIdentifier', $response->getData());
     }
 }
 ```
+
+`getData()` is the flat business object — read `getData()['<field>']` directly; the 400 / 409 / 422 answers carry `@type` `validation` (`fields[]={field, reason, message}`) / `concurrencyConflict` / `ruleViolation`. `getErrors()` is context-keyed (`array<string, list<string>>`); on the wire it is an object, `{}` when empty.
 
 Never assert SQL / PDO calls — assert the response and the persisted state via a second read: `$domain->counter()->counter()->getCounterById(...)`. Reads stay on the public chain; the harness is for writes only.
 
@@ -146,7 +159,8 @@ public function testHydrateRejectsInvalidObis(): void
         ->createCounter(new CommandCounter(name: 'M-1', obis: 'not-an-obis'));
 
     self::assertSame(400, $response->getStatus());
-    self::assertStringContainsString('Invalid OBIS', $response->getErrors()[0] ?? '');
+    $messages = array_merge(...array_values($response->getErrors()));   // errors are context-keyed
+    self::assertStringContainsString('Invalid OBIS', $messages[0] ?? '');
 }
 ```
 
@@ -162,11 +176,11 @@ public function testCreateCounterCollectsCounterCreated(): void
     $events = array_merge(...array_values($response->getEvents(EventScope::Internal)));
     self::assertCount(1, $events);
     self::assertInstanceOf(CounterCreated::class, $events[0]);
-    self::assertSame([], $response->getEvents(EventScope::Domain));   // Domain events arrive in Phase B
+    self::assertSame([], $response->getEvents(EventScope::Domain));   // an aggregate command collects Internal events only; a Domain event is announced by an Event ◇ node of a Process
 }
 ```
 
-For **listener-side / transport** tests (a Process node publishing `$response->getEvents()` to Kafka etc.), register `EventCollector` (`jardisadapter/eventdispatcher` — see `adapter-eventdispatcher`) on the dispatcher the node publishes through, or substitute a `MessagingService` fake (test `ClassVersionConfig`) and assert `publish()` was called.
+For a Process with an **Event ◇ node**, assert the announced event on the process response: `array_merge(...array_values($response->getEvents(EventScope::Domain)))` — the node carries it in the reserved channel `data['__jardis']['events']`, the orchestrator collects it as a Domain event, and the identity inside the event is read flat from the preceding node's `getData()`. For **listener-side / transport** tests (a Process node publishing the events of the command it called to Kafka etc.), register `EventCollector` (`jardisadapter/eventdispatcher` — see `adapter-eventdispatcher`) on the dispatcher the node publishes through, or substitute a `MessagingService` fake (test `ClassVersionConfig`) and assert `publish()` was called.
 
 **D. Domain Service with external port** — provide a Fake implementing the Contract in `tests/Support/`, bind via test container. Service IPO test, no HTTP/DB:
 
@@ -195,7 +209,7 @@ final class CounterMustBeActiveTest extends TestCase
 }
 ```
 
-This Unit test does **not** replace an integration test — PRD A16 makes both mandatory. The **endpoint integration test** proves the whole chain: the Guard closure actually runs (short-circuit on the first rejection — assert an invocation count on a second Rule in the chain to prove it), a rejection surfaces as `RuleViolation` (422) with `{rule, messageKey, context}`, and — if the Command is exposed — that the exposed BC-facade method runs through the identical chain as the internal call. Never assert only the Unit test and call the Rule "covered" — the Guard wiring, the 422-response shape, and the exposed-door path are exactly what an isolated predicate test cannot see.
+This Unit test does **not** replace an integration test — PRD A16 makes both mandatory. The **endpoint integration test** proves the whole chain: the Guard closure actually runs (short-circuit on the first rejection — assert an invocation count on a second Rule in the chain to prove it), a rejection surfaces as `RuleViolation` (422) with `data` = `{"@type":"ruleViolation","rule","messageKey","context"}`, and — if the Command is exposed — that the exposed BC-facade method runs through the identical chain as the internal call. Never assert only the Unit test and call the Rule "covered" — the Guard wiring, the 422-response shape, and the exposed-door path are exactly what an isolated predicate test cannot see.
 
 **Do not:**
 
