@@ -55,7 +55,8 @@ final class AggregateAgentsMd
      * - Empty descriptor list AND (catalog installed OR router text given) → managed block
      *   without vendor sources is written.
      * - Router text (may be empty) opens the managed block, before the vendor aggregation.
-     * - A file above the Codex size limit is still written; the result carries a warning.
+     * - A file above the Codex size limit is still written; the result carries a warning, but only when
+     *   `$codexHost` is true (`codex` is among the configured hosts).
      * - AGENTS.md is a link or lies behind one → no block, no backup, nothing written; result has count 0
      *   and a warning that names the way out (a regular AGENTS.md, imported by CLAUDE.md via `@AGENTS.md`).
      * - A write failure (e.g. a directory at the target) is a core error: InstallFailedException.
@@ -71,6 +72,7 @@ final class AggregateAgentsMd
         string $projectRoot,
         bool $catalogInstalled = false,
         string $routerText = '',
+        bool $codexHost = false,
     ): AggregateAgentsResult {
         if ($descriptors === [] && !$catalogInstalled && $routerText === '') {
             return new AggregateAgentsResult(0, null);
@@ -101,7 +103,7 @@ final class AggregateAgentsMd
             count($descriptors),
             $backupPath,
             $analysis->healedDuplicateBlock,
-            ($this->sizeWarning)(strlen($payload)),
+            $codexHost ? ($this->sizeWarning)(strlen($payload)) : null,
             !$analysis->fileExisted,
         );
     }

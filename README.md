@@ -17,7 +17,7 @@ The overview in German: [overview.de.html](https://jardistools.github.io/dev-ski
 After `composer install` or `composer update`, the plugin does the following in your project root:
 
 1. **Skills.** It copies the bundled skills of the installation profile (all 34 in the profile `jardis`, 25 in the profile `core`, see [Installation profile](#installation-profile-profile)) and every skill of a `jardis*` vendor package (`vendor/<vendor>/<package>/.claude/skills/<name>/`) into two folders: `.claude/skills/` and `.agents/skills/`.
-2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then aggregates the `AGENTS.md` of every Jardis vendor package. A project that is itself a `jardis*` package gets no block (see [`agents-md`](#agentsmd-in-a-jardis-package-agents-md)).
+2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then lists every Jardis vendor package as a short block (what it is, when to use it, which skills to load and the docs URL), not as its full `AGENTS.md`. A project that is itself a `jardis*` package gets no block (see [`agents-md`](#agentsmd-in-a-jardis-package-agents-md)).
 3. **`CLAUDE.md`.** It adds a managed block that imports `@AGENTS.md` (not with `agents-md` = `none`).
 4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName` (only with `gemini` in [`hosts`](#reviewer-shells-per-tool-hosts); not with `agents-md` = `none`).
 5. **Reviewer agents.** It writes the 19 reviewer roles of the `process-review-board` skill (17 in the profile `core`) as agent files for the tools named in [`hosts`](#reviewer-shells-per-tool-hosts) (default: Claude Code only; see [Reviewer agent files](#reviewer-agent-files)).
@@ -83,7 +83,7 @@ Re-checked before each release.
 
 Re-checked before each release.
 
-With many vendor packages the managed `AGENTS.md` block can grow past 32 KiB. The router stands first in the block, ahead of the aggregated package content. The plugin prints a warning when `AGENTS.md` exceeds 32,768 bytes and still writes the file.
+With many vendor packages the managed `AGENTS.md` block can grow past 32 KiB. The router stands first in the block, ahead of the aggregated package content. The short package blocks keep the file far below that; the plugin prints a warning when `AGENTS.md` exceeds 32,768 bytes only if `codex` is listed in [`hosts`](#reviewer-shells-per-tool-hosts), and still writes the file.
 
 ### Cursor — documented, not tested
 

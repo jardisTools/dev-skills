@@ -531,7 +531,13 @@ final class SkillInstallerTest extends TestCase
         );
         $this->pluginRepo->writeFile('router/AGENTS-router.md', "# Router\nRoute here.\n");
 
-        $report = $this->install();
+        // The Codex size warning only applies when `codex` is a configured host. The fixture has no heading, so the
+        // whole body counts as the package intro and stays in the short block, which keeps the file oversized.
+        $installer = new SkillInstaller(
+            config: PluginConfig::all()->withHosts([Host::Claude, Host::Codex], null),
+            pluginRoot: $this->pluginRepo->root,
+        );
+        $report = $installer($this->project->root, $this->project->path('vendor'), '0.0.0');
 
         $size = filesize($this->project->path('AGENTS.md'));
         self::assertGreaterThan(32768, $size);

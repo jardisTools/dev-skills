@@ -63,6 +63,44 @@ final class SkillInstallerAgentsMdTest extends TestCase
         self::assertStringContainsString('BEGIN jardis/dev-skills', $this->excludeFile());
     }
 
+    public function testSizeWarningOnlyWithCodexHostAndVendorBlockIsTheShortForm(): void
+    {
+        $this->project->writeFile(
+            'vendor/jardisadapter/cache/AGENTS.md',
+            "# jardisadapter/cache\n\nIntro.\n\n## Usage essentials\n\n" . str_repeat("- rule line\n", 4000),
+        );
+        $this->project->writeFile('vendor/jardisadapter/cache/.claude/skills/adapter-cache/SKILL.md', 'x');
+        $this->pluginRepo->writeFile('catalog/manifest.json', json_encode([[
+            'package' => 'jardisadapter/cache',
+            'capability' => 'multi-layer caching',
+            'use_when' => 'you need a cache',
+            'composer_require' => 'composer require jardisadapter/cache',
+        ]], JSON_THROW_ON_ERROR));
+
+        $withoutCodex = $this->install([], 'acme/app');
+        $agentsMd = (string) file_get_contents($this->project->path('AGENTS.md'));
+
+        self::assertSame([], $withoutCodex->warnings());
+        self::assertLessThan(16384, strlen($agentsMd));
+        self::assertStringContainsString('Multi-layer caching.', $agentsMd);
+        self::assertStringContainsString('load skill `adapter-cache`', $agentsMd);
+        self::assertStringNotContainsString('rule line', $agentsMd);
+    }
+
+    public function testOversizedAgentsMdWarnsOnlyWithCodexHost(): void
+    {
+        // The short blocks no longer reach the Codex limit, so an oversized router text stands in for a large file.
+        $this->pluginRepo->writeFile('router/AGENTS-router.md', str_repeat("Router line.\n", 3000));
+
+        $without = $this->install([], 'acme/app');
+        $with = $this->install(['hosts' => ['claude', 'codex']], 'acme/app');
+
+        self::assertGreaterThan(32768, filesize($this->project->path('AGENTS.md')));
+        self::assertSame([], $without->warnings());
+        self::assertCount(1, $with->warnings());
+        self::assertStringContainsString('Codex limit', $with->warnings()[0]);
+    }
+
     public function testReviewerShellsStillComeInTheNoneMode(): void
     {
         $withBlock = new TempProject('dev-skills-agentsmd-ref-');
