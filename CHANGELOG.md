@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.17.0] - 2026-10-08
+
+### Changed
+- The closure skills (`generated-code-extend`, `generated-code-recipes`, `design-headless-mcp`, `design-model-capabilities`) describe the Closure test as a task for the AI: written from `examples[]` against the generated `ClosureTestCase`, with the work package pointing to `files.test`, `testExists` and `runTest`.
+- `generated-code-extend` and `foundation-testing` name the single hermetic `tests/Unit/Closure/{Domain}/ClosureTestCase.php` (helpers `make()`/`readsReturn()`/`usesReturn()`); no skill mentions a generated test any more.
+
 ## [1.16.0] - 2026-10-08
 
 ### Changed

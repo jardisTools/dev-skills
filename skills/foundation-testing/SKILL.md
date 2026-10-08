@@ -209,6 +209,8 @@ final class CounterMustBeActiveTest extends TestCase
 }
 ```
 
+In a Jardis-generated domain the Rule test extends the generated `tests/Unit/Closure/{Domain}/ClosureTestCase.php` instead of `TestCase` directly: `$rule = $this->make(CounterMustBeActive::class, [GetCounterListHandler::class => $this->readsReturn(['items' => [...], 'total' => 1])])`; use `usesReturn()` for `uses` stand-ins; write one test case per `examples[]` entry.
+
 This Unit test does **not** replace an integration test — PRD A16 makes both mandatory. The **endpoint integration test** proves the whole chain: the Guard closure actually runs (short-circuit on the first rejection — assert an invocation count on a second Rule in the chain to prove it), a rejection surfaces as `RuleViolation` (422) with `data` = `{"@type":"ruleViolation","rule","messageKey","context"}`, and — if the Command is exposed — that the exposed BC-facade method runs through the identical chain as the internal call. Never assert only the Unit test and call the Rule "covered" — the Guard wiring, the 422-response shape, and the exposed-door path are exactly what an isolated predicate test cannot see.
 
 **Do not:**

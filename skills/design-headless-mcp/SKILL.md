@@ -189,7 +189,7 @@ one Closure on a single call, assembled purely from already-saved catalogs (Clos
 Queries.json, the aggregate/command catalog, ValueLists.json, usage), no second source of truth:
 `task` (a plain-language brief), `contract` (description, the exact `__invoke` signature, each
 input's PHP type, the output's type plus its pass/reject or return shape, `policyRef`, `examples`),
-`files` (the stub path plus `stubExists`, the generated test's path plus `testExists` — both
+`files` (the stub path plus `stubExists`, the path of the test you write from `examples[]` plus `testExists` — both
 Go-derived facts, true only when that file was actually found on disk —, and how to run the
 test), `uses`/`reads` (every composed Closure / readable query, each with its own signature and
 call recipe), `types` (the PHP field shape of every `command`/`aggregate`/`valuelist` input),
@@ -198,7 +198,7 @@ chains — a guard entry carries `viaSet` when a Rule-Set is the only path bindi
 that chain — process Rule-nodes, and other Closures' `uses`), `body` (`offen`/`geschrieben` —
 whether the generated stub still throws its Not-implemented marker; absent for a Rule-Set, which
 has no body of its own), and `missing` (concrete next steps). Flow: read the resource → write the
-`__invoke` body at `files.stub` → `build` → run the generated test at `files.test` until it is
+`__invoke` body at `files.stub` → `build` → write the test at `files.test` from `examples[]` (one case per example, against the generated `ClosureTestCase`), run it (`files.runTest`) until it is
 green. Also reachable over HTTP — `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work` calls
 the SAME service method and returns the SAME JSON shape; the contract itself is written via
 `save_closures` — Resource and HTTP route only compose a read-friendly, AI-facing view of the same
