@@ -72,6 +72,8 @@ final class WriteReviewerShells
         }
 
         $managed = $this->managedShells($projectRoot);
+        /** @var list<string> $foreign */
+        $foreign = [];
         $names = array_filter(
             scandir($sourceDir) ?: [],
             static fn (string $name): bool => str_ends_with($name, '.md') && is_file($sourceDir . '/' . $name),
@@ -94,12 +96,15 @@ final class WriteReviewerShells
                 continue;
             }
 
-            $this->writeShellsOf($source, $projectRoot, $realRoot, $managed, $report);
+            $this->writeShellsOf($source, $projectRoot, $realRoot, $managed, $report, $foreign);
         }
+
+        $report->addWarningIfAny((new SummarizeLeftUnchanged())($foreign));
     }
 
     /**
      * @param array<string, true> $managed
+     * @param list<string> $foreign collects the paths left unchanged (reported once by the caller)
      */
     private function writeShellsOf(
         ReviewerSource $source,
@@ -107,21 +112,22 @@ final class WriteReviewerShells
         string $realRoot,
         array $managed,
         InstallReport $report,
+        array &$foreign,
     ): void {
         foreach ($this->hosts as $host) {
             $format = $host->shellFormat();
             try {
-                $warning = $this->writeShell(
+                $this->writeShell(
                     $projectRoot,
                     $realRoot,
                     $format->pathFor($source->role),
                     ($this->renderShell)($source, $format),
                     $managed,
+                    $foreign,
                 );
             } catch (InstallFailedException $failure) {
-                $warning = $failure->getMessage();
+                $report->addWarning($failure->getMessage());
             }
-            $report->addWarningIfAny($warning);
         }
     }
 
@@ -147,7 +153,7 @@ final class WriteReviewerShells
 
     /**
      * @param array<string, true> $managed
-     * @return string|null a warning when the shell was left as it was
+     * @param list<string> $foreign
      */
     private function writeShell(
         string $projectRoot,
@@ -155,18 +161,18 @@ final class WriteReviewerShells
         string $path,
         string $content,
         array $managed,
-    ): ?string {
+        array &$foreign,
+    ): void {
         $target = $projectRoot . '/' . $path;
         $isManaged = isset($managed[$path]);
 
         if (is_link($target) || (file_exists($target) && (!$isManaged || !is_file($target)))) {
-            return sprintf(
-                '%s exists and is not a reviewer shell of the plugin; the file was left unchanged.',
-                $path,
-            );
+            $foreign[] = $path;
+
+            return;
         }
         if ($isManaged && is_file($target) && file_get_contents($target) === $content) {
-            return null;
+            return;
         }
 
         $this->ensureDirectory(dirname($target), $projectRoot, $realRoot);
@@ -186,8 +192,6 @@ final class WriteReviewerShells
                 ));
             }
         }
-
-        return null;
     }
 
     private function ensureDirectory(string $directory, string $projectRoot, string $realRoot): void

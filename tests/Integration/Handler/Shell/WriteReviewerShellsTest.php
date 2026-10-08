@@ -113,7 +113,7 @@ final class WriteReviewerShellsTest extends TestCase
 
         self::assertSame($foreign, file_get_contents($this->project->path('.codex/agents/stage-verifier.toml')));
         self::assertCount(1, $report->warnings());
-        self::assertStringContainsString('.codex/agents/stage-verifier.toml', $report->warnings()[0]);
+        self::assertStringContainsString('stage-verifier.toml', $report->warnings()[0]);
         self::assertFileExists($this->project->path('.claude/agents/stage-verifier.md'));
         self::assertArrayNotHasKey('.codex/agents/stage-verifier.toml', $this->manifest()->selfSet);
         self::assertCount(4, $this->manifest()->selfSet);
@@ -164,7 +164,7 @@ final class WriteReviewerShellsTest extends TestCase
         ]))($this->project->root, $this->project->path('vendor'), $report);
 
         self::assertCount(2, $report->warnings());
-        self::assertStringContainsString('.codex/agents/test-reviewer.toml', implode("\n", $report->warnings()));
+        self::assertStringContainsString('test-reviewer.toml', implode("\n", $report->warnings()));
         self::assertStringContainsString('.gemini/agents', implode("\n", $report->warnings()));
         self::assertDirectoryExists($this->project->path('.codex/agents/test-reviewer.toml'));
         self::assertFileExists($this->project->path('.claude/agents/test-reviewer.md'));

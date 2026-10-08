@@ -4,6 +4,15 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.14.1] - 2026-10-08
+
+### Changed
+- The "exists and is not a reviewer shell of the plugin; the file was left unchanged." notice is collected into ONE summary line per install (names shortened after five).
+
+### Documentation
+- README: `AGENTS.md` and `.agents/skills/<package>/` change on every install/require of a Jardis package and belong in the commit.
+- `generated-code-wire-transport`: the root update carries no child lists.
+
 ## [1.13.0] - 2026-10-08
 
 ### Added

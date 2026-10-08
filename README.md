@@ -26,6 +26,11 @@ After `composer install` or `composer update`, the plugin does the following in 
 
 The add-ons — the `CLAUDE.md` block, the Gemini entry, the reviewer agent files and the exclude block — only warn when they fail; they never stop the install.
 
+**Commit the result.** `AGENTS.md` and `.agents/skills/<package>/` change on every install or require of a Jardis package (adapters too, for example after `set_stack_selection`).
+Commit them together with `composer.lock`, as you commit the lock file.
+`.agents/` is not ignored: the folder is part of the project state.
+Agent files under `.claude/agents` that are not reviewer shells of the plugin are left unchanged and reported in one summary line.
+
 The bundled skills also contain a development process: tier choice, concept, PRD, plan, review board, stage run, verification and closing. Two tools for it ship with the package: the knowledge pool checker and the `commit-msg` hook (see [Process tools](#process-tools)).
 
 ---
@@ -391,7 +396,7 @@ The 19 reviewer roles of `process-review-board` live in `skills/process-review-b
 | GitHub Copilot | `.github/agents/<role>.agent.md` |
 | Gemini CLI | `.gemini/agents/<role>.md` |
 
-A file the plugin did not write itself is never overwritten; the plugin leaves it and warns. A link at the target path or in a folder on the way is never followed. On uninstall the plugin deletes the files it wrote and removes their folders when they are empty.
+A file the plugin did not write itself is never overwritten; the plugin leaves it and reports all such files in one summary line. A link at the target path or in a folder on the way is never followed. On uninstall the plugin deletes the files it wrote and removes their folders when they are empty.
 
 ---
 
