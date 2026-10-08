@@ -25,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 final class SkillInstallerProfileTest extends TestCase
 {
     private const JARDIS_SKILLS = [
-        'design-draft-schema', 'design-headless-mcp', 'generated-code-extend', 'generated-code-recipes',
+        'design-draft-schema', 'design-headless-mcp', 'design-model-capabilities', 'generated-code-extend', 'generated-code-recipes',
         'generated-code-versioning', 'generated-code-wire-transport', 'generated-code-workflow-api',
         'start-orientation',
     ];
@@ -75,7 +75,7 @@ final class SkillInstallerProfileTest extends TestCase
         $report = $this->install(PluginConfig::all());
 
         self::assertSame(InstallProfile::Jardis, $report->profile());
-        self::assertCount(33, $this->skillFolders());
+        self::assertCount(34, $this->skillFolders());
         self::assertSame(InstallProfile::Jardis, $this->manifest()->profile);
         $agentsMd = (string) file_get_contents($this->project->path('AGENTS.md'));
         self::assertStringContainsString('## Jardis projects', $agentsMd);
@@ -100,7 +100,7 @@ final class SkillInstallerProfileTest extends TestCase
         self::assertSame(InstallProfile::Core, $core->profile());
 
         $this->install((new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => 'jardis']]));
-        self::assertCount(33, $this->skillFolders());
+        self::assertCount(34, $this->skillFolders());
     }
 
     public function testInstallationFromBeforeTheProfileKeepsEverythingInEveryRun(): void
@@ -110,7 +110,7 @@ final class SkillInstallerProfileTest extends TestCase
         $first = $this->install(PluginConfig::all());
 
         self::assertSame(InstallProfile::Jardis, $first->profile());
-        self::assertCount(33 + 18, $this->skillFolders(), 'the 33 skills plus the 18 redirects');
+        self::assertCount(34 + 18, $this->skillFolders(), 'the 34 skills plus the 18 redirects');
         self::assertNull($this->manifest()->profile, 'a kept installation is not marked');
 
         $before = TreeSnapshot::ofProject($this->project);
@@ -132,7 +132,7 @@ final class SkillInstallerProfileTest extends TestCase
         $report = $this->install(PluginConfig::all());
 
         self::assertSame(InstallProfile::Jardis, $report->profile());
-        self::assertCount(33, $this->skillFolders());
+        self::assertCount(34, $this->skillFolders());
         self::assertSame([], $report->removedBundledSkills());
     }
 

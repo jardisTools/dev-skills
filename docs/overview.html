@@ -125,8 +125,8 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 
 <div class="fixed"><b>Fixed points:</b>
 <ul>
-<li>33 bundled skills in nine areas, plus the skills of every Jardis vendor package</li>
-<li>The profile <code>core</code> installs 25 of them; a Jardis package or <code>profile</code> <code>jardis</code> adds the other eight</li>
+<li>34 bundled skills in nine areas, plus the skills of every Jardis vendor package</li>
+<li>The profile <code>core</code> installs 25 of them; a Jardis package or <code>profile</code> <code>jardis</code> adds the other nine</li>
 <li>Skills land in <code>.claude/skills</code> and <code>.agents/skills</code>; one managed block lands in <code>AGENTS.md</code></li>
 <li>Branch, commit and merge are gates of the human; no commit carries a tool attribution</li>
 <li>19 reviewer roles (17 in the profile <code>core</code>) are written as agent files for five tools</li>
@@ -338,6 +338,7 @@ The area says where in the lifecycle a skill is used: <code>start</code>, <code>
   <div class="area"><h4>design <span>before the generated code · profile jardis</span></h4>
     <div class="sk"><div class="n">design-draft-schema</div><div class="d">Draft the content of a <code>Schema.json</code> for the Designer from a plain-text domain idea</div></div>
     <div class="sk"><div class="n">design-headless-mcp</div><div class="d">Drive a Jardis workspace without a browser through <code>jardis mcp</code>: tools, resources, error envelopes</div></div>
+    <div class="sk"><div class="n">design-model-capabilities</div><div class="d">Decide what to model before the first interview question: what each Jardis tool delivers without hand code, what Jardis lacks, the capability table</div></div>
   </div>
 
   <div class="area"><h4>generated-code <span>after the Designer · profile jardis</span></h4>
@@ -387,7 +388,7 @@ The area says where in the lifecycle a skill is used: <code>start</code>, <code>
 <tr><td><code>open-question-gate</code></td><td><code>process-run-stage</code></td><td>before a question reaches the human</td></tr>
 <tr><td><code>failure-diagnosis</code></td><td><code>process-run-stage</code></td><td>after RED, when the report does not explain the cause</td></tr>
 </table>
-<p class="src">Source: the frontmatter of the 33 skills under <code>skills/</code> and <code>docs/SKILL-FORMAT.md</code> (area prefixes).</p>
+<p class="src">Source: the frontmatter of the 34 skills under <code>skills/</code> and <code>docs/SKILL-FORMAT.md</code> (area prefixes).</p>
 </section>
 
 <!-- ========================================================= 4 -->
@@ -401,7 +402,7 @@ your-project/
 │     <span class="t-now">+ aggregated AGENTS.md of the Jardis vendor packages</span>   <span class="t-c">warning above 32,768 bytes (Codex)</span>
 ├── <span class="t-now">CLAUDE.md</span>                         <span class="t-c">managed block: imports @AGENTS.md</span>
 ├── .claude/
-│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 bundled skills (25 in the profile core) + vendor skills · Claude Code, Copilot</span>
+│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">34 bundled skills (25 in the profile core) + vendor skills · Claude Code, Copilot</span>
 │   ├── skills/.jardis-managed.json     <span class="t-c">manifest: every skill folder the plugin installed</span>
 │   ├── <span class="t-now">agents/&lt;role&gt;.md</span>                <span class="t-c">reviewer agent files (Claude Code)</span>
 │   └── .jardis-backup/                 <span class="t-c">copies of folders that differed from the managed state</span>
@@ -432,7 +433,7 @@ your-project/
 <h3>Configuration <code>composer.json</code></h3>
 <pre class="tree" style="white-space:pre;font-size:11.5px">"extra": { "jardis/dev-skills": {
     "bundled-skills": true,
-    <span class="t-c">// the skills of the profile by default (33 in jardis, 25 in core); a list or include/exclude narrows it</span>
+    <span class="t-c">// the skills of the profile by default (34 in jardis, 25 in core); a list or include/exclude narrows it</span>
     <span class="t-c">// foundation-* and process-* are always installed</span>
     "git-rules": true,
     <span class="t-c">// "delegated": the session commits itself, merge and push stay with the human; false removes the git sentences from the router</span>

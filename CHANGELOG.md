@@ -4,6 +4,17 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.15.0] - 2026-10-08
+
+### Added
+- Skill `design-model-capabilities` (profile `jardis`, zone `pre`): the law "use the platform before you program", per Jardis tool (schema, aggregate, value list, query, process, closure, field map, strategic layer, tooling) the settings, allowed values, generated effect and MCP/UI door, the list of what Jardis does not have, the mandatory capability table "model element → Jardis capability → used / not used" with an example, and the reading order before the first interview.
+
+### Changed
+- `foundation-working-principles`: new rule 4 "Use the platform before you program", `next` adds `design-model-capabilities`.
+- `start-orientation`: the design phase and the routing table point to `design-model-capabilities` before the interview.
+- `process-concept` and `process-write-prd`: in a Jardis project the capability table is a mandatory part of the concept and the PRD.
+- The bundle has 34 skills; the profile `jardis` installs 34, `core` stays at 25 (README, `AGENTS.md`, overview pages, `BundleSkills`).
+
 ## [1.14.1] - 2026-10-08
 
 ### Changed

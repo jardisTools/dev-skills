@@ -5,12 +5,12 @@ zone: crosscut
 persona: C
 profile: core
 prerequisites: []
-next: [foundation-architecture]
+next: [foundation-architecture, design-model-capabilities]
 ---
 
 ## Scope
 
-Three rules that apply to every task, before any code is written and while it is debugged. They govern how facts are established; the content rules live in the sibling skills.
+Four rules that apply to every task, before any code is written and while it is debugged. They govern how facts are established; the content rules live in the sibling skills.
 
 ### 1. Skill first, then source code, then ask
 
@@ -39,8 +39,13 @@ Modelling and design decisions are not free: where data lives versus behaviour, 
 - Prefer composition over inheritance; state dependencies explicitly.
 - When the strict reading produces clearly higher complexity, a conscious, stated compromise is allowed — never a silent one.
 
-### 4. Reference
+### 4. Use the platform before you program
+
+In a Jardis project, every model element is checked against the capabilities of the Jardis tools BEFORE any code, closure or workaround is planned. The order of means is: declarative tool settings (process, query, aggregate with its schema-column settings and value lists, field map, strategic layer), then a closure for a rule across aggregate boundaries, then hand code on the dev surfaces. Programming what a setting already generates is a defect. The required knowledge and the capability table are in `design-model-capabilities` (jardis profile; absent in a core-only installation), read at interview and PRD time.
+
+### 5. Reference
 
 - Pillars, hexagonal direction, Closure-Orchestrator: `foundation-architecture`
 - Pattern catalogue: `foundation-patterns`
 - PHP conventions: `foundation-php`
+- Jardis tool capabilities per model element: `design-model-capabilities`

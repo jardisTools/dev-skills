@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
  * are in the archive, so these tests measure the committed state (`git archive HEAD`), not the
  * working tree; uncommitted changes are checked by the rest of the suite.
  *
- * Covers the install picture (33 skills in both folders, 19 reviewers in five formats, router,
+ * Covers the install picture (34 skills in both folders, 19 reviewers in five formats, router,
  * CLAUDE.md block, Gemini entry, manifest), the repeat run, the update from 1.3.6 with the
  * redirects, the removal, and the untouched knowledge pool and project profile throughout.
  */
@@ -84,9 +84,9 @@ final class FullInstallEndToEndTest extends TestCase
             self::assertDirectoryDoesNotExist($this->project->path('vendor/jardis/dev-skills/' . $ignored), $ignored);
         }
 
-        // 33 skills, both folders, file for file as shipped; the vendor skill beside them; no redirect.
+        // 34 skills, both folders, file for file as shipped; the vendor skill beside them; no redirect.
         $names = $this->bundleNames();
-        self::assertCount(33, $names);
+        self::assertCount(34, $names);
         foreach (['.claude/skills', '.agents/skills'] as $root) {
             self::assertSame(
                 $this->sorted([...$names, self::VENDOR_SKILL]),
@@ -146,7 +146,7 @@ final class FullInstallEndToEndTest extends TestCase
             self::assertArrayHasKey('.claude/skills/' . $name, $manifest['paths']);
             self::assertArrayHasKey('.agents/skills/' . $name, $manifest['paths']);
         }
-        self::assertCount(2 * (33 + 1), $manifest['paths']);
+        self::assertCount(2 * (34 + 1), $manifest['paths']);
         foreach (ShellFormat::cases() as $format) {
             foreach ($roles as $role) {
                 self::assertTrue($manifest['selfSet'][$format->pathFor($role)]['fileCreated'] ?? false, $format->pathFor($role));
@@ -202,7 +202,7 @@ final class FullInstallEndToEndTest extends TestCase
         self::assertSame($userBefore, $this->userFolderTree($userFolders), 'User folders after run 2.');
 
         $names = $this->bundleNames();
-        self::assertCount(33, $names);
+        self::assertCount(34, $names);
         $old = array_keys(RenamedSkills::MAPPING);
         self::assertCount(18, $old);
         self::assertSame(

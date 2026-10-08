@@ -24,8 +24,8 @@ use JardisTools\DevSkills\Handler\Install\ResolveTargets;
  *   project whose real path is exactly that location; anything else (absolute, `..`, foreign folder,
  *   symlink) is ignored with a warning;
  * - no manifest: the fixed list of the 18 old bundle names (RenamedSkills::MAPPING keys) and all
- *   33 current bundle names (BundleSkills::NAMES) plus vendor skills under the package prefixes
- *   in `.claude/skills` (1.3.x wrote nowhere else); in `.agents/skills` only the 33 current names,
+ *   34 current bundle names (BundleSkills::NAMES) plus vendor skills under the package prefixes
+ *   in `.claude/skills` (1.3.x wrote nowhere else); in `.agents/skills` only the 34 current names,
  *   because that folder never held an old name (no release writes one there) and the
  *   vendor-prefix rule stays `.claude/skills`-only. Never a prefix match on the bundle areas.
  *   Every name, in both folders, passes the same ResolveManagedFolder rule as a manifest key:
