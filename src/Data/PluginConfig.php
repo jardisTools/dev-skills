@@ -14,6 +14,7 @@ final readonly class PluginConfig
     /**
      * @param list<string> $includeGlobs
      * @param list<string> $excludeGlobs
+     * @param list<Host>   $hosts the agent tools that get reviewer shells
      */
     public function __construct(
         public bool $installAll,
@@ -29,6 +30,8 @@ final readonly class PluginConfig
         public ?string $profileWarning = null,
         public AgentsMdMode $agentsMd = AgentsMdMode::Aggregate,
         public ?string $agentsMdWarning = null,
+        public array $hosts = [Host::Claude],
+        public ?string $hostsWarning = null,
     ) {
     }
 
@@ -51,6 +54,8 @@ final readonly class PluginConfig
             $this->profileWarning,
             $this->agentsMd,
             $this->agentsMdWarning,
+            $this->hosts,
+            $this->hostsWarning,
         );
     }
 
@@ -75,6 +80,8 @@ final readonly class PluginConfig
             $this->profileWarning,
             $this->agentsMd,
             $this->agentsMdWarning,
+            $this->hosts,
+            $this->hostsWarning,
         );
     }
 
@@ -98,6 +105,8 @@ final readonly class PluginConfig
             $warning,
             $this->agentsMd,
             $this->agentsMdWarning,
+            $this->hosts,
+            $this->hostsWarning,
         );
     }
 
@@ -121,6 +130,34 @@ final readonly class PluginConfig
             $this->profile,
             $this->profileWarning,
             $agentsMd,
+            $warning,
+            $this->hosts,
+            $this->hostsWarning,
+        );
+    }
+
+    /**
+     * The same configuration with the hosts that get reviewer shells and the warning about the raw value.
+     *
+     * @param list<Host> $hosts
+     */
+    public function withHosts(array $hosts, ?string $warning): self
+    {
+        return new self(
+            $this->installAll,
+            $this->mandatoryOnly,
+            $this->includeGlobs,
+            $this->excludeGlobs,
+            $this->warning,
+            $this->processDocs,
+            $this->processDocsWarning,
+            $this->gitRules,
+            $this->gitRulesWarning,
+            $this->profile,
+            $this->profileWarning,
+            $this->agentsMd,
+            $this->agentsMdWarning,
+            $hosts,
             $warning,
         );
     }

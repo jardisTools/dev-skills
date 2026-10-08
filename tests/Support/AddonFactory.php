@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Support;
 
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\Data\ProcessDocsMode;
 use JardisTools\DevSkills\Handler\Install\BuildClaudeMdContent;
@@ -123,7 +124,10 @@ final class AddonFactory
         );
     }
 
-    public static function writeReviewerShells(string $pluginRoot): WriteReviewerShells
+    /**
+     * @param list<Host>|null $hosts the hosts that get shells; null = all five
+     */
+    public static function writeReviewerShells(string $pluginRoot, ?array $hosts = null): WriteReviewerShells
     {
         return new WriteReviewerShells(
             $pluginRoot,
@@ -132,6 +136,7 @@ final class AddonFactory
             (new ReadManifest())->__invoke(...),
             self::recordSelfSet(),
             (new IsPathBehindLink())->__invoke(...),
+            $hosts ?? Host::cases(),
         );
     }
 

@@ -6,6 +6,7 @@ namespace JardisTools\DevSkills\Tests\Integration;
 
 use JardisTools\DevSkills\Data\AgentsMdUninstallAction;
 use JardisTools\DevSkills\Data\Manifest;
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
@@ -121,7 +122,7 @@ final class SkillUninstallerTest extends TestCase
             $gemini = "{\n  \"theme\": \"dark\"\n}\n";
             $this->project->writeFile('CLAUDE.md', $claudeMd);
             $this->project->writeFile('.gemini/settings.json', $gemini);
-            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+            (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $pluginRepo->root))(
                 $this->project->root,
                 $this->project->path('vendor'),
                 '1.0.0',
@@ -146,7 +147,7 @@ final class SkillUninstallerTest extends TestCase
         $pluginRepo = new TempProject('dev-skills-plugin-');
         try {
             $pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
-            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+            (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $pluginRepo->root))(
                 $this->project->root,
                 $this->project->path('vendor'),
                 '1.0.0',
@@ -192,7 +193,7 @@ final class SkillUninstallerTest extends TestCase
             $foreignCodex = "name = \"stage-verifier\"\n";
             $this->project->writeFile('.codex/agents/stage-verifier.toml', $foreignCodex);
             $this->project->writeFile('.claude/agents/mine.md', "my agent\n");
-            (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+            (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $pluginRepo->root))(
                 $this->project->root,
                 $this->project->path('vendor'),
                 '1.0.0',
@@ -242,7 +243,7 @@ final class SkillUninstallerTest extends TestCase
             self::assertTrue(symlink($outside->path('codex'), $this->project->path('.codex')));
             $before = TreeSnapshot::of($outside->root);
 
-            $installReport = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $pluginRepo->root))(
+            $installReport = (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $pluginRepo->root))(
                 $this->project->root,
                 $this->project->path('vendor'),
                 '1.0.0',
