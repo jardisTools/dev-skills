@@ -125,8 +125,8 @@ pre.tree{margin:0;overflow:hidden;font-size:11px!important;background:#0f172a;co
 
 <div class="fixed"><b>Festgelegt:</b>
 <ul>
-<li>33 mitgelieferte Skills in neun Bereichen, dazu die Skills jedes Jardis-Vendor-Packages</li>
-<li>Das Profil <code>core</code> installiert davon 25; ein Jardis-Package oder <code>profile</code> <code>jardis</code> bringt die anderen acht dazu</li>
+<li>34 mitgelieferte Skills in neun Bereichen, dazu die Skills jedes Jardis-Vendor-Packages</li>
+<li>Das Profil <code>core</code> installiert davon 25; ein Jardis-Package oder <code>profile</code> <code>jardis</code> bringt die anderen neun dazu</li>
 <li>Skills landen in <code>.claude/skills</code> und <code>.agents/skills</code>; ein verwalteter Block landet in <code>AGENTS.md</code></li>
 <li>Branch, Commit und Merge sind Gates des Menschen; kein Commit trägt eine Werkzeug-Attribution</li>
 <li>19 Prüfer-Rollen (17 im Profil <code>core</code>) werden als Agent-Dateien für fünf Werkzeuge geschrieben</li>
@@ -338,6 +338,7 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code
   <div class="area"><h4>design <span>vor dem generierten Code · Profil jardis</span></h4>
     <div class="sk"><div class="n">design-draft-schema</div><div class="d">Den Inhalt einer <code>Schema.json</code> für den Designer aus einer Domänenidee in Klartext entwerfen</div></div>
     <div class="sk"><div class="n">design-headless-mcp</div><div class="d">Einen Jardis-Workspace ohne Browser über <code>jardis mcp</code> steuern: Tools, Resources, Fehler-Envelopes</div></div>
+    <div class="sk"><div class="n">design-model-capabilities</div><div class="d">Vor der ersten Interviewfrage entscheiden, was modelliert wird: was jedes Jardis-Werkzeug ohne Handcode liefert, was Jardis nicht kann, die Fähigkeitstabelle</div></div>
   </div>
 
   <div class="area"><h4>generated-code <span>nach dem Designer · Profil jardis</span></h4>
@@ -387,7 +388,7 @@ Der Bereich sagt, wo im Lebenszyklus ein Skill verwendet wird: <code>start</code
 <tr><td><code>open-question-gate</code></td><td><code>process-run-stage</code></td><td>bevor eine Frage den Menschen erreicht</td></tr>
 <tr><td><code>failure-diagnosis</code></td><td><code>process-run-stage</code></td><td>nach RED, wenn der Bericht die Ursache nicht erklärt</td></tr>
 </table>
-<p class="src">Quelle: das Frontmatter der 33 Skills unter <code>skills/</code> und <code>docs/SKILL-FORMAT.md</code> (Bereichs-Präfixe).</p>
+<p class="src">Quelle: das Frontmatter der 34 Skills unter <code>skills/</code> und <code>docs/SKILL-FORMAT.md</code> (Bereichs-Präfixe).</p>
 </section>
 
 <!-- ========================================================= 4 -->
@@ -401,7 +402,7 @@ your-project/
 │     <span class="t-now">+ zusammengeführte AGENTS.md der Jardis-Vendor-Packages</span>   <span class="t-c">Warnung über 32.768 Bytes (Codex)</span>
 ├── <span class="t-now">CLAUDE.md</span>                         <span class="t-c">verwalteter Block: importiert @AGENTS.md</span>
 ├── .claude/
-│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">33 mitgelieferte Skills (25 im Profil core) + Vendor-Skills · Claude Code, Copilot</span>
+│   ├── skills/&lt;name&gt;/SKILL.md          <span class="t-c">34 mitgelieferte Skills (25 im Profil core) + Vendor-Skills · Claude Code, Copilot</span>
 │   ├── skills/.jardis-managed.json     <span class="t-c">Manifest: jeder Skill-Ordner, den das Plugin installiert hat</span>
 │   ├── <span class="t-now">agents/&lt;role&gt;.md</span>                <span class="t-c">Prüfer-Agent-Dateien (Claude Code)</span>
 │   └── .jardis-backup/                 <span class="t-c">Kopien von Ordnern, die vom verwalteten Zustand abwichen</span>
@@ -432,7 +433,7 @@ your-project/
 <h3>Konfiguration <code>composer.json</code></h3>
 <pre class="tree" style="white-space:pre;font-size:11.5px">"extra": { "jardis/dev-skills": {
     "bundled-skills": true,
-    <span class="t-c">// standardmäßig die Skills des Profils (33 bei jardis, 25 bei core); eine Liste oder include/exclude schränkt ein</span>
+    <span class="t-c">// standardmäßig die Skills des Profils (34 bei jardis, 25 bei core); eine Liste oder include/exclude schränkt ein</span>
     <span class="t-c">// foundation-* und process-* werden immer installiert</span>
     "git-rules": true,
     <span class="t-c">// "delegated": die Session committet selbst, Merge und Push bleiben beim Menschen; false entfernt die Git-Sätze aus dem Router</span>

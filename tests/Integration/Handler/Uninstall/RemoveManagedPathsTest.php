@@ -237,7 +237,7 @@ final class RemoveManagedPathsTest extends TestCase
 
     public function testWithoutManifestAllThirtyThreeBundleNamesGoFromBothFoldersAndNothingByPrefix(): void
     {
-        self::assertCount(33, BundleSkills::NAMES);
+        self::assertCount(34, BundleSkills::NAMES);
         $mine = ['process-mine', 'knowledge-mine', 'foundation-mine', 'code-review-mine', 'start-mine', 'packages-mine',
             'generated-code-mine', 'git-mine', 'design-mine'];
         foreach (BundleSkills::NAMES as $name) {

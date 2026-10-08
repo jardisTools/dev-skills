@@ -26,7 +26,7 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
    validation, …), check whether a Jardis package already covers it. → `packages-find-existing`.
 2. **Schema** — model the domain's tables from a plain-text idea, or introspect an existing
    database. → `design-draft-schema`.
-3. **Design** — draw Aggregates, Processes, and declarative read Queries in the Jardis Designer
+3. **Design** — before the interview, concept or PRD, read `design-model-capabilities`: it names what every Jardis tool delivers without hand code and the capability table every concept and PRD carries. Then draw Aggregates, Processes, and declarative read Queries in the Jardis Designer
    (`jardis ui`). Queries (`Queries.json`) are the fourth designer,
    sibling of Aggregates/Processes: a BC-level artefact for read-only queries against an
    aggregate's data (condition tree, joins, parameters) without hand-written PHP — the Builder
@@ -71,6 +71,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Review a frontend plan or component against Jardis's stack-agnostic frontend rules | `foundation-frontend-review` |
 | Pick the right design pattern (Facade, Strategy, Repository, …) for a problem | `foundation-patterns` |
 | Write a test, or decide what to do about a failing one | `foundation-testing` |
+| Decide what to model: what a Jardis tool setting already generates (child commands, validators, business keys, value lists, query filters, process nodes), what Jardis lacks, and the capability table for a concept or PRD — before any interview | `design-model-capabilities` |
 | Drive an entire Jardis workspace headless — no browser, an AI or script calls `jardis mcp` directly | `design-headless-mcp` |
 | Classify a subdomain (Core/Supporting/Generic), maintain a BC's glossary or canvas ("Steckbrief"), or plan a not-yet-built BC — headless, additive to the code-generation workflow | `design-headless-mcp` |
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `design-headless-mcp` |
@@ -117,6 +118,7 @@ The reviewer roles of the process — requirements, design, frontend, stage veri
 
 ### 6. Reference
 
+- Capabilities per Jardis tool and the mandatory capability table: `design-model-capabilities`.
 - Full Tool/Resource surface for headless driving: `design-headless-mcp`.
 - Werkzeugkasten (which package skill answers "how do I cache / send mail / …"):
   `generated-code-extend`.

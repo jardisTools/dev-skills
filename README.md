@@ -1,6 +1,6 @@
 # jardis/dev-skills
 
-**Gives your AI coding agent the rules and APIs of Jardis.** Jardis is the Domain-Driven Design platform for PHP: you model your domain, and Jardis generates the production-ready hexagonal code. This Composer plugin installs 33 bundled skills, the skills of every Jardis package you use, an `AGENTS.md` process router and reviewer agent files into your project, so Claude Code, Codex, Cursor, GitHub Copilot and Gemini CLI find them. No configuration is needed.
+**Gives your AI coding agent the rules and APIs of Jardis.** Jardis is the Domain-Driven Design platform for PHP: you model your domain, and Jardis generates the production-ready hexagonal code. This Composer plugin installs 34 bundled skills, the skills of every Jardis package you use, an `AGENTS.md` process router and reviewer agent files into your project, so Claude Code, Codex, Cursor, GitHub Copilot and Gemini CLI find them. No configuration is needed.
 
 > Part of **[Jardis](https://jardis.io)** — the Domain-Driven Design platform for PHP. You model your domain; Jardis generates the production-ready hexagonal code (DTOs, Command/Query handlers, repositories, persistence). This plugin keeps your AI agent in sync with the rules and APIs that generated code follows.
 
@@ -16,7 +16,7 @@ The overview in German: [overview.de.html](https://jardistools.github.io/dev-ski
 
 After `composer install` or `composer update`, the plugin does the following in your project root:
 
-1. **Skills.** It copies the bundled skills of the installation profile (all 33 in the profile `jardis`, 25 in the profile `core`, see [Installation profile](#installation-profile-profile)) and every skill of a `jardis*` vendor package (`vendor/<vendor>/<package>/.claude/skills/<name>/`) into two folders: `.claude/skills/` and `.agents/skills/`.
+1. **Skills.** It copies the bundled skills of the installation profile (all 34 in the profile `jardis`, 25 in the profile `core`, see [Installation profile](#installation-profile-profile)) and every skill of a `jardis*` vendor package (`vendor/<vendor>/<package>/.claude/skills/<name>/`) into two folders: `.claude/skills/` and `.agents/skills/`.
 2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then aggregates the `AGENTS.md` of every Jardis vendor package. A project that is itself a `jardis*` package gets no block (see [`agents-md`](#agentsmd-in-a-jardis-package-agents-md)).
 3. **`CLAUDE.md`.** It adds a managed block that imports `@AGENTS.md` (not with `agents-md` = `none`).
 4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName` (only with `gemini` in [`hosts`](#reviewer-shells-per-tool-hosts); not with `agents-md` = `none`).
@@ -181,7 +181,7 @@ The plugin acts on `composer install` and `composer update` (Composer's post-ins
 - Old `bundled-skills` globs keep working: a glob that matches an old name also selects the name the skill carries now (`platform-*` selects the five `generated-code-*` skills).
 - 1.3.x wrote no manifest. In the first run the fixed list of the 18 old names decides what the plugin may replace, never a name prefix. Every old folder is copied to `.claude/.jardis-backup/` before it is replaced, so local edits survive.
 - **The migration takes effect only in the second Composer run after the update.** The update run itself is still driven by the old plugin code and does not migrate. After `composer update jardis/dev-skills`, run `composer install` once more.
-- The default of `bundled-skills` changed: without the key, all 33 skills are installed (1.3.x installed only three). From 1.7.0 on, a fresh project without a Jardis package gets the 25 skills of the profile `core`; an update keeps all 33 (see [Installation profile](#installation-profile-profile)).
+- The default of `bundled-skills` changed: without the key, all 34 skills are installed (1.3.x installed only three). From 1.7.0 on, a fresh project without a Jardis package gets the 25 skills of the profile `core`; an update keeps all 34 (see [Installation profile](#installation-profile-profile)).
 
 **Windows is not tested.** The continuous integration runs on Linux only (`ubuntu-latest`).
 
@@ -191,13 +191,13 @@ The plugin acts on `composer install` and `composer update` (Composer's post-ins
 
 ## Which skills are installed?
 
-The 33 bundled skills come with the plugin. Their names start with the prefix of their area. The column Profile says which [installation profile](#installation-profile-profile) installs the skill: `core` skills are installed in both profiles, `jardis` skills only in the profile `jardis`.
+The 34 bundled skills come with the plugin. Their names start with the prefix of their area. The column Profile says which [installation profile](#installation-profile-profile) installs the skill: `core` skills are installed in both profiles, `jardis` skills only in the profile `jardis`.
 
 | Prefix | Profile | Skills |
 |---|---|---|
 | `start-` | `jardis` | `start-orientation` — entry point, routes into the other skills |
 | `packages-` | `core` | `packages-find-existing` — the package catalog (see [Package catalog](#package-catalog-packages-find-existing)) |
-| `design-` | `jardis` | `design-draft-schema`, `design-headless-mcp` |
+| `design-` | `jardis` | `design-draft-schema`, `design-headless-mcp`, `design-model-capabilities` |
 | `generated-code-` | `jardis` | `generated-code-extend`, `generated-code-wire-transport`, `generated-code-versioning`, `generated-code-workflow-api`, `generated-code-recipes` |
 | `foundation-` | `core` | `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-frontend-review`, `foundation-php`, `foundation-working-principles` |
 | `git-` | `core` | `git-setup-repository`, `git-start-branch`, `git-commit-change`, `git-push-and-open-pr`, `git-check-compliance` |
@@ -231,7 +231,7 @@ The mandatory groups `foundation-*` and `process-*` are always installed. Everyt
 
 | Value | Effect |
 |---|---|
-| Key absent, or `true` | All 33 bundled skills (default) |
+| Key absent, or `true` | All 34 bundled skills (default) |
 | `false`, or `[]`, or `{ "include": [] }` | Only the mandatory groups `foundation-*` and `process-*` |
 | `["git-*", "design-*"]` | Whitelist: the matching skills plus the mandatory groups |
 | `{ "include": [...], "exclude": [...] }` | `include` first, then `exclude`; an absent `include` means all skills; the mandatory groups are always added |
@@ -269,7 +269,7 @@ Installs all bundled skills except the `git-*` skills (a missing `include` means
 
 ### Installation profile (`profile`)
 
-The bundled skills come in two profiles. `core` serves any PHP project: 25 skills, the process, the rules `foundation-*`, the git and knowledge skills and the package catalog. `jardis` adds the eight skills for projects that work with the Jardis Designer and its generated code (`start-orientation`, `design-*`, `generated-code-*`). Each skill declares its profile in the frontmatter field `profile`. The profile also decides which router section `AGENTS.md` carries (`## PHP projects` or `## Jardis projects`) and how many reviewer agent files are written (17 or 19).
+The bundled skills come in two profiles. `core` serves any PHP project: 25 skills, the process, the rules `foundation-*`, the git and knowledge skills and the package catalog. `jardis` adds the nine skills for projects that work with the Jardis Designer and its generated code (`start-orientation`, `design-*`, `generated-code-*`). Each skill declares its profile in the frontmatter field `profile`. The profile also decides which router section `AGENTS.md` carries (`## PHP projects` or `## Jardis projects`) and how many reviewer agent files are written (17 or 19).
 
 The plugin resolves the profile in every run, in this order:
 
@@ -280,9 +280,9 @@ The plugin resolves the profile in every run, in this order:
 | Value | Skills | Router section | Reviewer agent files |
 |---|---|---|---|
 | `core` | 25 | `## PHP projects` | 17 (no `plan-review-packages`, no `plan-review-ddd-tactics`) |
-| `jardis` | 33 | `## Jardis projects` | 19 |
+| `jardis` | 34 | `## Jardis projects` | 19 |
 
-A fresh project without a Jardis package therefore gets `core`. After `composer require` of a `jardis*` package the next `composer install` resolves `jardis` and installs the other eight skills; remove the package and the next run takes them out again (a changed folder is backed up first, as for any removed skill). The profile of the last run is recorded in the manifest. Reviewer agent files that already exist are never removed when the profile narrows. The key is independent of `bundled-skills`, which selects within the profile.
+A fresh project without a Jardis package therefore gets `core`. After `composer require` of a `jardis*` package the next `composer install` resolves `jardis` and installs the other nine skills; remove the package and the next run takes them out again (a changed folder is backed up first, as for any removed skill). The profile of the last run is recorded in the manifest. Reviewer agent files that already exist are never removed when the profile narrows. The key is independent of `bundled-skills`, which selects within the profile.
 
 ```json
 {
