@@ -31,6 +31,7 @@ Write `docs/vorhaben/<name>/PRD.md` with these parts, each only as long as the u
 | Limits | Sizes, counts, time, permissions, what the result must not do |
 | Data paths | Where each datum comes from, where it is stored, who reads it, what leaves the system |
 | Out of scope | What is explicitly not built |
+| Capabilities | In a Jardis project: the capability table of `design-model-capabilities` is a mandatory part; a closure or hand code appears only after its declarative row says "not available" |
 | Decisions | Numbered forks, answered or open; fixed format, see below |
 
 The solution part has this format:

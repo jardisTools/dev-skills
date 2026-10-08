@@ -42,6 +42,7 @@ Clarify one point at a time. Before the first question, read `.claude/PROJECT_PR
 2. Accept no silent assumption. Where the human has not said it, ask; where the project can answer, read it first (code, knowledge pool, `process-check-existing` for what the environment already does).
 3. Cover at least: the goal in one sentence, who uses the result and how, what it must not do, the error and empty cases, what is explicitly out of scope.
 4. Record every settled point in the concept artefact, not in a chat summary.
+5. In a Jardis project the capability table of `design-model-capabilities` (model element, Jardis capability, used or deliberately not used with reason) is a mandatory part of the concept: read that skill before the first question, and offer interview options only from capabilities it names.
 
 <!-- rule:decide-yourself-no-gate-waiver -->
 A human's "decide open points yourself" or "proceed autonomously" waives no gate. A question the human left open and the project cannot answer (code, knowledge pool, target artefact) is never settled by the main session, neither in the concept, nor in the PRD, nor by ruling a board finding on it as resolved. It goes to the open-question gate (`open-question-gate`, see `process-run-stage`); what the gate cannot decide stays in the progress head as `STOPP: <YYYY-MM-DD> · <question>` and is put to the human at the next approval.

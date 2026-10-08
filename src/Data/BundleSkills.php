@@ -18,6 +18,7 @@ final class BundleSkills
         'code-review-change',
         'design-draft-schema',
         'design-headless-mcp',
+        'design-model-capabilities',
         'foundation-architecture',
         'foundation-frontend-review',
         'foundation-patterns',
