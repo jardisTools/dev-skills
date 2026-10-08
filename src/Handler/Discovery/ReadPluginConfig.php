@@ -19,12 +19,15 @@ final class ReadPluginConfig
     private const GIT_RULES_KEY = 'git-rules';
     private const PROFILE_KEY = 'profile';
     private const AGENTS_MD_KEY = 'agents-md';
+    private const HOSTS_KEY = 'hosts';
 
     private readonly ResolveAgentsMdMode $resolveAgentsMdMode;
+    private readonly ResolveHosts $resolveHosts;
 
-    public function __construct(?ResolveAgentsMdMode $resolveAgentsMdMode = null)
+    public function __construct(?ResolveAgentsMdMode $resolveAgentsMdMode = null, ?ResolveHosts $resolveHosts = null)
     {
         $this->resolveAgentsMdMode = $resolveAgentsMdMode ?? new ResolveAgentsMdMode();
+        $this->resolveHosts = $resolveHosts ?? new ResolveHosts();
     }
 
     /**
@@ -46,11 +49,17 @@ final class ReadPluginConfig
 
         [$agentsMd, $agentsMdWarning] = $this->readAgentsMd($root, $rootPackageName);
 
+        [$hosts, $hostsWarning] = ($this->resolveHosts)(
+            array_key_exists(self::HOSTS_KEY, $root),
+            $root[self::HOSTS_KEY] ?? null,
+        );
+
         return $this->readBundledSkills($root)
             ->withProcessDocs($mode, $modeWarning)
             ->withGitRules($gitRules, $gitRulesWarning)
             ->withProfile($profile, $profileWarning)
-            ->withAgentsMd($agentsMd, $agentsMdWarning);
+            ->withAgentsMd($agentsMd, $agentsMdWarning)
+            ->withHosts($hosts, $hostsWarning);
     }
 
     /**

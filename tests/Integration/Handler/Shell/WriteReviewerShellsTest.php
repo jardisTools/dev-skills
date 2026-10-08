@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace JardisTools\DevSkills\Tests\Integration\Handler\Shell;
 
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
@@ -239,7 +240,9 @@ final class WriteReviewerShellsTest extends TestCase
         GitRepo::commitAll($this->project->root);
 
         $report = (new SkillInstaller(
-            config: PluginConfig::all()->withProcessDocs(\JardisTools\DevSkills\Data\ProcessDocsMode::Local, null),
+            config: PluginConfig::all()
+                ->withHosts(Host::cases(), null)
+                ->withProcessDocs(\JardisTools\DevSkills\Data\ProcessDocsMode::Local, null),
             pluginRoot: $this->plugin->root,
         ))($this->project->root, $this->project->path('vendor'));
 

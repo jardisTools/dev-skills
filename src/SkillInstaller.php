@@ -8,6 +8,7 @@ use Closure;
 use Composer\Util\Filesystem;
 use JardisTools\DevSkills\Data\AgentsDescriptor;
 use JardisTools\DevSkills\Data\AgentsMdMode;
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Data\AggregateAgentsResult;
 use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallProfile;
@@ -32,6 +33,7 @@ use JardisTools\DevSkills\Handler\Install\RecordAgentsMdCreated;
 use JardisTools\DevSkills\Handler\Install\RemoveManagedAgentsMd;
 use JardisTools\DevSkills\Handler\Install\ReplaceExcludeBlock;
 use JardisTools\DevSkills\Handler\Install\RetireAgentsMd;
+use JardisTools\DevSkills\Handler\Install\RetireGeminiContext;
 use JardisTools\DevSkills\Handler\Install\ResolveGitDir;
 use JardisTools\DevSkills\Handler\Install\SyncExcludeBlock;
 use JardisTools\DevSkills\Handler\Manifest\ForgetSelfSetEntries;
@@ -47,6 +49,7 @@ use JardisTools\DevSkills\Handler\Shell\RenderCursorShell;
 use JardisTools\DevSkills\Handler\Shell\RenderFrontmatterShell;
 use JardisTools\DevSkills\Handler\Shell\RenderGeminiShell;
 use JardisTools\DevSkills\Handler\Shell\RenderShell;
+use JardisTools\DevSkills\Handler\Shell\RetireHostShells;
 use JardisTools\DevSkills\Handler\Shell\WriteReviewerShells;
 use JardisTools\DevSkills\Handler\Manifest\ReadManifest;
 use JardisTools\DevSkills\Handler\Manifest\RecordSelfSetEntry;
@@ -80,6 +83,7 @@ final class SkillInstaller
     private readonly ?string $profileWarning;
 
     private readonly ?string $agentsMdWarning;
+    private readonly ?string $hostsWarning;
 
     private readonly GitRulesMode $gitRules;
 
@@ -116,6 +120,7 @@ final class SkillInstaller
         $this->gitRulesWarning = $config?->gitRulesWarning;
         $this->profileWarning = $config?->profileWarning;
         $this->agentsMdWarning = $config?->agentsMdWarning;
+        $this->hostsWarning = $config?->hostsWarning;
         $this->gitRules = $config->gitRules ?? GitRulesMode::Strict;
 
         $this->installSkills = new InstallSkills(
@@ -163,6 +168,7 @@ final class SkillInstaller
                 $detectLineEnding,
                 $skipValue,
                 $isPathBehindLink,
+                in_array(Host::Gemini, $config->hosts, true),
             ),
             AgentsMdMode::None => [
                 'agents-md-retire' => $this->retireAgentsMd($detectLineEnding, $isPathBehindLink),
@@ -171,7 +177,13 @@ final class SkillInstaller
 
         return new InstallAddons([
             ...$agentsMdAddons,
-            'reviewer-shells' => $this->reviewerShells($recordSelfSet),
+            'reviewer-shells-retire' => (new RetireHostShells(
+                (new ReadManifest())->__invoke(...),
+                $this->forgetSelfSetEntries(),
+                $isPathBehindLink,
+                $config->hosts,
+            ))->__invoke(...),
+            'reviewer-shells' => $this->reviewerShells($recordSelfSet, $config->hosts),
             'exclude-block' => (new SyncExcludeBlock(
                 $config->processDocs,
                 (new ResolveGitDir($runGit))->__invoke(...),
@@ -191,6 +203,7 @@ final class SkillInstaller
      * @param Closure(string): string $detectLineEnding
      * @param Closure(string, int): int $skipValue
      * @param Closure(string, string): bool $isPathBehindLink
+     * @param bool $withGemini whether `hosts` lists `gemini`; without it the entry of an earlier run is taken out
      * @return array<string, Closure(string, string, InstallReport): void>
      */
     private function aggregateAddons(
@@ -198,6 +211,7 @@ final class SkillInstaller
         Closure $detectLineEnding,
         Closure $skipValue,
         Closure $isPathBehindLink,
+        bool $withGemini,
     ): array {
         return [
             'claude-md-import' => (new EnsureClaudeMdImport(
@@ -208,16 +222,27 @@ final class SkillInstaller
                 $recordSelfSet,
                 $isPathBehindLink,
             ))->__invoke(...),
-            'gemini-context' => (new EnsureGeminiContext(
-                (new PlanGeminiContextEdit(
-                    $detectLineEnding,
-                    (new ScanJsonObject($skipValue))->__invoke(...),
-                    (new ScanJsonArray($skipValue))->__invoke(...),
-                    (new BuildJsonMemberInsertion())->__invoke(...),
+            'gemini-context' => $withGemini
+                ? (new EnsureGeminiContext(
+                    (new PlanGeminiContextEdit(
+                        $detectLineEnding,
+                        (new ScanJsonObject($skipValue))->__invoke(...),
+                        (new ScanJsonArray($skipValue))->__invoke(...),
+                        (new BuildJsonMemberInsertion())->__invoke(...),
+                    ))->__invoke(...),
+                    $recordSelfSet,
+                    $isPathBehindLink,
+                ))->__invoke(...)
+                : (new RetireGeminiContext(
+                    (new ReadManifest())->__invoke(...),
+                    (new SelectPreviousManifest())->__invoke(...),
+                    (new RemoveGeminiContext(
+                        (new ReverseTextEdit())->__invoke(...),
+                        (new IsEmptyGeminiScaffold())->__invoke(...),
+                        $isPathBehindLink,
+                    ))->__invoke(...),
+                    $this->forgetSelfSetEntries(),
                 ))->__invoke(...),
-                $recordSelfSet,
-                $isPathBehindLink,
-            ))->__invoke(...),
             'agents-md-created' => (new RecordAgentsMdCreated($recordSelfSet))->__invoke(...),
         ];
     }
@@ -255,10 +280,22 @@ final class SkillInstaller
     }
 
     /**
+     * @return Closure(string, list<string>): void
+     */
+    private function forgetSelfSetEntries(): Closure
+    {
+        return (new ForgetSelfSetEntries(
+            (new ReadManifest())->__invoke(...),
+            (new WriteManifest())->__invoke(...),
+        ))->__invoke(...);
+    }
+
+    /**
      * @param Closure(string, string, \JardisTools\DevSkills\Data\SelfSetEntry): void $recordSelfSet
+     * @param list<Host> $hosts
      * @return Closure(string, string, InstallReport): void
      */
-    private function reviewerShells(Closure $recordSelfSet): Closure
+    private function reviewerShells(Closure $recordSelfSet, array $hosts): Closure
     {
         $encodeBasicString = (new EncodeTomlBasicString())->__invoke(...);
         $buildBody = (new BuildShellBody())->__invoke(...);
@@ -281,6 +318,7 @@ final class SkillInstaller
             (new ReadManifest())->__invoke(...),
             $recordSelfSet,
             (new IsPathBehindLink())->__invoke(...),
+            $hosts,
         ))->__invoke(...);
     }
 
@@ -291,6 +329,7 @@ final class SkillInstaller
         $report->addWarningIfAny($this->gitRulesWarning);
         $report->addWarningIfAny($this->profileWarning);
         $report->addWarningIfAny($this->agentsMdWarning);
+        $report->addWarningIfAny($this->hostsWarning);
 
         $report->addWarningIfAny(($this->guardManifestVersion)(
             $projectRoot,

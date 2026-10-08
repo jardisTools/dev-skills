@@ -53,10 +53,27 @@ final class FullInstallEndToEndTest extends TestCase
         $this->project->cleanup();
     }
 
-    public function testFullInstallFromTheHeadArchiveYieldsEveryFileOfTheTargetPicture(): void
+    public function testFullInstallWithoutHostsKeyWritesTheShellsOfClaudeOnly(): void
     {
         $this->writePoolAndProfile();
         $this->writeConsumer(self::CANDIDATE, []);
+        LegacyFixture::archiveHead($this->repoRoot, self::CANDIDATE, $this->artifactDir);
+
+        $output = ComposerFixture::runComposer($this->project, 'install');
+
+        self::assertCount(19, glob($this->project->path('.claude/agents/*')) ?: []);
+        foreach (['.codex', '.cursor', '.github', '.gemini'] as $folder) {
+            self::assertDirectoryDoesNotExist($this->project->path($folder), $folder);
+        }
+        self::assertStringNotContainsString('is not a reviewer shell', $output);
+        self::assertFileExists($this->project->path('.agents/skills'));
+        self::assertFileExists($this->project->path('AGENTS.md'));
+    }
+
+    public function testFullInstallFromTheHeadArchiveYieldsEveryFileOfTheTargetPicture(): void
+    {
+        $this->writePoolAndProfile();
+        $this->writeConsumer(self::CANDIDATE, ['hosts' => ['claude', 'codex', 'cursor', 'copilot', 'gemini']]);
         LegacyFixture::archiveHead($this->repoRoot, self::CANDIDATE, $this->artifactDir);
 
         $output = ComposerFixture::runComposer($this->project, 'install');

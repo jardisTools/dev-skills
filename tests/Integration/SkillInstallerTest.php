@@ -8,6 +8,7 @@ use JardisTools\DevSkills\Data\GitRulesMode;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
 use JardisTools\DevSkills\Data\ManifestState;
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Exception\InstallFailedException;
 use JardisTools\DevSkills\Handler\Discovery\ReadPluginConfig;
@@ -966,7 +967,7 @@ final class SkillInstallerTest extends TestCase
         $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
         $this->project->writeFile('CLAUDE.md', "# Mine\n");
         $this->project->writeFile('.gemini/settings.json', "{\n  \"theme\": \"dark\"\n}\n");
-        $installer = new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root);
+        $installer = new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $this->pluginRepo->root);
 
         $installer($this->project->root, $this->project->path('vendor'), '1.4.0');
         $first = (new ReadManifest())($this->project->path(Manifest::FILE), '1.4.0')->manifest?->selfSet;
@@ -989,7 +990,7 @@ final class SkillInstallerTest extends TestCase
         $this->project->mkdir('CLAUDE.md');
         $this->project->writeFile('CLAUDE.md/keep.txt', 'kept');
 
-        $report = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root))(
+        $report = (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $this->pluginRepo->root))(
             $this->project->root,
             $this->project->path('vendor'),
             '1.4.0',
@@ -1008,7 +1009,7 @@ final class SkillInstallerTest extends TestCase
         $this->pluginRepo->writeFile('skills/foundation-alpha/SKILL.md', 'a');
         $this->project->writeFile('.gemini/settings.json/keep.txt', 'kept');
 
-        $report = (new SkillInstaller(config: PluginConfig::all(), pluginRoot: $this->pluginRepo->root))(
+        $report = (new SkillInstaller(config: PluginConfig::all()->withHosts(Host::cases(), null), pluginRoot: $this->pluginRepo->root))(
             $this->project->root,
             $this->project->path('vendor'),
             '1.4.0',

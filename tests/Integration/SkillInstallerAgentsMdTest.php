@@ -90,7 +90,7 @@ final class SkillInstallerAgentsMdTest extends TestCase
 
     public function testBlockOnlyFileCreatedByThePluginIsDeletedTogetherWithImportAndGeminiEntry(): void
     {
-        $this->install(['agents-md' => 'aggregate'], 'acme/app');
+        $this->install(['agents-md' => 'aggregate', 'hosts' => ['claude', 'gemini']], 'acme/app');
         self::assertFileExists($this->project->path('AGENTS.md'));
         self::assertFileExists($this->project->path('CLAUDE.md'));
         self::assertFileExists($this->project->path('.gemini/settings.json'));
@@ -121,7 +121,7 @@ final class SkillInstallerAgentsMdTest extends TestCase
 
     public function testAggregateOnAJardisPackageKeepsTheBlockLikeToday(): void
     {
-        $this->install(['agents-md' => 'aggregate'], 'jardiscore/kernel');
+        $this->install(['agents-md' => 'aggregate', 'hosts' => ['claude', 'gemini']], 'jardiscore/kernel');
 
         $agents = (string) file_get_contents($this->project->path('AGENTS.md'));
         self::assertStringContainsString(self::OLD_BLOCK_HEADER, $agents);
