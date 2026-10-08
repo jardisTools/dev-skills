@@ -16,11 +16,14 @@ use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\PluginConfig;
 use JardisTools\DevSkills\Data\SkillDescriptor;
 use JardisTools\DevSkills\Handler\Discovery\ScanAgentsFiles;
+use JardisTools\DevSkills\Handler\Discovery\ScanVendor;
 use JardisTools\DevSkills\Handler\Install\AggregateAgentsMd;
 use JardisTools\DevSkills\Handler\Install\AnalyzeAgentsMd;
 use JardisTools\DevSkills\Handler\Install\BuildClaudeMdContent;
 use JardisTools\DevSkills\Handler\Install\BuildExcludeLines;
 use JardisTools\DevSkills\Handler\Install\BuildJsonMemberInsertion;
+use JardisTools\DevSkills\Handler\Install\DigestAgentsDescriptors;
+use JardisTools\DevSkills\Handler\Install\LoadCatalogEntries;
 use JardisTools\DevSkills\Handler\Install\EnsureClaudeMdImport;
 use JardisTools\DevSkills\Handler\Install\EnsureGeminiContext;
 use JardisTools\DevSkills\Handler\Install\HasAgentsImport;
@@ -99,8 +102,20 @@ final class SkillInstaller
     /** @var Closure(string, GitRulesMode, InstallProfile): string */
     private readonly Closure $loadRouterText;
 
-    /** @var Closure(list<AgentsDescriptor>, string, bool, string): AggregateAgentsResult */
+    /** @var Closure(list<AgentsDescriptor>, string, bool, string, bool): AggregateAgentsResult */
     private readonly Closure $aggregateAgentsMd;
+
+    /** @var Closure(string): list<\JardisTools\DevSkills\Data\CatalogEntry> */
+    private readonly Closure $loadCatalogEntries;
+
+    /** @var Closure(string): list<SkillDescriptor> */
+    private readonly Closure $scanVendorSkills;
+
+    /** @var Closure(list<AgentsDescriptor>, list<\JardisTools\DevSkills\Data\CatalogEntry>, list<SkillDescriptor>): list<AgentsDescriptor> */
+    private readonly Closure $digestAgentsDescriptors;
+
+    /** whether `hosts` lists `codex`; only then AGENTS.md size is checked against the Codex limit */
+    private readonly bool $withCodex;
 
     /** @var Closure(InstallReport, AggregateAgentsResult): void */
     private readonly Closure $recordAgentsAggregation;
@@ -134,6 +149,10 @@ final class SkillInstaller
         $this->scanAgentsFiles = (new ScanAgentsFiles())->__invoke(...);
         $this->isCatalogInstalled = (new IsCatalogInstalled())->__invoke(...);
         $this->loadRouterText = (new LoadRouterText())->__invoke(...);
+        $this->loadCatalogEntries = (new LoadCatalogEntries())->__invoke(...);
+        $this->scanVendorSkills = (new ScanVendor())->__invoke(...);
+        $this->digestAgentsDescriptors = (new DigestAgentsDescriptors())->__invoke(...);
+        $this->withCodex = in_array(Host::Codex, ($config ?? PluginConfig::all())->hosts, true);
         $this->aggregateAgentsMd = (new AggregateAgentsMd(
             $fs,
             (new IsPathBehindLink())->__invoke(...),
@@ -361,10 +380,15 @@ final class SkillInstaller
         InstallReport $report,
     ): void {
         $result = ($this->aggregateAgentsMd)(
-            ($this->scanAgentsFiles)($vendorDir),
+            ($this->digestAgentsDescriptors)(
+                ($this->scanAgentsFiles)($vendorDir),
+                ($this->loadCatalogEntries)($this->pluginRoot),
+                ($this->scanVendorSkills)($vendorDir),
+            ),
             $projectRoot,
             ($this->isCatalogInstalled)($keptBundled),
             ($this->loadRouterText)($this->pluginRoot, $this->gitRules, $report->profile() ?? InstallProfile::Jardis),
+            $this->withCodex,
         );
         ($this->recordAgentsAggregation)($report, $result);
     }

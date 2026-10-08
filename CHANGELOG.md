@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] - 2026-10-08
+
+### Changed
+- The aggregated `AGENTS.md` lists each Jardis vendor package as a short block instead of its full `AGENTS.md`: the capability from `catalog/manifest.json` (else the package intro), `Use when`, the skills to load and the docs URL. A typical project file shrinks from about 47 KB to below 16 KB.
+- The Codex size warning (`AGENTS.md is N bytes, above the Codex limit ...`) appears only when `codex` is listed in `hosts`.
+
 ## [1.15.0] - 2026-10-08
 
 ### Added

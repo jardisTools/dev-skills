@@ -83,7 +83,11 @@ final class PluginTest extends TestCase
 
         $agentsMd = (string) file_get_contents($this->project->path('AGENTS.md'));
         self::assertStringContainsString('BEGIN jardis/dev-skills', $agentsMd);
-        self::assertStringContainsString('Cache rules.', $agentsMd);
+        // The block of a vendor package is the short form: the catalog capability (the plugin's own manifest knows
+        // jardisadapter/cache) and the skill to load, not the package AGENTS.md itself.
+        self::assertStringContainsString('Multi-layer caching', $agentsMd);
+        self::assertStringContainsString('load skill `adapter-cache`', $agentsMd);
+        self::assertStringNotContainsString('Cache rules.', $agentsMd);
     }
 
     public function testOnComposerRunInstallsAllPluginOwnSkills(): void
