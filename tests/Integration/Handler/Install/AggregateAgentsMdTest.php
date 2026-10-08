@@ -242,7 +242,8 @@ final class AggregateAgentsMdTest extends TestCase
     {
         $descriptors = [new AgentsDescriptor('jardisadapter/cache', str_repeat("Cache rules line.\n", 2500))];
 
-        $result = ($this->aggregate())($descriptors, $this->project->root, false, '# Router');
+        // The warning is now host-dependent: the Codex limit only matters when `codex` is a configured host.
+        $result = ($this->aggregate())($descriptors, $this->project->root, false, '# Router', true);
 
         $size = filesize($this->project->path('AGENTS.md'));
         self::assertGreaterThan(32768, $size);
@@ -250,6 +251,16 @@ final class AggregateAgentsMdTest extends TestCase
         self::assertStringContainsString((string) $size . ' bytes', $result->sizeWarning);
         self::assertStringContainsString('32768', $result->sizeWarning);
         self::assertStringContainsString('project_doc_max_bytes', $result->sizeWarning);
+    }
+
+    public function testNoWarningAboveLimitWithoutCodexHost(): void
+    {
+        $descriptors = [new AgentsDescriptor('jardisadapter/cache', str_repeat("Cache rules line.\n", 2500))];
+
+        $result = ($this->aggregate())($descriptors, $this->project->root, false, '# Router');
+
+        self::assertGreaterThan(32768, filesize($this->project->path('AGENTS.md')));
+        self::assertNull($result->sizeWarning);
     }
 
     public function testNoWarningBelowCodexLimit(): void
