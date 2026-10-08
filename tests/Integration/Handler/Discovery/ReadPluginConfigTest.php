@@ -436,4 +436,39 @@ final class ReadPluginConfigTest extends TestCase
         self::assertSame(InstallProfile::Core, $config->profile);
         self::assertSame(GitRulesMode::Strict, $config->gitRules);
     }
+
+    public function testHostsDefaultToClaudeWhenTheKeyIsAbsent(): void
+    {
+        $withoutRoot = (new ReadPluginConfig())([]);
+        $withOtherKeys = (new ReadPluginConfig())(['jardis/dev-skills' => ['profile' => 'core']]);
+
+        self::assertSame([\JardisTools\DevSkills\Data\Host::Claude], $withoutRoot->hosts);
+        self::assertSame([\JardisTools\DevSkills\Data\Host::Claude], $withOtherKeys->hosts);
+        self::assertNull($withoutRoot->hostsWarning);
+    }
+
+    public function testHostsAreReadNextToTheOtherKeys(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => [
+            'hosts' => ['claude', 'codex'],
+            'agents-md' => 'none',
+            'bundled-skills' => ['design-*'],
+        ]], 'acme/app');
+
+        self::assertSame(
+            [\JardisTools\DevSkills\Data\Host::Claude, \JardisTools\DevSkills\Data\Host::Codex],
+            $config->hosts,
+        );
+        self::assertNull($config->hostsWarning);
+        self::assertSame(['design-*'], $config->includeGlobs);
+        self::assertSame(AgentsMdMode::None, $config->agentsMd);
+    }
+
+    public function testInvalidHostsWarnAndFallBackToClaude(): void
+    {
+        $config = (new ReadPluginConfig())(['jardis/dev-skills' => ['hosts' => ['claude', 'vim']]]);
+
+        self::assertSame([\JardisTools\DevSkills\Data\Host::Claude], $config->hosts);
+        self::assertStringContainsString('entry "vim" is unknown', (string) $config->hostsWarning);
+    }
 }

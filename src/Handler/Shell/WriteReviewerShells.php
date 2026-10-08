@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace JardisTools\DevSkills\Handler\Shell;
 
 use Closure;
+use JardisTools\DevSkills\Data\Host;
 use JardisTools\DevSkills\Data\InstallProfile;
 use JardisTools\DevSkills\Data\InstallReport;
 use JardisTools\DevSkills\Data\Manifest;
@@ -18,9 +19,10 @@ use JardisTools\DevSkills\Handler\Manifest\ResolvePluginVersion;
 
 /**
  * Writes the reviewer shells (R8): for every source `skills/process-review-board/reviewers/<role>.md`
- * of the plugin one shell per tool format. No source, no shell; a source without valid frontmatter
- * yields a warning and no shell. Without the source folder (it does not exist before the prompts are
- * shipped) nothing happens and nothing is reported.
+ * of the plugin one shell per tool format of the configured hosts (`hosts`; the others get none, and the
+ * shells of a host that dropped out of the list are taken out by `RetireHostShells`). No source, no shell;
+ * a source without valid frontmatter yields a warning and no shell. Without the source folder (it does
+ * not exist before the prompts are shipped) nothing happens and nothing is reported.
  *
  * A shell is overwritten only when the manifest lists it (`selfSet`, `fileCreated`). Anything else at the
  * target path (a foreign file, a folder, a link) stays as it is and is reported. A write error for one
@@ -44,6 +46,7 @@ final class WriteReviewerShells
      * @param Closure(string, string): ManifestReadResult $readManifest
      * @param Closure(string, string, SelfSetEntry): void $recordSelfSet
      * @param Closure(string, string): bool $isPathBehindLink
+     * @param list<Host> $hosts the tools that get shells
      */
     public function __construct(
         private readonly string $pluginRoot,
@@ -52,6 +55,7 @@ final class WriteReviewerShells
         private readonly Closure $readManifest,
         private readonly Closure $recordSelfSet,
         private readonly Closure $isPathBehindLink,
+        private readonly array $hosts = [Host::Claude],
     ) {
     }
 
@@ -104,7 +108,8 @@ final class WriteReviewerShells
         array $managed,
         InstallReport $report,
     ): void {
-        foreach (ShellFormat::cases() as $format) {
+        foreach ($this->hosts as $host) {
+            $format = $host->shellFormat();
             try {
                 $warning = $this->writeShell(
                     $projectRoot,

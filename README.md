@@ -19,8 +19,8 @@ After `composer install` or `composer update`, the plugin does the following in 
 1. **Skills.** It copies the bundled skills of the installation profile (all 33 in the profile `jardis`, 25 in the profile `core`, see [Installation profile](#installation-profile-profile)) and every skill of a `jardis*` vendor package (`vendor/<vendor>/<package>/.claude/skills/<name>/`) into two folders: `.claude/skills/` and `.agents/skills/`.
 2. **`AGENTS.md`.** It writes one managed block into `AGENTS.md`. The block opens with a process router (work tiers, the phase-to-skill table, a pointer to the knowledge pool, optionally the git rules) and then aggregates the `AGENTS.md` of every Jardis vendor package. A project that is itself a `jardis*` package gets no block (see [`agents-md`](#agentsmd-in-a-jardis-package-agents-md)).
 3. **`CLAUDE.md`.** It adds a managed block that imports `@AGENTS.md` (not with `agents-md` = `none`).
-4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName` (not with `agents-md` = `none`).
-5. **Reviewer agents.** It writes the 19 reviewer roles of the `process-review-board` skill (17 in the profile `core`) as agent files for five tools (see [Reviewer agent files](#reviewer-agent-files)).
+4. **`.gemini/settings.json`.** It lists `AGENTS.md` in `context.fileName` (only with `gemini` in [`hosts`](#reviewer-shells-per-tool-hosts); not with `agents-md` = `none`).
+5. **Reviewer agents.** It writes the 19 reviewer roles of the `process-review-board` skill (17 in the profile `core`) as agent files for the tools named in [`hosts`](#reviewer-shells-per-tool-hosts) (default: Claude Code only; see [Reviewer agent files](#reviewer-agent-files)).
 6. **Manifest.** It records every skill folder it installed in `.claude/skills/.jardis-managed.json`; update and uninstall touch only what the manifest lists.
 7. **Git exclude block.** It writes a managed block into `.git/info/exclude` (see [`process-docs`](#where-the-generated-files-go-process-docs)).
 
@@ -32,13 +32,15 @@ The bundled skills also contain a development process: tier choice, concept, PRD
 
 ## Supported tools
 
-| Tool | Status | What the plugin writes for it |
-|---|---|---|
-| Claude Code | **tested** | `.claude/skills`, `AGENTS.md` imported from `CLAUDE.md`, `.claude/agents` |
-| Codex | documented, not tested | `.agents/skills`, `AGENTS.md`, `.codex/agents` |
-| Cursor | documented, not tested | `.agents/skills`, `AGENTS.md`, `.cursor/agents` |
-| GitHub Copilot | documented, not tested | `.agents/skills` and `.claude/skills`, `AGENTS.md`, `.github/agents` |
-| Gemini CLI | documented, not tested | `.agents/skills`, `.gemini/settings.json` with `AGENTS.md`, `.gemini/agents` |
+| Tool | Status | What the plugin writes for it | Shells with `hosts: [...]` |
+|---|---|---|---|
+| Claude Code | **tested** | `.claude/skills`, `AGENTS.md` imported from `CLAUDE.md`, `.claude/agents` | `"claude"` (default) |
+| Codex | documented, not tested | `.agents/skills`, `AGENTS.md`, `.codex/agents` | `"codex"` |
+| Cursor | documented, not tested | `.agents/skills`, `AGENTS.md`, `.cursor/agents` | `"cursor"` |
+| GitHub Copilot | documented, not tested | `.agents/skills` and `.claude/skills`, `AGENTS.md`, `.github/agents` | `"copilot"` |
+| Gemini CLI | documented, not tested | `.agents/skills`, `.gemini/settings.json` with `AGENTS.md`, `.gemini/agents` | `"gemini"` |
+
+`.agents/skills`, `AGENTS.md` and the `CLAUDE.md` import are the layer all tools share; they are always written. Only the agent files (`…/agents`) and the Gemini entry depend on `hosts`.
 
 **tested** means: the process was run with the tool and each check listed below passed. **documented, not tested** means: the vendor documentation says the tool reads that location, we quote the passage below, and we have not run the process with that tool. Other tools are not covered.
 
@@ -303,6 +305,26 @@ The key has three stances. By default (`true`) the process router in `AGENTS.md`
 
 `git-start-branch` creates a branch from `origin/develop` (hotfixes from `origin/main`), so it needs a remote named `origin` and a `develop` branch.
 
+### Reviewer shells per tool (`hosts`)
+
+The key `hosts` lists the tools that get reviewer agent files. By default (no key) that is `["claude"]`: only Claude Code is tested, so the plugin does not write files for the other four tools unasked. Values are `"claude"`, `"codex"`, `"cursor"`, `"copilot"` and `"gemini"`.
+
+```json
+{
+    "extra": {
+        "jardis/dev-skills": {
+            "hosts": ["claude", "codex"]
+        }
+    }
+}
+```
+
+**Sync behavior:** the config is the source of truth, as for `bundled-skills`. If a host drops out of the list, the next `composer install` deletes the reviewer shells the manifest lists for it and removes its `…/agents` folder when that is empty. A file the plugin did not write stays, and so does the folder it lives in. `"gemini"` also decides the entry in `.gemini/settings.json`: without it the plugin does not create or change that file, and takes out an entry an earlier run added. `.agents/skills`, `.claude/skills`, `AGENTS.md` and the `CLAUDE.md` import do not depend on `hosts`; `agents-md` = `none` still keeps the Gemini entry out in any case.
+
+**Invalid config** (not a list, or an unknown name such as `"vim"`): console warning, treated as `["claude"]`. An empty list is valid and writes no shells.
+
+Why: before this key every install wrote 19 shells for each of the five tools, 76 of them for tools nobody had tested, and each re-install reported the files of a project that already had them (`exists and is not a reviewer shell of the plugin`, 95 lines in one measured project). Ask for a tool only when you use it.
+
 ### AGENTS.md in a Jardis package (`agents-md`)
 
 The `AGENTS.md` of a Jardis package is a deliverable: dev-skills aggregates it into the projects that require the package. It must not become the workplace of the plugin. The key `agents-md` decides whether the plugin writes its managed block (router plus the aggregated `AGENTS.md` of the vendor packages) into the `AGENTS.md` of the project it runs in.
@@ -359,7 +381,7 @@ Every skill description is part of the skill listing the agent sees in each sess
 
 ## Reviewer agent files
 
-The 19 reviewer roles of `process-review-board` live in `skills/process-review-board/reviewers/`. For each role the plugin writes one agent file per tool; in the profile `core` the two roles `plan-review-packages` and `plan-review-ddd-tactics` get none (17 roles), and existing files are left in place:
+The 19 reviewer roles of `process-review-board` live in `skills/process-review-board/reviewers/`. For each role the plugin writes one agent file per tool listed in [`hosts`](#reviewer-shells-per-tool-hosts) (default `claude`); in the profile `core` the two roles `plan-review-packages` and `plan-review-ddd-tactics` get none (17 roles), and existing files are left in place:
 
 | Tool | Path |
 |---|---|

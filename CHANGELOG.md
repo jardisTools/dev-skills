@@ -4,6 +4,16 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] - 2026-10-08
+
+### Added
+- **Key `extra."jardis/dev-skills"."hosts"`**: the tools that get reviewer shells, a list of `"claude"`, `"codex"`, `"cursor"`, `"copilot"`, `"gemini"`. Without the key it is `["claude"]`; an invalid value (not a list, unknown name) warns and counts as absent.
+
+### Changed
+- Reviewer shells are written only for the listed hosts (before: always all five). A host that drops out of the list loses the shells the manifest lists for it on the next install; foreign files stay, emptied `…/agents` folders go.
+- `.gemini/settings.json` is created or changed only with `gemini` in `hosts`; without it an entry of an earlier run is taken out. `.agents/skills`, `.claude/skills`, `AGENTS.md` and the `CLAUDE.md` import do not depend on `hosts`.
+- Projects that rely on shells for Codex, Cursor, Copilot or Gemini add the matching names to `hosts`.
+
 ## [1.9.0] - 2026-10-04
 
 ### Changed
