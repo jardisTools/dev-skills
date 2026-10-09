@@ -83,7 +83,7 @@ The `type` vocabulary is closed (`column_type_vocabulary.go`); a token outside i
 
 ### 3. Modelling heuristics
 
-- **Identifier columns:** every business object typically has an internal `int` PK (`id`) **and** a public business identifier (`identifier`, often `varchar(36)` UUID7). Unique index on the business identifier.
+- **Identifier columns:** every business object typically has an internal `int` PK (`id`) **and** a public business identifier (`identifier`, often `varchar(36)` UUID7). Unique index on the business identifier. Child tables (`erm: many`) get their own `identifier` column with a single-column unique index too — the Aggregate declares it as `identifier {stage: column}`; without it finding ID-2 appears.
 - **Active period:** "active period" in the idea → `activeFrom` (`date` or `datetime`, per whether a time of day matters; not nullable) + `activeUntil` (same type, nullable = open period).
 - **Lookup tables:** categories/types/statuses get their own table even when described as enums.
 - **Single PK only:** exactly **one** PK column per table. A composite (multi-column) PK is a hard build error (S7). Junction/N:M tables therefore get a surrogate PK + two FKs, never a composite PK.
