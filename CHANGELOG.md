@@ -4,6 +4,13 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.19.0] - 2026-10-09
+
+### Changed
+- `generated-code-wire-transport` separates the status codes: a unique-key duplicate is always 409 `duplicate` and never 422; 422 belongs to the Rules-Layer only. The root `PUT` writes root fields only, children are maintained through `Update{Child}` / `Add{Child}` / `Remove{Child}`, and the root PUT route exists only for a Command marked `expose: true` in `Closures.json`.
+- `design-model-capabilities` names the child commands for `Update{Root}` and asks for an explicit `identifier {stage: column, column: identifier}` on every child with an identifier column (otherwise finding ID-2).
+- `design-draft-schema` gives every `erm: many` child table its own `identifier` column with a single-column unique index, declared on the Aggregate as `identifier {stage: column}`.
+
 ## [1.18.0] - 2026-10-09
 
 ### Added
