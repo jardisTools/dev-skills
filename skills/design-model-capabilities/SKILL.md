@@ -47,7 +47,7 @@ Door: MCP `save_aggregate` (`graph.nodes`, `graph.edges`, `graph.adopts`), `add_
 
 | Setting | Allowed values | Effect |
 |---|---|---|
-| Child `erm` | `one` / `many` | `many`: `Add{Singular}` and `Remove{Singular}` child commands, a child list in the create command. `one`: `Set{Child}` always, `Remove{Child}` only when the child is optional |
+| Child `erm` | `one` / `many` | `many`: `Add{Singular}`, `Update{Singular}` and `Remove{Singular}` child commands, a child list in the create command. `one`: `Set{Child}` always, `Remove{Child}` only when the child is optional |
 | `source` | table name (alias allowed) | one aggregate entity per table; the table must exist in the schema (R1) |
 | `relates` (edge `sourceCol`/`targetCol`, `extraConditions[]`) | join condition between parent and child | defines the FK link; `extraConditions` carry polymorphic discriminators |
 | `required` | default `true`; `false` explicit; forbidden on root | `many` + required: create requires a non-empty list (400 via `CountMin`) and removing the last entry is refused; `one` + required: create requires the child (`NotBlank`) and no `Remove{Child}` is generated for a plain required child; `false`: optional child, `Remove` available |
@@ -70,6 +70,7 @@ Command forms the tree yields (all derived, no JSON of their own):
 | `Create{Root}` | scalars (not system-managed, not adopted, not FK to owned child), grouped VOs, `one` children, `many` lists (required lists before optional) | never exposable at the BC facade (name clash with `{agg}()`) |
 | `Update{Root}` | root identifier + root scalars only | no child lists, no `one` children — children change through their own commands |
 | `Set{Child}` / `Add{Singular}` | parent selector + child scalars | no nested `many` collections; clashing names are prefixed with the entity name, never dropped |
+| `Update{Singular}` (`many`) | parent selector + child identifier (path only) + child scalars | full replacement like `Update{Root}`: every field required, a missing nullable key equals `null`; the child identifier is immutable and never part of the body (an identifier in the body is 400 `unknown`); embedded `one` sub-objects stay out (change them via `Set{Sub}`); emitted only when the child has at least one changeable field; one event `{Agg}{Child}Updated` per call, also for a no-op; `PUT …/{roots}/{rootId}/{children}/{childId}` once exposed |
 | `Remove{Singular}` (`many`) | parent selector + child identifier | cascade property is the child identifier; `Remove{Child}` of an `one` child needs no fields |
 | `Remove{Root}` | root identifier | cascade, see above |
 

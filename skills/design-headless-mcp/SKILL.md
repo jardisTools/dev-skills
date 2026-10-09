@@ -145,7 +145,9 @@ human- or agent-confirmed single step.
 **Rules-Layer — full MCP parity:** a BC's `Closures.json`
 (the Rule catalog + per-Command bindings that guard writes between the aggregate and its process,
 `generated-code-extend`) is fully MCP-reachable, same as everything above — no browser-only
-capability here. `save_closures` persists the whole catalog+bindings document (LockedSave — a
+capability here. Child commands included: every `erm: many` child's `Add{Singular}` / `Update{Singular}` /
+`Remove{Singular}` appears in the `catalog` Resource (with `httpMethod` and `target`) and is exposed through
+`bindings.<Command>.expose` exactly like a root command — no browser-only step. `save_closures` persists the whole catalog+bindings document (LockedSave — a
 `CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`);
 Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
 `messageKey` is never cleared — omitted or `""` keeps the stored key, and an empty one on a
