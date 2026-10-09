@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.18.0] - 2026-10-09
+
+### Added
+- `design-model-capabilities` documents the generated `Update{Singular}` command for every `erm: many` child (full replacement, child identifier only in the path, `PUT …/{children}/{childId}` once exposed) next to `Add{Singular}` and `Remove{Singular}`.
+- `design-headless-mcp` states that child commands (Add/Update/Remove per `erm: many` child) are listed in the `catalog` Resource with `httpMethod`/`target` and exposed via `bindings.<Command>.expose` — full MCP parity.
+
 ## [1.17.0] - 2026-10-08
 
 ### Changed
