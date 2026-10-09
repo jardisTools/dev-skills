@@ -54,7 +54,7 @@ Door: MCP `save_aggregate` (`graph.nodes`, `graph.edges`, `graph.adopts`), `add_
 | `adopt.onCreate` | `'"const"'`, `'"__UUID7__"'`, `'"__UUID4__"'`, `<entity>.id`, `<entity>.field` | column filled once at create, removed from the command DTO. `<entity>.id` = FK from an ancestor; UUID varchar needs length ≥ 36 |
 | `adopt.sync` | `<entity>.field` | column re-filled on every persist (field inheritance) |
 | `depend` | `<column>: <entity>.id` (target = child or sibling, not `many`; no cycle, no both directions) | persist cascade: the target is persisted first and delivers the generated id; FK removed from the DTO. Not combinable with `adopt` on the same column |
-| `identifier` | `{stage: column\|uniqueColumn\|pk, column}` | declares the public identifier explicitly (otherwise guessed by a 3-stage cascade; ID-2 suggestion). Child `many` needs a dedicated unique identifier column, else PK fallback (R7) |
+| `identifier` | `{stage: column\|uniqueColumn\|pk, column}` | declares the public identifier explicitly (otherwise guessed by a 3-stage cascade; ID-2 suggestion). Child `many` needs a dedicated unique identifier column, else PK fallback (R7). Declare `identifier {stage: column, column: identifier}` on every child that has an identifier column; an undeclared pick raises finding ID-2 |
 | `eventIdentifier` | `{kind: pureJoin\|businessKey\|dependTarget\|syntheticPk}` | identifier in the event payload; undeclared → EVT-ID-3 suggestion. MCP only via `write_definitions` (no UI) |
 | `orderBy` (node) | column + `ASC`/`DESC` | copied into the derived follow-up query of that child and orders it; an effect on the aggregate load path is not verified |
 | `field` (node) | column list | column restriction; MCP only via `write_definitions` (no UI) |
@@ -68,7 +68,7 @@ Command forms the tree yields (all derived, no JSON of their own):
 | Command | Fields | Notes |
 |---|---|---|
 | `Create{Root}` | scalars (not system-managed, not adopted, not FK to owned child), grouped VOs, `one` children, `many` lists (required lists before optional) | never exposable at the BC facade (name clash with `{agg}()`) |
-| `Update{Root}` | root identifier + root scalars only | no child lists, no `one` children — children change through their own commands |
+| `Update{Root}` | root identifier + root scalars only | no child lists, no `one` children — children change through `Update{Child}`/`Add{Child}`/`Remove{Child}`; the root PUT route exists only with `expose: true` in `Closures.json` |
 | `Set{Child}` / `Add{Singular}` | parent selector + child scalars | no nested `many` collections; clashing names are prefixed with the entity name, never dropped |
 | `Update{Singular}` (`many`) | parent selector + child identifier (path only) + child scalars | full replacement like `Update{Root}`: every field required, a missing nullable key equals `null`; the child identifier is immutable and never part of the body (an identifier in the body is 400 `unknown`); embedded `one` sub-objects stay out (change them via `Set{Sub}`); emitted only when the child has at least one changeable field; one event `{Agg}{Child}Updated` per call, also for a no-op; `PUT …/{roots}/{rootId}/{children}/{childId}` once exposed |
 | `Remove{Singular}` (`many`) | parent selector + child identifier | cascade property is the child identifier; `Remove{Child}` of an `one` child needs no fields |
