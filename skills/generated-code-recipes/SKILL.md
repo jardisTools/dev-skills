@@ -1,6 +1,6 @@
 ---
 name: generated-code-recipes
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/in-process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/projection in the same process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 profile: jardis
@@ -66,7 +66,7 @@ foreach (array_merge(...array_values($response->getEvents())) as $event) {
 }
 ```
 
-**In-process** (projection, audit trail) — also a node body, calling the projector through `handle()`:
+**Projection in the same process** (projection, audit trail) — a synchronous call from the node body through `handle()`, not an event subscription:
 
 ```php
 foreach (array_merge(...array_values($response->getEvents())) as $event) {
@@ -501,12 +501,11 @@ NOT roll back in that case, it commits empty — the No path is a legitimate com
   may happen to match the actual state — just as relevant for Case A (bool flag) as for
   Case B (counter).
 
-**Event initial creation remains a concept, not a finished path.** The status row in Case A should ideally
-arise via domain event ("order delivered" → create row), but the generated
-`<Agg>EventRouter.php` is a pure registration stub (§1 above) — delivery via a
-real transport (Kafka/HTTP/in-process, §1) is open wiring, not a finished building block. Until then:
-initial creation via fixture seed / a one-off migration step, documented as a deliberate gap, not
-silently passed over.
+**Initial creation of the status row.** There is no event subscription inside the system — events are
+outbound (§1 above), nothing in the generated code reacts to them. The status row in Case A is therefore
+created by the process that completes the triggering step ("order delivered"): as a node in the same BC,
+or across BCs through a Cross-BC call to the owning BC's `process()`. Rows for data that already exists
+come from a fixture seed / a one-off migration step.
 
 **Converting the real process.** An existing check-then-act decision node (reads via query
 for absence) is replaced in the Designer, not built alongside it: model the status aggregate
