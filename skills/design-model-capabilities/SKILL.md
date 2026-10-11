@@ -127,7 +127,7 @@ Door: MCP `create_process`, `save_process` (whole process wire), `validate_proce
 | Node = event | `mode: async` + `eventFields[]` (`source` = input field, or collector `{kind: latest\|all, node, facade, method}`; `label`) | event record built from named fields; transport recipes in `generated-code-recipes` |
 | `mode` | `sync`\|`async`, mandatory per node | |
 | `edges[]` | `from`, `on`, `to` or `terminal: true`; `on` ∈ `onSuccess` `onFail` `onTimeout` `onSkip` `onCancel` `onExit` | routing; a node with `consumedCalls`/`rule`/`subProcess` needs an `onFail` edge. Success → `onSuccess`, 404 and 422 → `onFail`, 5xx → exception path |
-| `responses[]` | per dead-end edge `{when:{from,on}, status, messageKey}`; status ∈ 400 401 403 404 405 409 422 500; `messageKey` = `{bc}.{cause}`, unique in the process | declared error mapping in OpenAPI and interface board; mandatory on dead-end edges except after rule nodes (fixed 422) — missing is warning RESP-1 |
+| `responses[]` | per dead-end edge `{when:{from,on}, status, messageKey}`; status ∈ 400 401 403 404 405 409 422 500; `messageKey` = `{bc}.{cause}`, unique in the process | declared error mapping in OpenAPI and interface board; mandatory on dead-end edges except after rule nodes (fixed 422) — missing is warning RESP-1. A 422 is never taken from `responses[]`: it comes from the Rule contract, or — open `messageKey` — from a reachable own-BC dev body (Custom/Query body, also via sub-process); declaring one is RESP-5/RESP-6 |
 | `reads[]` (action node) | `{query, needs: statusFilter\|dateInterval\|identifierChain, binds}` | declared read of an own-aggregate query |
 | `description`, node `purpose`, `acceptanceCriteria[]` | text | docblocks of the facade method and node classes |
 
@@ -149,7 +149,7 @@ Door: MCP `save_closures`, `validate_closures`, `rename/delete/duplicate_closure
 | `bindings.<Command>.chain[]` | ordered closure names, no duplicates after flattening; output `verdict`; at most one `command` input (that command), at most one `aggregate` input (not on Create); no scalar/valuelist input | AND chain with short circuit, enforced structurally at the endpoint |
 | `bindings.<Command>.expose` | bool; any command except Create, including child commands | direct method `{command}({Cmd}DTO)` on the BC facade |
 
-Rejection is `422 {"@type":"ruleViolation", rule, messageKey, context}`, never an exception. Read pattern inside a body: `$this->context(Get{Agg}ListHandler::class, new {Agg}ListFilter(limit: 1, …))()['total']`. Known limit: no locking between check and apply — back hard invariants with a database constraint.
+Rejection is `422 {"@type":"ruleViolation", rule, messageKey, context}`, never an exception. A Process door declares this 422 in its OpenAPI also when a dev body of its own BC is reachable (`messageKey` then an open string, no enum); cross-BC/external call alone declares none. Read pattern inside a body: `$this->context(Get{Agg}ListHandler::class, new {Agg}ListFilter(limit: 1, …))()['total']`. Known limit: no locking between check and apply — back hard invariants with a database constraint.
 
 #### 2.7 Field map
 

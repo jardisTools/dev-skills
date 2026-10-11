@@ -60,7 +60,7 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 | 403 | 403 Forbidden | 2 | Auth insufficient |
 | 404 | 404 Not Found | 2 | A single read found nothing, or a write loaded its aggregate and missed it (Update/Remove/Add-child/Set — root, and the child a Remove looks up by identifier; never a Create) — `data` is `{"@type":"notFound","context":{<route parameter or load identifier>}}`, and a Process reaching such a loading Command node answers the same (first 4xx wins, the node routes `ON_FAIL`); a bulk read never answers 404 (200 with `items: []`); the router's own 404/405 is the contract's `BoundaryEnvelope` |
 | 409 | 409 Conflict | 2 | Stale write / state conflict — `data` is `{"@type":"concurrencyConflict","reason","aggregate","context"}` — `reason` is `stale_write`, `stale_delete` or `duplicate` (a unique-key duplicate, typed from the repository package — always 409, never 422; an FK violation stays 500); `context` carries the root's outer-door identifier under its FieldMap name (`id` only without a unique key), never primary-key or column internals |
-| 422 | 422 Unprocessable Entity | 2 | Rules-Layer only: a bound business Rule rejected the Command (a unique-key violation is NOT a rule rejection, it is 409 `duplicate`) — `data` is `{"@type":"ruleViolation","rule","messageKey","context"}` (requires `jardiscore/kernel` ≥ 1.1.0); map `messageKey` to a localized message in this transport layer, never in the domain |
+| 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — or, at a Process door, a developer-owned node body of the own BC answered 422 (a unique-key violation is NOT a rule rejection, it is 409 `duplicate`) — `data` is `{"@type":"ruleViolation","rule","messageKey","context"}` (requires `jardiscore/kernel` ≥ 1.1.0); the Process door's OpenAPI declares this 422 whenever a Rule or an own-BC dev body is reachable (also through sub-processes) — `messageKey` is the closed enum of the Rule keys if only Rules are reachable, an open string if an own-BC dev body is reachable; a cross-BC or external call alone declares no 422; map `messageKey` to a localized message in this transport layer, never in the domain |
 | 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422); the message is in `errors` |
 
 > **Root update carries no child lists.** The root update (`PUT /…/{key}`) writes the root fields only; children are maintained through `Update{Child}` / `Add{Child}` / `Remove{Child}` (or as a block on the create path). A child field in a PUT body is a 400 with `reason: unknown`. The root PUT route exists only for a Command marked `expose: true` in `Closures.json`.
@@ -98,7 +98,7 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 // Not found on write (e.g. update of a missing counter) → 404, never 500
 { "status": 404, "data": { "@type": "notFound", "context": { "counterIdentifier": "018e..." } }, "errors": {}, "meta": { … } }
 
-// Rule rejection → 422
+// Rule rejection (or own-BC dev-body 422 at a Process door) → 422
 { "status": 422, "data": { "@type": "ruleViolation", "rule": "…", "messageKey": "counter.must_be_active", "context": { "identifier": "018e..." } }, "errors": {}, "meta": { … } }
 ```
 
