@@ -65,7 +65,7 @@ Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB
 
 > **Root update carries no child lists.** The root update (`PUT /…/{key}`) writes the root fields only; children are maintained through `Update{Child}` / `Add{Child}` / `Remove{Child}` (or as a block on the create path). A child field in a PUT body is a 400 with `reason: unknown`. The root PUT route exists only for a Command marked `expose: true` in `Closures.json`.
 
-Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). **`getData()` is flat:** it is the business object itself, typed by its own `@type` field — there is no handler-name or aggregate-root level in between. **`getErrors()` is context-keyed** (`array<string, list<string>>`, e.g. `['counter' => ['message']]`); on the wire `errors` is an object `{<context>: [message, …]}`, an empty `{}` when nothing failed (never `[]`). `meta` carries `duration`, `contexts`, `timestamp`, `version`. Per X-1 the generator emits a minimal payload — **Command** echoes only the reference values (root business key, plus the affected child key), **Query** returns the projected aggregate: the root fields flat in the `data` array, children as typed `{Child}Response` objects (in PHP read them with `->`; `json_encode` writes the same nested JSON as below). `@type` per answer kind (full table: `generated-code-recipes` Recipe 6): the aggregate's root key (`counter`) for a single read and a Command, `<agg>List` for list and bulk reads, the aggregate of the success command for a Process, `validation` / `notFound` / `concurrencyConflict` / `ruleViolation` for 400 / 404 / 409 / 422 (a Process trims a dev body's `data` to `@type` plus the form's fields; a 4xx without a form, e.g. 401/403/405, is passed through unchanged; a `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed). Examples:
+Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). **`getData()` is flat:** it is the business object itself, typed by its own `@type` field — there is no handler-name or aggregate-root level in between. **`getErrors()` is context-keyed** (`array<string, list<string>>`, e.g. `['counter' => ['message']]`); on the wire `errors` is an object `{<context>: [message, …]}`, `{}` when no component put a message there (never `[]`). **Where the cause of a failure lives:** only a **500** reliably fills `errors`; a **4xx** (400 field/guard, 404, 409, 422) carries its cause in the typed `data` (`fields[]` / `context` / `rule`+`messageKey`), and `errors` may be `{}` there — the route guard's 400 and a node's 404 leave it empty, the aggregate CommandHandler's 400 fills it with the validator message. So a transport that needs the reason of a 4xx reads `getData()`, never only `getErrors()`. `meta` carries `duration`, `contexts`, `timestamp`, `version`. Per X-1 the generator emits a minimal payload — **Command** echoes only the reference values (root business key, plus the affected child key), **Query** returns the projected aggregate: the root fields flat in the `data` array, children as typed `{Child}Response` objects (in PHP read them with `->`; `json_encode` writes the same nested JSON as below). `@type` per answer kind (full table: `generated-code-recipes` Recipe 6): the aggregate's root key (`counter`) for a single read and a Command, `<agg>List` for list and bulk reads, the aggregate of the success command for a Process, `validation` / `notFound` / `concurrencyConflict` / `ruleViolation` for 400 / 404 / 409 / 422 (a Process trims a dev body's `data` to `@type` plus the form's fields; a 4xx without a form, e.g. 401/403/405, is passed through unchanged; a `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed). Examples:
 
 ```json
 // Command via a Process (e.g. createCounter) → 200, reference value only
@@ -79,19 +79,19 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 // Query (e.g. getCounterById / getCounterByIdentifier) → 200, flat projected record
 {
   "status": 200,
-  "data":   { "@type": "counter", "id": 1, "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01", "recordedAt": "2026-10-07T10:00:00+00:00", "price": "19.90" },
+  "data":   { "@type": "counter", "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01", "recordedAt": "2026-10-07T10:00:00+00:00", "price": "19.90" },
   "errors": {},
   "meta":   { "duration": 8.1, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
 }
 
 // Bulk read (getCounterByIds / getCounterByIdentifiers) → 200
-{ "status": 200, "data": { "@type": "counterList", "items": [ { "id": 1, "identifier": "018e..." } ] }, "errors": {}, "meta": { … } }
+{ "status": 200, "data": { "@type": "counterList", "items": [ { "identifier": "018e..." } ] }, "errors": {}, "meta": { … } }
 
 // Validation failure → 400
 {
   "status": 400,
   "data":   { "@type": "validation", "fields": [ { "field": "counterNumber", "reason": "missing", "message": "Field is required.", "messageKey": "validation.missing" } ] },
-  "errors": { "<context>": [ "…" ] },
+  "errors": { "<context>": [ "…" ] },   // filled by the aggregate CommandHandler; {} from the route guard — the cause is always in data.fields
   "meta":   { … }
 }
 
@@ -104,7 +104,7 @@ Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plu
 
 Time leaves the door as an ISO string in UTC (`date` `Y-m-d`, `date-time` ATOM with `+00:00`; never a `DateTime` object), a decimal as a string (`format: decimal`, pattern `^-?\d+(\.\d+)?$`), a column bound to a Werteliste as a member of a closed `enum`. A single read or a loading write that finds nothing answers 404 `{"@type":"notFound","context":{<route parameter or load identifier>}}` at the outer door (inside the family, through the kernel seam, the payload stays empty). A list read through the aggregate read facade (`{agg}List(...)`) returns a plain array `{items, total, limit, offset}`, not a `DomainResponse`; the generated route wraps it as `data = {"@type":"<agg>List", items, total, limit, offset}` — a hand-written transport that wants the same outer shape does the same.
 
-CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle (the single-aggregate-record projection is key-conformant either way); only an aggregate **without** a unique key leads list items with the root `id`. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
+CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. Every aggregate's read facade (`{Agg}Read`) carries the uniform read base `get<Agg>ById` / `get<Agg>ByIds` / `get<Agg>By<UniqueKey>` plus `<agg>List` — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle and the projected single-aggregate record of such an aggregate has no root `id` property at all; only an aggregate **without** a unique key leads list items with the root `id` and carries it (normalized as `id`) in the record. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (a Process node — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
 
 ### 4. Transport patterns
 
@@ -183,13 +183,13 @@ public function __invoke(CreateCounterMessage $msg): void
 {
     $response = $this->app->counter()->process()->createCounter($msg->toDto());   // write via process()
     if ($response->getStatus() >= 500) throw new RecoverableException('infra error, retry');
-    if (!$response->isSuccess())      throw new UnrecoverableException($response->getErrors());
+    if (!$response->isSuccess())      throw new UnrecoverableException(json_encode($response->getData()));   // a 4xx cause lives in data (fields[] / messageKey / context); errors may be empty
 }
 ```
 
 ### 5. Error handling
 
-- 4xx business/validation errors → already in the response: the typed `data` (`validation` / `notFound` / `concurrencyConflict` / `ruleViolation`, §3; `data` = `@type` plus the form's fields, a 4xx without a form is passed through unchanged; a `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed) and `DomainResponse::getErrors()`. Serialise both, do not rethrow; `errors` stays an object (`{}` when empty).
+- 4xx business/validation errors → already in the response: the typed `data` (`validation` / `notFound` / `concurrencyConflict` / `ruleViolation`, §3; `data` = `@type` plus the form's fields, a 4xx without a form is passed through unchanged; a `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed) — that is where the cause of a 4xx lives; `DomainResponse::getErrors()` is filled reliably only for a 500 and may be `{}` on a 4xx (route-guard 400, node 404). Serialise both, do not rethrow, and never read the reason of a 4xx from `errors` alone; `errors` stays an object (`{}` when empty).
 - Infrastructure exceptions → let them escape to framework middleware / CLI default handler. No bespoke envelope.
 - Never `catch (\Throwable)` in the controller to build a custom error body.
 
