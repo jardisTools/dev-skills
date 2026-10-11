@@ -76,7 +76,7 @@ Command forms the tree yields (all derived, no JSON of their own):
 
 Selector rule: when the path crosses a `many` ancestor, the command carries ONE selector `{entity}Identifier` (string) or `{entity}Id` (int) for the last crossing.
 
-Response (every command): flat `data` with `@type` = aggregate key plus the root business identifier and the references of the touched children — never objects. Errors: 400 `{"@type":"validation","fields":[{field,reason,message}]}` (`field` = outer name, list index omitted), 409 `{"@type":"concurrencyConflict",…}` or `duplicate`, 422 `{"@type":"ruleViolation","rule","messageKey","context"}`. A process calling a command answers 200.
+Response (every command): flat `data` with `@type` = aggregate key plus the root business identifier and the references of the touched children — never objects. Errors: 400 `{"@type":"validation","fields":[{field,reason,message}]}` (`field` = outer name, list index omitted), 404 `{"@type":"notFound","context"}` (a write that loaded its aggregate or child and found none — never a Create), 409 `{"@type":"concurrencyConflict",…}` or `duplicate`, 422 `{"@type":"ruleViolation","rule","messageKey","context"}`. A process calling a command answers 200.
 
 Outer door (BC facade): `{agg}(): {Agg}Read` (lookups by id/ids/unique key, lists) and `process()`; the write facade is family-internal. Cross-BC writes go through the foreign `process()`, cross-BC reads through the foreign `{Agg}Read`.
 
