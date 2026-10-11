@@ -92,6 +92,8 @@ In all three cases the caller receives the complete `WorkflowContext` back; the 
 
 ### 6. The node channel `__jardis` and the status derivation at run end
 
+Field errors of the Process input never reach this channel: the orchestrator answers them as 400 before the first node (process gate, `generated-code-extend`), so the rule "the first 4xx wins" below starts after the gate.
+
 A node body may return `'responseStatus' => $response->getStatus()` and `'errors' => list<string>` next to `status`/`data` from `logic()`. The generated `__invoke` moves them into the **reserved channel** `data['__jardis'] = {status, errors, events}`; they never sit beside the business payload in `data`. Only the key `__jardis` is reserved — business fields named `responseStatus` or `domain` pass through unchanged in the node's `data` within the workflow context (at the process exit of a typed 4xx — 400/404/409/422 — only `@type` plus the form's fields remain, plus a declared `messageKey`; on a 200 and on a 4xx without a form `data` stays unchanged). The orchestrator hands the executed chain (`$ctx->getChain()`) to the generated, hermetic `{Domain}\Response\ResolveProcessOutcome`, which reads only that channel and strips it from the answer. Channel and status choice are generator emission, not engine behaviour.
 
 This is a refinement of the three-level separation from §1: **branching** (`ON_SUCCESS`/`ON_FAIL`
