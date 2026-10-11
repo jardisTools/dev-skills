@@ -224,7 +224,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** / **Remove** / **Remove{Child}** | `['@type' => 'counter', 'counterIdentifier' => …]` — root identity only (Remove{Child} skips the child key) |
 | **Process** | `['@type' => '<aggregate of the success command>'] + <flat payload of the success node>`; a Process without one unambiguous static success exit answers `['@type' => '<processName>']` (lcfirst process name) without a reference value (the build warns); status **200**, never 201 |
-| **400 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message}]]` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
+| **400 / 404 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message}]]` / `['@type' => 'notFound', 'context']` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
 
 Exactly one context of a response may carry data; the generated `DomainResponseTransformer` takes that payload as `data` and throws a `LogicException` when two contexts carry data — it never merges silently.
 
@@ -373,6 +373,8 @@ final class CheckStockInCatalog extends EcommerceContext
 ```
 
 **Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
+
+**Dev-body 4xx failure form.** What a dev body (custom, sub-process, cross-BC or external-call node) returns as `responseStatus`/`data` becomes the process answer through `ResolveProcessOutcome::failureData`. For the four statuses with a typed form — 400 `validation`, 404 `notFound`, 409 `concurrencyConflict`, 422 `ruleViolation` — `data` is trimmed to exactly `@type` plus that form's fields (`fields` / `context` / `reason, aggregate, context` / `rule, messageKey, context`); every other key of the node payload is dropped, and a form field you do not return stays empty (nothing is filled from `errors` or the node name). Any other 4xx (401/403/405) has no form of its own and is passed through unchanged. So to answer 404 or 422 from a cross-BC service, return `'responseStatus' => 404` with the form's fields in `data`, not free-form business keys.
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 

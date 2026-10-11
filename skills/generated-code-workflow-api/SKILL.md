@@ -96,7 +96,7 @@ A node body may return `'responseStatus' => $response->getStatus()` and `'errors
 
 This is a refinement of the three-level separation from §1: **branching** (`ON_SUCCESS`/`ON_FAIL`
 = true/false) remains unchanged pure path selection; **response status** still always comes from the
-actual `DomainResponse` (carried in `__jardis.status`), but from the last decisive execution of the node (a retried node counts with its last status only; the first node whose last status is a 4xx wins, typed as `validation` / `concurrencyConflict` / `ruleViolation`; without one the Process answers 200), not from the
+actual `DomainResponse` (carried in `__jardis.status`), but from the last decisive execution of the node (a retried node counts with its last status only; the first node whose last status is a 4xx wins, typed as `validation` / `notFound` / `concurrencyConflict` / `ruleViolation`, its `data` trimmed to `@type` plus that form's fields while a 4xx without a form, e.g. 401/403/405, passes through unchanged; without one the Process answers 200), not from the
 edge declaration and not simply from the first or last chain member — a
 convergent No terminal (several predecessor nodes lead into the same reject node) makes "last
 chain member" structurally wrong, a healed retry of the same node makes "any earlier
