@@ -66,7 +66,7 @@ A Designer node can instead be marked **Rule** — it references one entry of th
 
 ### 3. handlerFactory closure
 
-`new Workflow($factory)` optionally accepts `Closure(string $fqcn, mixed $data): object`. The convention in the aggregate context is `fn($cls, $data) => $this->context($cls, $data)`, so that every node gets a fresh BC with `$data` as payload — nodes read it via `$this->payload()`. With `$data === null`, `$this->handle($cls)` is the default, and the outer payload is retained. Without a factory the engine calls `new $fqcn()` (`$data` ignored) — usable for pure PHP code outside the aggregate context.
+`new Workflow($factory)` optionally accepts `Closure(string $fqcn, mixed $data): object`. The convention in the aggregate context is `fn($cls, $data) => $this->context($cls, $data, $this->version())`, so that every node gets a fresh BC with `$data` as payload — nodes read it via `$this->payload()`. With `$data === null`, `$this->handle($cls)` is the default, and the outer payload is retained. The version of a process call applies to every node and every sub-process of the run. The factory passes the run's `$this->version()` to `context()`, a sub-process node calls `$this->context(<SubHandler>::class, $in, $this->version())()`, and `handle()` inherits it, so a `v{N}/` variant of a node or sub-process handler is resolved by the version of the process-facade call; without a version everything stays baseline. Without a factory the engine calls `new $fqcn()` (`$data` ignored) — usable for pure PHP code outside the aggregate context.
 
 ### 4. Three opaque context slots
 
