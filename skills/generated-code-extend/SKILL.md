@@ -366,7 +366,7 @@ public function __invoke(MyDto $dto): DomainResponseInterface
 | `Conflict` (409) | A write lost its read basis (stale write/delete) — payload `{"@type":"concurrencyConflict","reason","aggregate","context"}`; the handler catches the conflict exception before the catch-all `\Throwable` |
 | `InternalError` (500) | Unexpected `Throwable`; the message is in `errors` |
 
-When you build a 400/404/409/422 by hand, use exactly these typed payloads — the same four forms every route, aggregate command and Process answers with. A Process trims a dev body's 4xx `data` to `@type` plus the form's fields; a Process 4xx without a form (401/403/405) is passed through unchanged.
+When you build a 400/404/409/422 by hand, use exactly these typed payloads — the same four forms every route, aggregate command and Process answers with. A Process trims a dev body's 4xx `data` to `@type` plus the form's fields; a Process 4xx without a form (401/403/405) is passed through unchanged. A `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed.
 
 **Status staircase (Rules-Layer):** `400` (form) → `422` (business, Rule chain) → `500` (technical) — a Command dispatch checks field validation first (cheap, local), then the Rule chain (potentially DB-bound), so a malformed request never pays for a existing-data check it can't pass anyway. A Process node calling a Command translates this deterministically: `422 → ON_FAIL` (a painted edge, same as any other business rejection); `5xx → the exception path`, never `ON_FAIL` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` mapping, which cannot tell the two apart.
 
