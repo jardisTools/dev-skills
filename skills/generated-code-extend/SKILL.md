@@ -195,9 +195,9 @@ The seam is `protected` — hard at runtime **and** at the type-system level: co
 An aggregate **WITHOUT** a unique key: list items lead with the root id, so the set pattern is:
 
 ```php
-$list    = $bc->counter()->counterList($filter);
+$list    = $bc->heartbeatSignal()->heartbeatSignalList($filter);
 $ids     = array_values(array_unique(array_column($list['items'], 'id')));
-$records = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids))->getData()['items'];   // list<CounterResponse> objects
+$records = $bc->heartbeatSignal()->getHeartbeatSignalByIds(new QueryHeartbeatSignalByIds(ids: $ids))->getData()['items'];   // list<HeartbeatSignalResponse> objects
 // match per id (`$record->id`) — every aggregate record carries it
 ```
 
