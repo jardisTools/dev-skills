@@ -146,7 +146,7 @@ final class CreateCounterTest extends MeterDeviceTestCase   // generated base
 }
 ```
 
-`getData()` is the flat business object — read `getData()['<field>']` directly; the 400 / 409 / 422 answers carry `@type` `validation` (`fields[]={field, reason, message}`) / `concurrencyConflict` / `ruleViolation`. `getErrors()` is context-keyed (`array<string, list<string>>`); on the wire it is an object, `{}` when empty.
+`getData()` is the flat business object — read `getData()['<field>']` directly; the 400 / 404 / 409 / 422 answers carry `@type` `validation` (`fields[]={field, reason, message}`) / `notFound` (`context`) / `concurrencyConflict` / `ruleViolation`; at a process door a typed 4xx `data` is exactly `@type` plus the form's fields (plus a declared `messageKey`), other 4xx pass through unchanged. `getErrors()` is context-keyed (`array<string, list<string>>`); on the wire it is an object, `{}` when empty.
 
 Never assert SQL / PDO calls — assert the response and the persisted state via a second read: `$domain->counter()->counter()->getCounterById(...)`. Reads stay on the public chain; the harness is for writes only.
 
