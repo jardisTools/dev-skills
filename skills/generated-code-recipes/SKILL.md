@@ -224,7 +224,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** / **Remove** / **Remove{Child}** | `['@type' => 'counter', 'counterIdentifier' => …]` — root identity only (Remove{Child} skips the child key) |
 | **Process** | `['@type' => '<aggregate of the success command>'] + <flat payload of the success node>`; a Process without one unambiguous static success exit answers `['@type' => '<processName>']` (lcfirst process name) without a reference value (the build warns); status **200**, never 201 |
-| **400 / 404 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message}]]` / `['@type' => 'notFound', 'context']` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
+| **400 / 404 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message, messageKey}]]` / `['@type' => 'notFound', 'context']` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
 
 Exactly one context of a response may carry data; the generated `DomainResponseTransformer` takes that payload as `data` and throws a `LogicException` when two contexts carry data — it never merges silently.
 
