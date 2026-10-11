@@ -217,8 +217,8 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 
 | Use-case kind | Generated `setData(...)` shape (`@type`) |
 |---|---|
-| **Query ById / By{UniqueKey}** (and hand-modelled single variants) | `['@type' => 'counter'] + <projected record fields>` — one projected nested scalar tree, flat (see Query projection below); nothing found → `[]` (empty payload, no `@type`) |
-| **Query ByIds** / **By{PluralKey}** (the latter only on an aggregate with a public unique key) | `['@type' => 'counterList', 'items' => <list<AggregateRecord>>]` — **no `[0]` collapse**, no `total`/`limit`/`offset`; missing ids/keys → partial result, empty input → empty `items` |
+| **Query ById / By{UniqueKey}** (and hand-modelled single variants) | `['@type' => 'counter'] + get_object_vars(<CounterResponse>)` — the **root fields lie flat** in the array (`getData()['counterNumber']`), but **children stay typed `{Child}Response` objects** (a list of them for `many`, one object for `one`): read them with `->`, e.g. `getData()['registerRelation'][0]->register->obis`; `getData()['registerRelation'][0]['register']` throws at runtime (see Query projection below); nothing found → `[]` (empty payload, no `@type`) |
+| **Query ByIds** / **By{PluralKey}** (the latter only on an aggregate with a public unique key) | `['@type' => 'counterList', 'items' => <list<CounterResponse>>]` — every item is a typed `{Agg}Response` **object** (`$item->counterNumber`, children via `->` as well; `$item['counterNumber']` throws), **no `[0]` collapse**, no `total`/`limit`/`offset`; missing ids/keys → partial result, empty input → empty `items` |
 | **List** (`{agg}List`, via the read facade) | a plain array `['items' => …, 'total' => …, 'limit' => …, 'offset' => …]` (not a `DomainResponse`); the generated route wraps it as `['@type' => 'counterList'] + $result` |
 | **Create** | `['@type' => 'counter', 'counterIdentifier' => …]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
@@ -234,7 +234,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) whe
 
 **Business-key resolution (G4 / X-2).** The Generator picks the root identifier by walking the entity for a Single-Column-Unique-Index on a NOT-NULL `string` column. If exactly one such column exists, that is the business key and surfaces in the response. If none exists, the response falls back to the internal `int` PK property (e.g. `counterGatewayId: int` for a keyless `counterGateway` child — not a defect, the only available identity). If multiple ambiguous candidates exist (X-2: two NOT-NULL-unique-string columns), the Build aborts — model an explicit single business key in the Schema instead of letting the response shape become non-deterministic.
 
-**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap. The projected aggregate record therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected aggregate record only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
+**Query projection.** The Generator emits per BC a `{BC}/FieldMap.php` (ForceOverwrite — a pure naming container with one `{table}Columns()` method per BC table, the write-path DTO→column map; there is no `Fields()` method). The **read** projection (internal-PK strip where a business key exists, G4; root-id normalization; FK-column strip; pure-join collapse, F3.1) is aggregate-structural and runs at the **aggregate read edge (the query handler)**, not in FieldMap. The projected aggregate is the typed, recursive `{Agg}Response` class (`{BC}/Model/{Agg}/Query/Response/{Agg}Response.php`, children as `{Child}Response` properties — `public array $offerItem` is a list of `OfferItemResponse` objects); `getData()` spreads only the **root** level into the array, so child access is always `->`. The projected aggregate record therefore always carries the root id — the internal handle the ById/ByIds read base relies on; child entities stay id-free. This concerns the projected aggregate record only — the auto-**list** SELECT is not uniform: on an aggregate WITH a public unique key it leads with that key column `AS {keyField}` instead of `id` (the outward, key-first bulk-read recipe, Recipe 7 below); an aggregate WITHOUT one leads its list with `id`. `DateTimeImmutable` blade values stay inert — JSON/CLI serialization is the caller's job (G5).
 
 **Command response** never carries domain state — only the reference value(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
@@ -249,7 +249,7 @@ An aggregate **WITH** a unique key — list → keys → `get{Agg}By{PluralKey}`
 ```php
 $list  = $bc->order()->orderList($filter);                                             // filtered flat list: plain array {items, total, limit, offset}
 $keys  = array_values(array_unique(array_column($list['items'], 'orderNumber')));
-$records = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys))->getData()['items']; // list<AggregateRecord>, data = {@type: orderList, items}
+$records = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys))->getData()['items']; // list<OrderResponse> — objects: $records[0]->orderNumber, children ->; data = {@type: orderList, items}
 ```
 
 An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
@@ -257,7 +257,7 @@ An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
 ```php
 $list  = $bc->counter()->counterList($filter);                               // filtered flat list
 $ids   = array_values(array_unique(array_column($list['items'], 'id')));
-$records = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids))->getData()['items'];  // list<AggregateRecord>, data = {@type: counterList, items}
+$records = $bc->counter()->getCounterByIds(new QueryCounterByIds(ids: $ids))->getData()['items'];  // list<CounterResponse> — objects: $records[0]->identifier, children ->; data = {@type: counterList, items}
 ```
 
 Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one aggregate record · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every aggregate record carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (public surface/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.
@@ -349,13 +349,13 @@ final class CheckStockInCatalog extends EcommerceContext
         if (!$read->isSuccess() || $read->getData() === []) {
             return ['status' => WorkflowResult::ON_FAIL, 'data' => ['productIdentifier' => $cmd->productIdentifier]];
         }
-        $current = $read->getData();   // flat: ['@type' => 'product', 'identifier' => …, …]; [] when not found
+        $current = $read->getData();   // root fields flat: ['@type' => 'product', 'identifier' => …, …]; children are {Child}Response objects (->); [] when not found
 
         // 2) translate the own input into the foreign PROCESS input DTO (ACL) —
         //    only the changed field is overridden, the rest mirrors the current state
         $update = new UpdateProductInCatalog(new UpdateProduct(
             productIdentifier: $current['identifier'],
-            /* … remaining fields copied from $current[...] … */
+            /* … remaining root fields copied from $current[...]; child objects read with -> … */
             price: $cmd->newPrice,
         ));
 
@@ -394,7 +394,7 @@ final class CounterMustBeActive extends MeterDeviceContext
             new QueryCounterByIdentifier(identifier: $cmd->identifier)
         );
 
-        $record = $read->getData();   // flat record; [] when the counter does not exist
+        $record = $read->getData();   // root fields flat (children would be {Child}Response objects, read with ->); [] when the counter does not exist
         if ($record === [] || ($record['status'] ?? null) !== 'active') {
             return RuleResult::reject(
                 rule: self::class,
@@ -547,6 +547,7 @@ an FK violation stays a technical 500. No driver knowledge in the generate, noth
 | `Cannot import OtherBC\...` review blocker | V6 violation (cross-BC import) | Add a Domain Service in the Process scope and call the other BC via `handle()` |
 | Process tries to extend an aggregate DTO (`extends platform:…`) | Not supported — a process input is self-contained (Recipe 5) | Declare the fields the process needs in `input.fields`; fetch aggregate data by running its query from a node |
 | Event node / node reading `getData()['<ctx>']` fails or yields `null` | `getData()` is flat — there is no handler-name or root level; a read keyed by context, or with `?? null`, misses | Read the field flat: `$context->getLatest(Node::class)->getData()['<idProp>']`, and let a missing key fail (`?? throw …`) instead of `?? null` |
+| PHPStan `throws.unusedType` on a node, Closure or Service body you just filled | The stub's generated `@throws` tag is still there — it is reconciled against the body at the next build, not when you save the file | Run `build` / `build_domain` after filling the bodies, then PHPStan again |
 | `getData()` empty after `addData()` in a node | The node returned before augmenting `$this->result()`, or replaced the payload | Read aggregate data, then `addData(...)`/`setData(...)`, then return |
 | Process node throws → whole process fails | Default: an uncaught node exception routes to `ON_FAIL` (or bubbles to 500 if unrouted) | Wrap the node body in `try/catch` only if its failure must not fail the process; otherwise add the `ON_FAIL` transition — §1, `generated-code-workflow-api` §5 |
 | Sub-process node body overwritten after rebuild | Sub-process node lost its `@node-id` marker, or the file was built with an older Generator version (formerly ForceOverwrite No-Op) | Keep the `@node-id` DocBlock marker intact; if the file is an old No-Op, delete it — the next build emits the typed Dev-Stub fresh (Recipe 8) |

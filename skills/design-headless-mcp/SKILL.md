@@ -200,7 +200,7 @@ chains — a guard entry carries `viaSet` when a Rule-Set is the only path bindi
 that chain — process Rule-nodes, and other Closures' `uses`), `body` (`offen`/`geschrieben` —
 whether the generated stub still throws its Not-implemented marker; absent for a Rule-Set, which
 has no body of its own), and `missing` (concrete next steps). Flow: read the resource → write the
-`__invoke` body at `files.stub` → `build` → write the test at `files.test` from `examples[]` (one case per example, against the generated `ClosureTestCase`), run it (`files.runTest`) until it is
+`__invoke` body at `files.stub` → `build` (reconciles the stub's leftover `@throws` tags and markers — run it before PHPStan, otherwise `throws.unusedType` shows up) → write the test at `files.test` from `examples[]` (one case per example, against the generated `ClosureTestCase`), run it (`files.runTest`) until it is
 green. Also reachable over HTTP — `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work` calls
 the SAME service method and returns the SAME JSON shape; the contract itself is written via
 `save_closures` — Resource and HTTP route only compose a read-friendly, AI-facing view of the same
