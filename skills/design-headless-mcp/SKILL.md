@@ -59,7 +59,11 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    content). This Tool **is** the authoring door: a `Schema.json` is never placed into the
    workspace as a hand-written file. It normalises `tables` the same way `analyze_schema` and the
    UI do (columns, indexes, foreign keys per table; a column-level `unique` becomes an index)
-   and, when `reportMd` is omitted, writes `SchemaReport.md` from that analysis.
+   and, when `reportMd` is omitted, writes `SchemaReport.md` from that analysis. `analyze_schema`
+   answers lean: the enriched `schema` once plus `reportMd`; the hint-free persistable form for this
+   `yaml` argument comes back in `yaml` only with `persistable: true` (the enriched `schema` still
+   carries frontend hints and is not an import input). `apply_schema_recommendations` answers with
+   `schema` only — already hint-free, so its JSON-serialised form is directly the `yaml` argument.
 3. **`save_aggregate`** — persist the aggregate's designer graph (entities, relations, keys).
    Returns a mtime `CONFLICT` if the on-disk graph moved under you — reload and retry, or pass
    the force flag once you have confirmed the overwrite is intended. A node's optional `identifier {stage, column}` declares its public Identifier (omit = keep the stored declaration, `{}` = delete it after the merge, invalid = 422 `VALIDATION_FAILED` before anything is written). Node positions and the
@@ -120,6 +124,11 @@ read-through, collaborators), `create_planned_bc` / `update_planned_bc` / `delet
 into a real one). None of these are required to generate code — they capture organisational
 metadata (subdomain classification, terminology, context boundaries) a human or AI can set
 independently of the Schema→Aggregate→Process→Build chain. Full field shapes: the tools' JSON input schemas (`tools/list`).
+All save tools answer lean: `save_closures`, `save_queries`, `save_glossary`, `save_steckbrief`,
+`save_value_lists` and `create_planned_bc` / `update_planned_bc` return findings/status and the new
+`newMtime` — the saved content (terms, Canvas fields, catalog entry, planned-BC fields) comes back
+only with `echo: true`; otherwise read it through the matching Resource (`glossary`, `steckbrief` —
+also for a planned BC —, `valuelists`, `queries`, `closures`). The HTTP/UI answer stays full.
 
 **Context Map (per Domain, full MCP parity with the UI board):** declared BC-to-BC
 relationships are edges carrying one of the eight canonical DDD patterns (Partnership, Shared
@@ -147,7 +156,8 @@ human- or agent-confirmed single step.
 `generated-code-extend`) is fully MCP-reachable, same as everything above — no browser-only
 capability here. Child commands included: every `erm: many` child's `Add{Singular}` / `Update{Singular}` /
 `Remove{Singular}` appears in the `catalog` Resource (with `httpMethod` and `target`) and is exposed through
-`bindings.<Command>.expose` exactly like a root command — no browser-only step. `save_closures` persists the whole catalog+bindings document (LockedSave — a
+`bindings.<Command>.expose` exactly like a root command — no browser-only step. `save_closures` answers lean: findings and `newMtime`, not the saved catalog/bindings — pass `echo: true` to get
+them echoed back, or read the stored content through the closures Resource. `save_closures` persists the whole catalog+bindings document (LockedSave — a
 `CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`);
 Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
 `messageKey` is never cleared — omitted or `""` keeps the stored key, and an empty one on a
@@ -215,7 +225,7 @@ condition tree, parameters, joins; every query is a paginated list answering
 is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
 pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_closures`; a draft with findings still writes, `valid`/`errors`/
-`warnings`/`suggestions` travel in the response); `validate_queries` checks a not-yet-saved query
+`warnings`/`suggestions` travel in the response; the saved query set is echoed only with `echo: true`, otherwise read it through the queries Resource); `validate_queries` checks a not-yet-saved query
 set against V-QDEF-1..16, 18..25 (25 = `limit` above 500, warning) plus RB1 (name collision with the read base, Blocker) —
 read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
