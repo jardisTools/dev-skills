@@ -19,6 +19,10 @@ PHP 8.3+ | declare(strict_types=1) | PHPStan Level 8 | PSR-4 / PSR-12 | Coverage
 ```
 
 - Every file starts with `declare(strict_types=1);`.
+- Style follows PSR-12 with lines of at most 120 characters (project `phpcs.xml` is authoritative); run `make phpcbf` before committing.
+- A declaration or `use` line that cannot be broken and is still wider than 120 characters (a long model-derived name) stays on one line and carries a line-local `// phpcs:ignore Generic.Files.LineLength -- unbreakable declaration (PSR-12)` directly above it; never ignore a docblock or comment line, never widen the limit.
+- Every class has a class docblock with a description and no tags; a `@todo` goes into the method docblock.
+- Decimal values are typed `numeric-string` in the docblock; the native type stays `string` (needs `ext-bcmath`).
 - Static analysis runs at PHPStan level 8.
 - **No traits.** Reuse goes through composition.
 - `abstract` only for exception hierarchies.
