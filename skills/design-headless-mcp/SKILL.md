@@ -203,7 +203,7 @@ in `removed`; `replace: true` without a `catalog` is a 400. `delete_closure` rem
 (unbinding by omission), an omitted one stays. `validate_closures` composes the same way (incl.
 `replace`) and predicts the following Save;
 Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
-`messageKey` is never cleared — omitted or `""` keeps the stored key, and an empty one on a
+a declared `messageKey` is binding (the 422 carries exactly this catalog key; the `reject()` argument in the body is not taken over) and is never cleared — omitted or `""` keeps the stored key, and an empty one on a
 verdict closure without `compose` is derived as `{lcfirst(bc)}.{lcfirst(name)}`. Bindings: omit a
 command's entry to leave it unbound; `chain: []` is a deliberately empty guard (the guard class is
 still generated, the drift report lists it as an empty chain).
@@ -243,7 +243,7 @@ Closure's `__invoke` body, read the per-Closure Resource template
 one Closure on a single call, assembled purely from already-saved catalogs (Closures.json,
 Queries.json, the aggregate/command catalog, ValueLists.json, usage), no second source of truth:
 `task` (a plain-language brief), `contract` (description, the exact `__invoke` signature, each
-input's PHP type, the output's type plus its pass/reject or return shape, `policyRef`, `examples`),
+input's PHP type, the output's type plus its pass/reject or return shape, `output.rejectNote` when the entry declares a `messageKey` (the 422 carries that catalog key, not the one passed to `reject()`), `policyRef`, `examples`),
 `files` (the stub path plus `stubExists`, the path of the test you write from `examples[]` plus `testExists` — both
 Go-derived facts, true only when that file was actually found on disk —, and how to run the
 test), `uses`/`reads` (every composed Closure / readable query, each with its own signature and
