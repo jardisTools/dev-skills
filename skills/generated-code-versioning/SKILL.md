@@ -1,6 +1,6 @@
 ---
 name: generated-code-versioning
-description: ClassVersion resolution and versioning model for Designer-generated code — the generated `classVersion()` override in the `<Domain>Context` base class wires `LoadClassFromSubDirectory` (injects `v{N}` before the last namespace segment, per class; baseline = the generated class itself), optional `ClassVersionConfig` fallback chains, per-call `$version` argument (no domain-wide default), five guiding principles (additive before version, version changes behaviour never the API, data break = new aggregate, code rescue via service layer, one API surface per aggregate).
+description: ClassVersion resolution and versioning model for Designer-generated code — the generated `classVersion()` override in the `<Domain>Context` base class wires `LoadClassFromSubDirectory` (injects `v{N}` before the last namespace segment, per class; baseline = the generated class itself), optional `ClassVersionConfig` fallback chains, per-call `$version` argument (no domain-wide default), the HTTP front door (`X-Jardis-Version` header → `jardisVersion` request attribute → `$version` on every facade door → `meta.version`; baseline fallback; 400 `request.versionUnknown`; known versions declared as `versions` in the domain manifest, `knownVersions`, `versions.php`, V-VERSION-DRIFT) with a step-by-step recipe, five guiding principles (additive before version, version changes behaviour never the API, data break = new aggregate, code rescue via service layer, one API surface per aggregate).
 zone: post-active
 persona: C
 profile: jardis
@@ -12,7 +12,7 @@ next: []
 
 The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in path or namespace). Resolution does not walk a `['', 'Platform']` two-segment chain — the **Generator emits a `classVersion()` override** in the generated `<Domain>Context.php` base class that wires the reader `LoadClassFromSubDirectory`.
 
-**No domain-wide version default:** the Domain facade (`<Domain>.php`) is `final` and JardisCore-free (holds only a `DomainKernelInterface` DomainKernel) — it offers no override surface, and `<Domain>Context` (which hosts `classVersion()`/`classVersionConfig()`, `generated-code-extend` §1) is hermetic (never hand-edited). A domain-wide default `version()` hook does not exist — the only lever is the per-call `$version` argument threaded through every facade method (see below).
+**No domain-wide version default:** the Domain facade (`<Domain>.php`) is `final` and JardisCore-free (holds only a `DomainKernelInterface` DomainKernel) — it offers no override surface, and `<Domain>Context` (which hosts `classVersion()`/`classVersionConfig()`, `generated-code-extend` §1) is hermetic (never hand-edited). A domain-wide default `version()` hook does not exist — the only lever is the per-call `$version` argument threaded through every facade method (see below; over HTTP the generated route fills it from the `X-Jardis-Version` header, §3).
 
 > **Proxy first, but a no-op here.** The wired `ClassVersion` consults the proxy cache before the
 > SubDirectory reader — a generated Domain has no proxy config, so in practice the SubDirectory resolution below
@@ -43,7 +43,7 @@ Namespace = `<Domain>\<BC>\Model\<Agg>\…`. There is **no `Platform` segment** 
 - **No version** (`$version = ''`, the 99 % case): the generated baseline runs. Nothing to configure. The aggregate is hermetic, so to *change* the baseline you re-model in the Designer or author a **Process** — not an in-place override (`generated-code-extend` §2).
 - **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants: author the variant at `{Agg}/.../v{N}/<Class>.php` and select it **per call** (reads: `$bc->{agg}()->getCounterById($q, 'v2')`; writes family-internally via the kernel seam: `$this->handle(Counter::class)->createCounter($dto, 'v2')` — the BC accessor returns the read-only `{Agg}Read`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The version of a process call applies to every node and every sub-process of the run. A `v{N}/` node variant (`{BC}/Process/{Name}/Command/Handler/Action/v{N}/<Node>.php`) or a versioned sub-process handler is therefore selected by the one `$version` of the process-facade call; a class without a variant stays baseline. The variant survives rebuilds — the Generator does not emit or clean `v{N}/` directories.
 
-> **Scope:** only version **resolution** is wired. No generator emits a `v{N}/` directory — version **creation / design** for the Builder is still open (`OPEN_ITEMS.md` "Versionierung Aggregat-Code + Process-Code" (versioning of aggregate code + process code)). Treat `v{N}/` as the available-but-not-yet-tooled escape hatch.
+> **Scope:** version **resolution** is wired, and since the versioned front door (§3) the HTTP caller can select a version and the set of selectable versions is declared in the domain manifest. No generator emits a `v{N}/` class — authoring the `v{N}/` variant itself stays hand-written Dev code (the recipe in §4). Declarative design of *what* a version changes (affected Closure, behaviour change) does not exist in the definition format.
 
 Optional `ClassVersionConfig` (only when you need fallback chains):
 
@@ -92,9 +92,54 @@ Versions in Jardis are about behaviour, not data shape. Five guiding principles 
 
 **Rules-Layer precision on "Version changes behaviour, never the API".** A Rule (`{BC}/Closure/{Name}.php`, `generated-code-extend` §1) is ClassVersion-capable the same way any generated class is (`Closure/v{N}/{Name}.php`), but the guiding principle needs a Rule-specific reading: **API** = the `__invoke({Cmd}DTO): RuleResult` signature **plus** the rejection payload shape (`{rule, messageKey, context}`, `messageKey` stable for i18n) — this must not change across versions. **Behaviour** = the accepted set — a `v2` Rule is exactly the place to *tighten* what passes (e.g. add a new precondition), never to change what a rejection looks like to the caller. The Command the Rule guards (its "endpoint identity") is versionless; only the Rule class itself is versioned.
 
+### 3. HTTP front door — `X-Jardis-Version`
+
+For a domain served through `jardiscore/app` the caller selects the class version with one request header. The chain is the same whether the call is a read, a list, a declared query, an exposed Command or a Process:
+
+```
+X-Jardis-Version: v2
+  → jardiscore/app  ResolveVersion          reads the header ONCE (src/Handler/Request/ResolveVersion.php)
+  → request attribute  jardisVersion        'v2' — or '' (baseline) when the header is absent
+  → generated route (Api/{Domain}/routes.php) reads the attribute, passes it as $version to its facade door
+  → {Agg}Read / {BC}Process / exposed Command method   ($version → every node and sub-process of the run)
+  → envelope  meta.version = 'v2'
+```
+
+| Case | Result |
+|---|---|
+| No header | `jardisVersion = ''` → baseline (the generated classes); `meta.version` is the empty baseline |
+| Declared version, `v{N}/` class exists for the class that runs | the `v{N}/` variant runs, `meta.version = 'v2'` |
+| Declared version, **no** `v{N}/` class for a given class | **Baseline fallback** — that class runs as generated; `meta.version` still names the **requested** version (`v2`) |
+| Value not in the known set, empty value, or the header repeated | `400` in the validation form — `data = {"@type":"validation","fields":[{"field":"X-Jardis-Version","reason":"invalid","message":…,"messageKey":"request.versionUnknown"}]}` — answered in the gate before any route or handler runs; 404/405 unaffected |
+
+Comparison is exact and case-sensitive; a version has the form `^v[1-9][0-9]*$`.
+
+**Where the set of known versions comes from.** It is declared where the domain is modelled: the list `versions: ["v2", …]` in `Domain.json` (MCP `update_domain_manifest` field `versions`, whole-list overwrite, `[]` clears; read via resource `jardis://domain/{domain}/manifest`; UI: tab *Stammdaten*, "Bekannte Versionen"). Not a directory scan of `v{N}/`. Each build writes `src/Api/{Domain}/versions.php` next to `routes.php` (`<?php return ['v2'];`, generated, hermetic, empty list allowed); the app template's `public/index.php` unites all `src/Api/*/versions.php` and hands the result to `AppConfig(knownVersions: …)`. Without a declaration the app serves the baseline only, and the generated OpenAPI contract carries no header.
+
+**Contract.** With declared versions the OpenAPI document has `components.parameters.XJardisVersion` (header, optional, `enum` = declaration); every operation references it and lists the `400` above (`request.versionUnknown` is a member of the `ValidationError` enum).
+
+**Drift warning V-VERSION-DRIFT.** The Builder compares the declaration with the `v{N}/` directories found in the generated output and warns in both directions (a declared version without any `v{N}/` class; a `v{N}/` directory that is not declared). It stays silent without an output directory or an unbuilt domain. It is a warning, never a source of the list.
+
+> **Minimum package version:** `jardiscore/app` >= 1.2.0 (the gate and `AppConfig::$knownVersions`).
+
+### 4. Recipe — serve a `v2` variant over HTTP
+
+A neutral example: domain `MeterDevice`, BC `Counter`, aggregate `Counter`, whose Command `createCounter` runs through a Process.
+
+1. **Declare the version** in the domain manifest: MCP `update_domain_manifest` with `versions: ["v2"]` (or UI *Stammdaten* → "Bekannte Versionen"). Format `v{N}`, no duplicates.
+2. **Author the variant** next to the baseline class, as Dev code (the Generator never emits or deletes `v{N}/`):
+   `{BC}/Model/{Agg}/Command/Handler/v2/CreateCounter.php`, namespace `MeterDevice\Counter\Model\Counter\Command\Handler\v2`, `extends` the generated `CreateCounter` (skeleton in §1). A Process node variant lives at `{BC}/Process/{Name}/Command/Handler/Action/v2/<Node>.php`, a Rule at `{BC}/Closure/v2/{Name}.php`.
+3. **Build** (`build` / `build_domain`). This rewrites `routes.php`, `versions.php` and the OpenAPI contract; V-VERSION-DRIFT is quiet once step 1 and 2 agree.
+4. **Call it:**
+   `curl -H 'X-Jardis-Version: v2' -X POST …/counters -d '{…}'` — the answer carries `"meta": {"version": "v2", …}`. The same call without the header runs the baseline and carries the empty baseline version; `-H 'X-Jardis-Version: v9'` (not declared) answers `400` with `request.versionUnknown`.
+
+Version changes behaviour, never the API (§2): the route, the DTO and the envelope are identical for every version.
+
 ### Anchors
 
 - `generated-code-extend` (hermetic aggregate layout, the customization surfaces incl. the Rule catalog, prohibitions).
 - `generated-code-recipes` (Phase-3 recipes, event transport, troubleshooting).
+- `core-app` (`ResolveVersion`, request attribute `jardisVersion`, `AppConfig(knownVersions:)`, the 400 form of the front door).
+- `generated-code-wire-transport` (how the version reaches a facade door from a hand-written transport).
 - `support-classversion` (the `LoadClassFromProxy` → `LoadClassFromSubDirectory` resolver implementations themselves).
 - `foundation-architecture` (Pillar 4 — Data-Behavior-Separation drives the service-layer note above).

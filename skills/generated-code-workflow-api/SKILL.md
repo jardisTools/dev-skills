@@ -104,8 +104,11 @@ actual `DomainResponse` (carried in `__jardis.status`), but from the last decisi
 edge declaration and not simply from the first or last chain member — a
 convergent No terminal (several predecessor nodes lead into the same reject node) makes "last
 chain member" structurally wrong, a healed retry of the same node makes "any earlier
-4xx" structurally wrong; **transaction** remains: the No path keeps committing, only a
-thrown technical error rolls back. Use case + measured values: `generated-code-recipes`
+4xx" structurally wrong; **transaction**: the branch edge itself stays transaction-neutral
+(a No path may write), but the Process runs in ONE transaction and a **4xx END status rolls
+the whole run back** (the answer stays the 4xx) — and the answer then carries **no domain
+event** (events follow the transaction: they enter the answer only after the commit). A thrown
+technical error rolls back too. Use case + measured values: `generated-code-recipes`
 Recipe 11.
 
 ### Anchors
