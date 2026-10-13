@@ -469,6 +469,10 @@ N1 "ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
    ON_FAIL    → 409
 ```
 
+**Handing the read basis to the write (Case B, and any gatekeeper whose target may be recomputed).** The gatekeeper node reads the row (`$current`), computes the target from it and passes what it read as the CAS expectation through the write facade of the own aggregate: `…->update{Root}($dto, $version, expected: ['<outerField>' => $current])` (outer FieldMap name ⇒ value read; family-internal only — the parameter is not on the BC facade, the Rules door, a route or the OpenAPI document; root writers `Update{Root}` / `Set{Root}Computed` only, child writers and `Remove` do not carry it). The generated handler lays the value over the snapshot (the package's `Hydration::hydrate`) after the guard and before the apply, so the UPDATE's `WHERE` checks the value the node actually read; a second writer that read the same value gets 0 rows → 409 `stale_write`. An unknown key in `expected` is a loud error (`InvalidArgumentException` → 500), not a silent no-op.
+
+**Measured picture (20 concurrent workers, one number range, generated process).** MySQL, MariaDB and Postgres: 0 duplicate numbers (`COUNT(*) = COUNT(DISTINCT number)`), the count of 2xx answers equals the count of assigned numbers, every loser answers 409 `stale_write` with `violated: []`. All 20 workers reach a number **only with a client-side retry on 409** — the 409 is the normal loser answer, not a failure. The same run without `expected` assigns duplicates on Postgres.
+
 **Retry is convenience, not correctness** and needs two obligations: an **upper bound**
 (attempt counter, the engine has no built-in loop brake) and — the documented defect of this
 class — the target value MUST be **recomputed per attempt**, from the freshly read
@@ -476,6 +480,8 @@ class — the target value MUST be **recomputed per attempt**, from the freshly 
 second attempt a no-op UPDATE whose `rowCount()` interpretation turns out
 differently depending on the driver (MySQL accidentally reads it correctly as a conflict, Postgres wrongly as success → double
 assignment).
+
+**The give-up node must pass the gatekeeper's 409 on.** When the retry guard gives up after its upper bound, its terminal node hands the gatekeeper's 409 `DomainResponse` on to the error sink unchanged. A give-up node that builds its own answer without the predecessor's status ends the run as 500 ("predecessor without 4xx status") instead of the 409.
 
 **Status behaviour at process end.** A gatekeeper conflict must become visible outwardly as 409,
 not merely route internally. Without this refinement a healed retry wrongly reports 409 despite actual success
@@ -539,6 +545,8 @@ an FK violation stays a technical 500. No driver knowledge in the generate, noth
 - Use Recipe 11 (gatekeeper) only where NO database UNIQUE index can carry the invariant (a state over several rows, a counter, a status transition).
 - Dev code that writes OUTSIDE the generated persist (own `Repository/` or `Service/` under `{BC}/Process/{Name}/`) catches `UniqueViolationException` itself and translates it to its own business answer (e.g. a 409 `DomainResponse`); it never inspects driver error codes or SQLSTATE.
 - Keep the DB UNIQUE index in `Schema.json` — it is the only carrier; without it nothing throws and the duplicate is stored.
+
+**The 409 names the violated fields (`violated`).** The `duplicate` payload carries one more key: `violated: list<string>` — the **outer** field names (FieldMap) of the unique columns that were hit, so a form can mark the field: `{"@type":"concurrencyConflict","reason":"duplicate","aggregate":"…","context":{…},"violated":["email"]}`. A root field is its plain outer name; a child field is `<kindProperty>.<field>` (e.g. `phones.number`). Columns without an outer name (FKs, the internal `id`) are omitted. `violated` is `[]` — always a JSON list, never `{}` — when the columns are unknown and on every `stale_write` / `stale_delete` answer (those name no field). The columns come from the repository package (`UniqueViolationException::getColumns()` / `getTable()`, contracts ≥ v2.5.0, repository ≥ v1.5.0; `[]` = unknown, never a partial list); dev code that catches the exception itself can read the same two getters.
 
 **Recipe 13 — Write a computed field from a process node (`Set{Entity}Computed`)**
 
