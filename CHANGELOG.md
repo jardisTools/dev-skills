@@ -4,6 +4,14 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.22.1] - 2026-10-13
+
+### Changed
+- `generated-code-workflow-api`: the node source of an event field (`latest` / `all`) must be an aggregate Command of the own BC with an identity chain. A Query call, a Process call, a foreign BC, a sub-process or event node as source and a referenced aggregate that cannot be loaded are rejected by the blocker `V-EVT-NODE-ELIGIBLE` at validation and at every build door; an event node without an event field is rejected by `V-EVT-MIN-ONE`. The generated code carries no throwing placeholder for an unresolved binding.
+- `generated-code-extend`: on rebuild, developer-changed and developer-own methods of a node class always stay; an untouched generated helper method other than `__invoke` / `logic()` stays only while a kept method uses it (call, also nullsafe or static, or its name inside a string; case-insensitive), and an unused helper appended by an earlier build disappears with the next build. A directory directly under `{BC}/Process/` that is no process of the model and holds no generated node file is kept and reported as a build warning with its path; an orphaned generated process directory is removed with its content.
+- `design-headless-mcp`: `save_aggregate` reports `valid` / `errors` / `warnings` and still writes when blockers exist, so the caller has to check `valid`; `graph.adopts` omitted or `null` keeps the stored adopts, `[]` clears them, a sent list replaces them for all nodes. `write_definitions` and `set_aggregate_tables` report the blockers of the written aggregate the same way, or `notValidated` with the reason.
+- `generated-code-recipes`: two troubleshooting rows, one for a build blocked by an event field source and one for a kept and warned directory under `{BC}/Process/`.
+
 ## [1.22.0] - 2026-10-13
 
 ### Added
