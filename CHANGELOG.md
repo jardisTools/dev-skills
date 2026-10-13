@@ -4,6 +4,14 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.21.0] - 2026-10-13
+
+### Added
+- `generated-code-recipes` Recipe 12: the 409 `duplicate` payload carries `violated` (outer field names of the hit unique columns, child fields as `<kindProperty>.<field>`, `[]` for unknown columns and every `stale_write` / `stale_delete`; columns from `UniqueViolationException::getColumns()` / `getTable()`, contracts 2.5.0, repository 1.5.0).
+- `generated-code-recipes` Recipe 11 Case B: the gatekeeper node hands its read value as `expected: ['<outerField>' => $current]` through the write facade; measured picture of 20 concurrent workers on MySQL, MariaDB and Postgres (0 duplicates, 20/20 only with client retry on 409); the give-up node of a retry guard must pass the gatekeeper's 409 on.
+- `generated-code-extend`: write facade `expected` (family-internal, root writers only) and the 409 `violated` form.
+- `generated-code-versioning`: `v{N}` variants of a root-writer handler adopt `__invoke(array $expected = [])`.
+
 ## [1.20.0] - 2026-10-13
 
 ### Added
