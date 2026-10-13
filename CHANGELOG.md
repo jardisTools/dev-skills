@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.22.2] - 2026-10-13
+
+### Changed
+- `design-headless-mcp`, `design-model-capabilities`, `foundation-testing`, `generated-code-extend`, `generated-code-recipes`, `generated-code-versioning`, `generated-code-wire-transport`: the `messageKey` a rule declares in the closure catalog is binding. The guard and the process rule node put it into the 422 response; the key from `RuleResult::reject()` is not taken over then. Command and process doors name the 422 keys as a closed enum. The 422 stays open as soon as a reachable rule has no catalog key, a developer body of the own BC is reachable, or a cross-BC / external-call node is reachable next to the rules.
+
 ## [1.22.1] - 2026-10-13
 
 ### Changed
