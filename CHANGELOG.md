@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.22.0] - 2026-10-13
+
+### Added
+- `generated-code-recipes` Recipe 11 Case B and Recipe 12: a transient database conflict (MariaDB 1020 with `innodb_snapshot_isolation=1`, deadlock 1213/40P01, serialization 40001; typed `TransientConflictException`, contracts 2.6.0, repository 1.6.0) answers 409 `stale_write` / `stale_delete` with `violated: []`, not 500. On MariaDB/MySQL the whole process transaction is rolled back, the conflict reaches the process bracket (not the node) as the typed exception and the bracket answers 409; a node retry does not take place. The way to repeat is a client retry in a new transaction. Warning: dev code catching `\Throwable` and carrying on swallows the type and writes on in autocommit.
+- `generated-code-extend` and `generated-code-wire-transport`: the 409 rows name the transient database conflict.
+
 ## [1.21.0] - 2026-10-13
 
 ### Added

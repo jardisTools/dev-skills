@@ -473,6 +473,8 @@ N1 "ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
 
 **Measured picture (20 concurrent workers, one number range, generated process).** MySQL, MariaDB and Postgres: 0 duplicate numbers (`COUNT(*) = COUNT(DISTINCT number)`), the count of 2xx answers equals the count of assigned numbers, every loser answers 409 `stale_write` with `violated: []`. All 20 workers reach a number **only with a client-side retry on 409** — the 409 is the normal loser answer, not a failure. The same run without `expected` assigns duplicates on Postgres.
 
+**A transient database conflict is a 409 too, not a 500 (contracts ≥ v2.6.0, repository ≥ v1.6.0).** The repository package types a transient concurrency failure of the database — MariaDB ≥ 11.6 with `innodb_snapshot_isolation=1` (error 1020), deadlock (1213 / Postgres 40P01), serialization failure (40001) — as `JardisSupport\Contract\Repository\Exception\TransientConflictException`; the generate only catches the type. The loser answers 409 `stale_write` (every write path except delete) or `stale_delete` (delete persist) with `violated: []`, the same envelope as a lost CAS. **How it reaches your node depends on the database:** where the generated persist owns its transaction or can roll back its savepoint (Postgres, or a Command without a process bracket), the 409 arrives at the node as an ordinary answer and routes like any 409 (the retry guard below stays possible). On MariaDB/MySQL the 1020/1213 rolls back the **whole** process transaction and the savepoint is gone — the conflict then does **not** arrive as an answer: the `TransientConflictException` is passed through unchanged by the Command handler and by the nodes, the process bracket (outermost owner) rolls back and answers 409 `stale_write` (`aggregate` = process name, `context` empty, no events); a node retry does not take place there. A nested run (sub-process, call from a node) never answers 409 itself; it rolls back its own savepoint if it can and rethrows to the outer owner. With `runInTransaction: false` the exception is thrown on. **The way to repeat is a new transaction — the client retries the whole request on 409 (or the caller starts a new process run); there is no server-side retry.** Dev code in a node that catches `\Throwable` and carries on swallows this type and would then write on after the transaction was destroyed — in autocommit, i.e. a half process; catch only the typed exceptions you translate, and let `TransientConflictException` pass.
+
 **Retry is convenience, not correctness** and needs two obligations: an **upper bound**
 (attempt counter, the engine has no built-in loop brake) and — the documented defect of this
 class — the target value MUST be **recomputed per attempt**, from the freshly read
@@ -506,11 +508,11 @@ rolls it back — the loser has written nothing, its answer is the 409 and carri
   `SQLITE_BUSY` immediately — the loser ends up via the Throwable path as a **500 with rollback**, not as
   409. The invariant holds (it writes nothing), but status and waiting behaviour are wrong.
   A known item of its own on the dbConnection adapter, not solved here.
-- **Under MySQL `REPEATABLE READ` a retry structurally never heals within the same transaction** —
+- **Under MySQL/MariaDB `REPEATABLE READ` a retry structurally never heals within the same transaction** —
   every snapshot of the loser sees the same `current` as its first read, never the
   winner value committed in the meantime. Under Postgres `READ COMMITTED` the retry sees the committed state after
-  waiting and can win. Both pictures are correct — a real
-  driver delta, not a bug.
+  waiting and can win (up to the retry bound). Both pictures are correct — a real
+  driver delta, not a bug. The loser's answer is the 409; the way to a number is a **client retry in a new transaction**.
 - **rowCount() trap as a warning:** the generated CAS persist layer checks success via
   `rowCount() > 0` — unreliable depending on the driver for no-op updates. Affects every gatekeeper whose target value
   may happen to match the actual state — just as relevant for Case A (bool flag) as for
@@ -545,6 +547,7 @@ an FK violation stays a technical 500. No driver knowledge in the generate, noth
 - Use Recipe 11 (gatekeeper) only where NO database UNIQUE index can carry the invariant (a state over several rows, a counter, a status transition).
 - Dev code that writes OUTSIDE the generated persist (own `Repository/` or `Service/` under `{BC}/Process/{Name}/`) catches `UniqueViolationException` itself and translates it to its own business answer (e.g. a 409 `DomainResponse`); it never inspects driver error codes or SQLSTATE.
 - Keep the DB UNIQUE index in `Schema.json` — it is the only carrier; without it nothing throws and the duplicate is stored.
+- **Concurrent losers are 409, not 500, also on a transient database conflict** (contracts ≥ v2.6.0, repository ≥ v1.6.0): a snapshot/serialization conflict or deadlock (MariaDB 1020 with `innodb_snapshot_isolation=1`, 1213, 40001, Postgres 40P01) is typed `TransientConflictException` and answers 409 `stale_write` / `stale_delete` with `violated: []` — see Recipe 11 Case B for how it reaches a process node (MariaDB/MySQL: the process bracket answers it, no node retry) and why the repeat is a client retry in a new transaction. Dev code that writes outside the generated persist and catches `\Throwable` must let this type pass.
 
 **The 409 names the violated fields (`violated`).** The `duplicate` payload carries one more key: `violated: list<string>` — the **outer** field names (FieldMap) of the unique columns that were hit, so a form can mark the field: `{"@type":"concurrencyConflict","reason":"duplicate","aggregate":"…","context":{…},"violated":["email"]}`. A root field is its plain outer name; a child field is `<kindProperty>.<field>` (e.g. `phones.number`). Columns without an outer name (FKs, the internal `id`) are omitted. `violated` is `[]` — always a JSON list, never `{}` — when the columns are unknown and on every `stale_write` / `stale_delete` answer (those name no field). The columns come from the repository package (`UniqueViolationException::getColumns()` / `getTable()`, contracts ≥ v2.5.0, repository ≥ v1.5.0; `[]` = unknown, never a partial list); dev code that catches the exception itself can read the same two getters.
 
