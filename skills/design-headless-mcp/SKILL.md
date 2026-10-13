@@ -69,7 +69,11 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    the force flag once you have confirmed the overwrite is intended. A node's optional `identifier {stage, column}` declares its public Identifier (omit = keep the stored declaration, `{}` = delete it after the merge, invalid = 422 `VALIDATION_FAILED` before anything is written). Node positions and the
    viewport are optional: when absent, the value in `Layout.json` is kept. A node's optional
    `path` (as returned by the aggregate load) is accepted, so a table placed at more than one
-   position survives load then save.
+   position survives load then save. `suggest_aggregate_edges` (read-only) proposes edges, node
+   positions and `rootCandidates` for the chosen tables; a root recognisable only through declared
+   FKs (no name-prefix hit, e.g. an irregular plural) is still returned, with reason `declared_fk`,
+   when it is the unique FK sink of the tables (chain A←B←C yields A) — two sinks or no FK signal
+   leave `rootCandidates` empty, so decide the root yourself then.
 4. **`save_naming`** — apply/confirm the field-mapping naming conventions for the bounded
    context before building.
 5. **`create_process`** / **`save_process`** / **`validate_process`** — model a BC-level
@@ -78,7 +82,12 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    `layoutJson` keeps the stored layout; passing `null` deletes it.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
-   `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6).
+   `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a
+   whole domain in one call, in build order: aggregates before the processes of the same BC and
+   producer BCs before their consumers (edges from `consumedCalls`; ties keep the alphabetical scan
+   order; on a mutual-call cycle the order breaks at its first member without an error and the
+   second side stays `not-checkable`). A consumer built before its producer would report
+   `not-checkable` for the cross-BC call, so do not work around it with a hand-ordered BC loop.
 7. **Read the generated code** — via the `code-tree` and `code-file` Resource templates
    (chunked reads with an offset/limit window; large files stay well inside the response cap).
    This replaces "open it in the editor" from the browser flow.
@@ -157,8 +166,15 @@ human- or agent-confirmed single step.
 capability here. Child commands included: every `erm: many` child's `Add{Singular}` / `Update{Singular}` /
 `Remove{Singular}` appears in the `catalog` Resource (with `httpMethod` and `target`) and is exposed through
 `bindings.<Command>.expose` exactly like a root command — no browser-only step. `save_closures` answers lean: findings and `newMtime`, not the saved catalog/bindings — pass `echo: true` to get
-them echoed back, or read the stored content through the closures Resource. `save_closures` persists the whole catalog+bindings document (LockedSave — a
-`CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`);
+them echoed back, or read the stored content through the closures Resource. `save_closures` persists the catalog+bindings document (LockedSave — a
+`CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`).
+The `catalog` is merged **by entry name**: a sent entry is added or replaced as a whole (no field
+merge inside the entry), entries you did not send stay, `catalog: {}` without `replace` is a no-op.
+To make the sent catalog the whole catalog send `replace: true` — the dropped names come back sorted
+in `removed`; `replace: true` without a `catalog` is a 400. `delete_closure` removes a single entry.
+`bindings` and `validationOverrides` are **not** merged by entry: a sent map replaces the stored one
+(unbinding by omission), an omitted one stays. `validate_closures` composes the same way (incl.
+`replace`) and predicts the following Save;
 Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
 `messageKey` is never cleared — omitted or `""` keeps the stored key, and an empty one on a
 verdict closure without `compose` is derived as `{lcfirst(bc)}.{lcfirst(name)}`. Bindings: omit a
