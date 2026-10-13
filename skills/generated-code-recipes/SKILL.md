@@ -1,6 +1,6 @@
 ---
 name: generated-code-recipes
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/projection in the same process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/projection in the same process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), write a computed field from a process node (`Set{Entity}Computed`), cross-BC read as a derived Cross-BC-Call Service (no `crossBcCall`), typed Process inputs (date/datetime/time/decimal/uuid/`valueList`, strict date gate), default reference value of the Process answer, the process transaction bracket (default on, 4xx rollback, events only after commit, `runInTransaction: false` opt-out), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 profile: jardis
@@ -209,6 +209,8 @@ readonly class CounterChange
 }
 ```
 
+**Input types are the scalar vocabulary of the aggregate door**, not a poorer one: `string`/`int`/`float`/`bool`, `date`, `datetime`, `time`, `decimal`, `uuid`, … (the backend lists them: process load answer `inputTypes`, MCP resource `jardis://process/…`; `save_process` `input.fields[].type`) plus the legacy words `string|array|mixed`, plus a value list as `valueList: <Name>` (instead of `type`; becomes an `enum` in the OpenAPI request in the list's declared order). The DTO type, the route and the OpenAPI schema follow the type (`date` → `DateTimeImmutable`, `format: date|uuid|decimal`), and the process gate checks the value like the aggregate door does: `date` → calendar-strict `Y-m-d`, `datetime` → RFC 3339 normalised to UTC, `time` → `H:i:s`; a violation is `400` `fields[]` with `reason type` before the first node. A field typed `array` or `mixed` carries no scalar shape and warns (`V-INPUT-UNTYPED`); a `valueList` that does not exist in the BC is a blocker (`V-INPUT-VALUELIST`).
+
 If a process needs data that lives on an aggregate, it does **not** inherit a DTO — it **runs the aggregate query/command** from a node (`$this->context(...)`) and reads the response. There is no merged-DTO / `platform:` parent concept; an unknown field in `input.fields` is a hard build error (no silent fallback).
 
 **Recipe 6 — Response shapes per operation (X-1)**
@@ -223,7 +225,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | **Create** | `['@type' => 'counter', 'counterIdentifier' => …]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** / **Remove** / **Remove{Child}** | `['@type' => 'counter', 'counterIdentifier' => …]` — root identity only (Remove{Child} skips the child key) |
-| **Process** | `['@type' => '<aggregate of the success command>'] + <flat payload of the success node>`; a Process without one unambiguous static success exit answers `['@type' => '<processName>']` (lcfirst process name) without a reference value (the build warns); status **200**, never 201 |
+| **Process** | `['@type' => '<aggregate of the success command>'] + <flat payload of the success node>`; a success exit the model does not name (event, query, custom, cross-BC node) answers by default with the reference value of the **last successfully run own Command node** of its paths (`@type` = the aggregate root key, e.g. `invoice`, not `createInvoice`; several shapes → `oneOf` in the OpenAPI) — only a process without any own Command node answers `['@type' => '<processName>']` (lcfirst process name) without a reference value (the build warns; a path without a Command next to reference paths warns with `path-without-command`); status **200**, never 201 |
 | **400 / 404 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message, messageKey}]]` / `['@type' => 'notFound', 'context']` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
 
 Exactly one context of a response may carry data; the generated `DomainResponseTransformer` takes that payload as `data` and throws a `LogicException` when two contexts carry data — it never merges silently.
@@ -374,6 +376,8 @@ final class CheckStockInCatalog extends EcommerceContext
 }
 ```
 
+**Cross-BC read needs no `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC (its `{Agg}Read` methods) is a Cross-BC-Call node on its own: the Service is derived as `{Process}{Node}` (never written into the model), the generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's `ON_FAIL` / 404 to decide. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
+
 **Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
 **Dev-body 4xx failure form.** What a dev body (custom, sub-process, cross-BC or external-call node) returns as `responseStatus`/`data` becomes the process answer through `ResolveProcessOutcome::failureData`. For the four statuses with a typed form — 400 `validation`, 404 `notFound`, 409 `concurrencyConflict`, 422 `ruleViolation` — `data` is trimmed to exactly `@type` plus that form's fields (`fields` / `context` / `reason, aggregate, context` / `rule, messageKey, context`); every other key of the node payload is dropped, and a form field you do not return stays empty (nothing is filled from `errors` or the node name). Any other 4xx (401/403/405) has no form of its own and is passed through unchanged. A `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed. So to answer 404 or 422 from a cross-BC service, return `'responseStatus' => 404` with the form's fields in `data`, not free-form business keys. **Contract side:** a Process door declares 422 `ruleViolation` in its OpenAPI whenever a Rule or a dev body of its **own** BC is reachable (a Custom/Query node with a body, also through sub-processes) — with an own-BC dev body reachable the `messageKey` is an open string (no enum), with only Rules reachable it stays the enum of the Rule keys; a cross-BC or external call alone declares no 422 in the contract (it still passes through at runtime). `responses[]` never carries the 422 itself.
@@ -417,6 +421,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-capable, `Closure/v{N}/`).
 - Read existing data only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the kernel seam (`context()`) for a BC-internal read — a declared internal list read with `limit: 1`, decided over `total` — a cross-BC existing-data check is process territory, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "customer has open invoices" — Query `openInvoicesByCustomer` (`internal`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, new OpenInvoicesByCustomerFilter(customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- **An `aggregate` input is the aggregate entity, not just the root:** `{Agg}\Model\{Agg}\Aggregate\Entity\{Agg}` with the child getters `get{Kind}()` (list for `erm: many`). Check children directly (`foreach ($root->getLines() as $line) …`) instead of declaring a helper query in `reads` for data the Guard already holds; the example's `given.root` carries the children under their relation names and `ClosureTestCase::aggregate()` builds the entity. A body that only uses root getters is unaffected.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `generated-code-versioning`).
@@ -478,19 +483,19 @@ including the side effect (documented, Postgres number range, see below).
 
 This is the three-level separation from `generated-code-workflow-api` §1: **branching** (ON_SUCCESS/ON_FAIL
 = true/false, pure path selection) · **response status** (always from the actual `DomainResponse`
-of the last decisive node, NEVER from the edge declaration) · **transaction** (the No path
-keeps committing — a declared 409 terminal is no reason to roll back, only a thrown
-technical error rolls back).
+of the last decisive node, NEVER from the edge declaration) · **transaction** (the branch edge
+is transaction-neutral; the Process runs in ONE transaction by default, and a 4xx END status — also
+a declared 409 terminal — rolls the whole run back, as does a thrown technical error; the answer
+of a rolled-back run carries no domain event).
 
 **Collision sequence (Case A):** both runs load `fakturiert=false`. The first N1 wins. The
 second N1 waits on the row lock, re-evaluates the current state after waiting (the UPDATE
-is a current read), hits 0 rows → 409 → N2 is never reached. The bracket does
-NOT roll back in that case, it commits empty — the No path is a legitimate completion, not an abort.
+is a current read), hits 0 rows → 409 → N2 is never reached. The 409 ends the run, so the bracket
+rolls it back — the loser has written nothing, its answer is the 409 and carries no event.
 
 **Limits:**
 
-- **Only via `runInTransaction` processes.** The direct BC path (Command without a process) stays
-  unprotected.
+- **Only via processes in the bracket.** Every process runs in the bracket by default (Recipe 14); the direct BC path (Command without a process) and a process with the explicit opt-out `runInTransaction: false` stay unprotected.
 - **SQLite:** without `busy_timeout` SQLite does not wait on the lock but throws
   `SQLITE_BUSY` immediately — the loser ends up via the Throwable path as a **500 with rollback**, not as
   409. The invariant holds (it writes nothing), but status and waiting behaviour are wrong.
@@ -534,6 +539,41 @@ an FK violation stays a technical 500. No driver knowledge in the generate, noth
 - Use Recipe 11 (gatekeeper) only where NO database UNIQUE index can carry the invariant (a state over several rows, a counter, a status transition).
 - Dev code that writes OUTSIDE the generated persist (own `Repository/` or `Service/` under `{BC}/Process/{Name}/`) catches `UniqueViolationException` itself and translates it to its own business answer (e.g. a 409 `DomainResponse`); it never inspects driver error codes or SQLSTATE.
 - Keep the DB UNIQUE index in `Schema.json` — it is the only carrier; without it nothing throws and the duplicate is stored.
+
+**Recipe 13 — Write a computed field from a process node (`Set{Entity}Computed`)**
+
+A column the process derives (a sum, a counter) is declared `computed: ["net_total", …]` on its entity in `Aggregate.json` (Designer field table switch "berechnet", MCP `save_aggregate` node field `computed`). Such a column is in **no** Create/Set/Add/Update command and in no OpenAPI request — a caller can neither send nor overwrite it (a body naming it is `400 unknown`); Read, list and Akte still carry it. The one write path is the generated, **family-internal** command `Set{Entity}Computed` (one per entity position with computed columns): its DTO is the entity's addressing path (root identifier; for an `erm: many` entity also the selector and the child identifier) plus exactly the computed columns, nothing else. It has no route, no OpenAPI path, no rule binding and no BC-facade method — the only way in is the kernel seam, from a Process node or Service:
+
+```php
+// {BC}/Process/{Name}/Command/Handler/Action/RecalculateTotals.php — node body is yours
+$response = $this->handle(Offer::class)->setOfferComputed(     // the aggregate WRITE facade, family-internal
+    new SetOfferComputed(                                       // {Domain}\{BC}\Model\Offer\Command\SetOfferComputed
+        offerIdentifier: $offerIdentifier,
+        netTotal: $net,                                         // only the computed columns
+        grossTotal: $gross,
+    )
+);
+return ['status' => $response->isSuccess() ? WorkflowResult::ON_SUCCESS : WorkflowResult::ON_FAIL, 'data' => []];
+```
+
+**Rules:** the command is applied through the position's regular aggregate method (root `set{Agg}`, `erm: one` `set{Sub}`, `erm: many` `update{Kind}`) — persist, change tracking and the stale-write 409 are exactly those of the regular write; a missing aggregate answers 404 like every loading command. Like every command it raises **exactly one event** (one event per command): its own `{Agg}ComputedUpdated` at the root, `{Agg}{Fragment}ComputedUpdated` below it — never the event of the position's regular Update/Set — collected by the handler (`EventScope::Internal`, not dispatched; the caller publishes after commit), registered in `{Agg}Events` and `{Agg}EventRouter`, carrying the entity's public fields after the write (children: identifier plus the computed fields). A `computed` column must be nullable or carry a DB default (`V-CALC-1`) — after Create it holds that null/default until this command writes it. A process **input** field named like a computed property is warned (`V-CALC-2`) and a Closure example using `command.<computed>` too (`V-CALC-3`): take the inputs the value is computed FROM, then write the result with this command. A `erm: one` entity that does not exist yet is created by the Set path with the computed values only — write the entity first. In the node catalogue the command is marked `internal` (no HTTP verb); it is a Command for the process classification (loads the aggregate, validated, identity chain).
+
+**Recipe 14 — The process transaction bracket: default, 4xx rollback, events after commit, opt-out**
+
+Every Process runs in **one** transaction by default — nothing to model. `runInTransaction` in the process definition is three-valued: key absent = bracket on, `false` = explicit opt-out (written to the file), `true` = valid but redundant. Every door shows the effective value (process load answer / MCP resource `runsInTransaction`); the Designer switch and `update_process_metadata` write the key only when you touch it, `false` only as an explicit opt-out.
+
+| Run ends with | What happens |
+|---|---|
+| Success (status < 400) | one `commit` at the end; the domain events collected by the nodes enter the answer **after** the commit |
+| **4xx END status** (400/404/409/422, also a declared reject terminal) | the whole run **rolls back**, the answer stays the 4xx — and carries **no domain event**, not even those of nodes that had succeeded before |
+| Thrown technical error / 5xx / failing `commit` | rollback, `500`, no event |
+| Nested (sub-process, or a node calling `process()` of another BC inside the caller's bracket) | a **savepoint** with a per-run unique name instead of a second transaction; a rolled-back nested part delivers no events to the outer answer, a caller that carries on after the rejection harvests only the events of the part that was not rolled back |
+
+- **`ON_FAIL` is a branch, not an abort.** The No path may write; only the **END status** of the run decides rollback. Do not model a manual rollback.
+- **One connection:** all BCs of a domain write through the same writer, so a Cross-BC write node (Recipe 9) is part of the caller's bracket — no saga.
+- **Events (Wurzel 3 unchanged):** the handler collects, nothing is dispatched; the caller publishes the events of the answer after the commit. With the opt-out there is no bracket, nothing is rolled back and the events are harvested unconditionally.
+- **Opt-out** `runInTransaction: false` is for a process that must keep partial writes on purpose; the build warns once per process (`V-PROC-TX-OPTOUT`, a warning, never a blocker).
+- **Floor:** the savepoints come from the packages (`jardissupport/contracts` ≥ 2.4.0 `SavepointInterface`, `jardissupport/repository` ≥ 1.4.0, `jardisadapter/dbconnection` ≥ 1.2.0) — no raw `SAVEPOINT` SQL in your Dev code either.
 
 ### 3. Troubleshooting
 

@@ -1,6 +1,6 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
 profile: jardis
@@ -53,6 +53,12 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
 1. **Workspace** — point the running `jardis mcp` process at a project root (passed at process
    start). If the domain structure does not exist yet, build it up with the structural tools
    (create a domain, add a bounded context, add an aggregate) before importing schema.
+   The domain's **class versions** the HTTP layer may serve (`X-Jardis-Version: v2`) are declared
+   with `update_domain_manifest` field `versions` (`["v2", …]`, each `^v[1-9][0-9]*$`, whole-list
+   overwrite, `[]` clears) and read back through the resource `jardis://domain/{domain}/manifest`;
+   a build writes them to `src/Api/{Domain}/versions.php` and into the OpenAPI contract
+   (`generated-code-versioning` §3). The build warns `V-VERSION-DRIFT` when a declared version has
+   no `v{N}/` class or a `v{N}/` directory is not declared.
 2. **`import_schema`** — write the bounded context's schema, either from a database
    introspection or from a schema drafted for a domain idea (see `design-draft-schema`), whose
    JSON you pass in the `yaml` argument (wire-key kept for contract stability — it carries JSON
@@ -73,13 +79,33 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    positions and `rootCandidates` for the chosen tables; a root recognisable only through declared
    FKs (no name-prefix hit, e.g. an irregular plural) is still returned, with reason `declared_fk`,
    when it is the unique FK sink of the tables (chain A←B←C yields A) — two sinks or no FK signal
-   leave `rootCandidates` empty, so decide the root yourself then.
+   leave `rootCandidates` empty, so decide the root yourself then. A node's optional `computed`
+   (`["net_total", …]`, omit = keep the stored marker, `[]` = delete it) marks the columns the
+   **process** derives (sums, counters): they leave every Create/Set/Add/Update command and the
+   OpenAPI request (a body naming one is `400 unknown`), Read/list/Akte keep them, and the process
+   writes them through the family-internal `Set{Entity}Computed` command. A computed column must be
+   nullable or carry a DB default (`V-CALC-1`) and cannot be the PK, the public identifier, an FK or
+   an `adopt` column (`V-CALC-4`); the aggregate load echoes `computedBlocked` (column → reason) for
+   the columns that may not carry the marker — send it back or omit it.
 4. **`save_naming`** — apply/confirm the field-mapping naming conventions for the bounded
    context before building.
 5. **`create_process`** / **`save_process`** / **`validate_process`** — model a BC-level
    process graph (if the change is process-level behaviour rather than aggregate structure),
    iterate, and check it for structural findings before building. On `save_process`, omitting
-   `layoutJson` keeps the stored layout; passing `null` deletes it.
+   `layoutJson` keeps the stored layout; passing `null` deletes it. The process **input types**
+   come from the backend, not from a list you remember: the process load answer / resource
+   `jardis://process/…` carries `inputTypes` (the scalar vocabulary of the aggregate door —
+   `date`, `datetime`, `time`, `decimal`, `uuid`, … plus `string|array|mixed`), and an input field
+   may reference a value list of the BC as `valueList: <Name>` instead of `type`
+   (`input.fields[].type` / `valueList`; an unknown list is the blocker `V-INPUT-VALUELIST`, a field typed
+   `array`/`mixed` warns `V-INPUT-UNTYPED`). **Transaction:** a process runs in one transaction by
+   default — the key `runInTransaction` is absent in a normal process, the load answer / resource
+   reports the effective value as `runsInTransaction`, and a 4xx end status rolls the run back
+   (events only after the commit). `update_process_metadata` writes `runInTransaction` only when
+   you pass it; `false` is the explicit opt-out and draws the warning `V-PROC-TX-OPTOUT`
+   (`validate_process`, finding source `process`). A node whose `consumedCalls` resolve into a
+   foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (Service `{Process}{Node}`
+   derived).
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a

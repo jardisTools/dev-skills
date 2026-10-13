@@ -4,6 +4,18 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.20.0] - 2026-10-13
+
+### Added
+- `generated-code-recipes` Recipe 13 (write a `computed` field through the family-internal `Set{Entity}Computed`) and Recipe 14 (process transaction bracket: default on, 4xx end status rolls back, events only after the commit, `runInTransaction: false` opt-out with `V-PROC-TX-OPTOUT`).
+- `generated-code-versioning` section 3 "HTTP front door" (`X-Jardis-Version` header, `jardisVersion` attribute, `meta.version`, baseline fallback, 400 `request.versionUnknown`, `versions` in the domain manifest, `V-VERSION-DRIFT`) and section 4, a recipe for serving a `v2` variant over HTTP.
+- `design-headless-mcp` names `computed` on `save_aggregate`, the process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning and `versions` via `update_domain_manifest` / the resource `jardis://domain/{domain}/manifest`.
+
+### Changed
+- `generated-code-extend`: the Rule `aggregate` input carries the aggregate entity with child getters (`given.root`, `ClosureTestCase::aggregate()`); a node whose `consumedCalls` resolve into a foreign BC is a Cross-BC-Call node without `crossBcCall` (Service `{Process}{Node}`); decision-tree row for computed fields.
+- `generated-code-recipes`: a Process answers by default with the reference value of its last own Command node; Process input types are the scalar vocabulary of the aggregate door with a strict date gate; the "No path keeps committing" statements in Recipe 11 and `generated-code-workflow-api` are corrected (a 4xx end status rolls the run back).
+- `generated-code-wire-transport` passes the class version through the transport (`X-Jardis-Version` to `$version`, `meta.version`).
+
 ## [1.19.0] - 2026-10-09
 
 ### Changed
