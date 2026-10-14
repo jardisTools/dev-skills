@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.22.3] - 2026-10-14
+
+### Changed
+- `design-model-capabilities`, `design-headless-mcp`, `generated-code-extend`, `generated-code-wire-transport`: the format markers of the Builder are documented. `identifier.scope` makes a public key unique per tenant (one unique index over scope + key; the row "composite unique key is not available" is corrected), `requestAttribute` takes a root column (and a process input field) from the request attribute `tenant` / `subject` instead of the client (only `tenant` filters reads, a missing attribute fails the route closed), `writeOnly` keeps a column in the write contract and out of every output, and `computed` is listed with its limits. The attribute names are `RequestAttribute::SUBJECT` / `::TENANT` of `jardissupport/contracts` >= 2.8.0.
+
 ## [1.22.2] - 2026-10-13
 
 ### Changed

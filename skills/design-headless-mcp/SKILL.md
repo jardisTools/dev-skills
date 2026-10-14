@@ -88,6 +88,19 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    nullable or carry a DB default (`V-CALC-1`) and cannot be the PK, the public identifier, an FK or
    an `adopt` column (`V-CALC-4`); the aggregate load echoes `computedBlocked` (column → reason) for
    the columns that may not carry the marker — send it back or omit it.
+   **Format markers on a node** (neutral example: table `orders`, key `order_no` unique per region):
+   ```json
+   {"id": "n1", "table": "orders", "entityKey": "order",
+    "identifier": {"stage": "uniqueColumn", "column": "order_no", "scope": ["region_code"]},
+    "requestAttribute": {"region_code": "tenant", "created_by": "subject"},
+    "writeOnly": ["api_token_hash"]}
+   ```
+   - `requestAttribute` (ROOT node only; omit = keep, `{}` = delete): the column's value comes from the authenticated request (`tenant` / `subject`), never from the client. It leaves every input contract and is set at every write door; only a `tenant` column also filters the read doors, a `subject` column never filters a read. Columns must be varchar/char data columns (`REQATTR-1`) and the aggregate needs a public unique key (`REQATTR-3`).
+   - `identifier.scope` (lists `tenant` columns, `REQATTR-2`): the key is unique per scope value; the schema needs ONE unique index over exactly scope + key column, scope columns NOT NULL (`ID-1`, blocker). A PUBLIC query on a scoped root binds each `tenant` column by a top-level `where.all` equality (`REQATTR-4`, `validate_queries`).
+   - `writeOnly` (omit = keep, `[]` = delete): written, never read — absent from Akte, list, bulk read, events and the OpenAPI response, present in the write contract. A public query may not filter or order on it (`WO-2`); not the PK, key, FK, adopt, computed or request-attribute column (`WO-1`).
+   - Blockers come back in `valid` / `errors` of the save answer; check them (the aggregate is written regardless).
+   - The request attributes are `RequestAttribute::SUBJECT` (`jardisSubject`) and `::TENANT` (`jardisTenant`) of `jardissupport/contracts` >= 2.8.0; the authenticating middleware of the app sets them.
+   - A process input field takes the same marker: `{"name": "regionCode", "type": "string", "requestAttribute": "tenant"}` in `input.fields[]` of `save_process` (scalar string, no `valueList`/`default`, at most one field per attribute: `V-INPUT-REQATTR`); a Rule node on a tenant-scoped root needs a `tenant` field as scope source (`V-PROC-SCOPE-SOURCE`).
 4. **`save_naming`** — apply/confirm the field-mapping naming conventions for the bounded
    context before building.
 5. **`create_process`** / **`save_process`** / **`validate_process`** — model a BC-level
