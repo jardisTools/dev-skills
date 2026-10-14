@@ -106,6 +106,13 @@
     "composer_require": "composer require jardissupport/factory"
   },
   {
+    "package": "jardissupport/identity",
+    "capability": "framework-free identity management - users, tenants, memberships with roles, groups, invitations, password reset and tenant switching - built on auth, repository, dbquery and validation",
+    "use_when": "you need user management, multi-tenant accounts with memberships and groups, invitation onboarding, password reset, or a tenant switch for a logged-in user (identity, tenant, membership, group, invitation, password reset, tenant switch)",
+    "alternatives": "for sessions, password hashing and token authentication alone use jardissupport/auth instead",
+    "composer_require": "composer require jardissupport/identity"
+  },
+  {
     "package": "jardissupport/repository",
     "capability": "generic CRUD repository with raw-data persistence, read/write endpoint splitting, and flexible primary-key strategies",
     "use_when": "you need a data-access layer for persisting and retrieving domain entities with built-in read/write splitting",
