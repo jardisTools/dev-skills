@@ -19,6 +19,12 @@ that) would only fragment the routing table this skill exists to provide.
 
 ### 1. The four phases
 
+**Platform boundary.**
+(a) The Jardis packages are the build platform; use them first, never rebuild what they provide.
+(b) Packages and the generator are immutable for an app developer: never patch `vendor/`, never edit generated trees.
+(c) A gap in a package or the generator is reported, not rebuilt: open an issue in the affected Jardis repository (package: its GitHub repository; generator: `jardisTools/builder`; skills: `jardisTools/dev-skills`). Until it is delivered, write dev code in the process scope (Closure, Service, Query) and mark it as interim.
+(d) Capability catalogs: `packages-find-existing` (packages), `design-model-capabilities` (model).
+
 The lifecycle of a Jardis project runs **packages → schema → design → code**:
 
 

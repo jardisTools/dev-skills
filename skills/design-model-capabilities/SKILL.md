@@ -226,6 +226,6 @@ Rows without a Jardis capability name are not allowed. "Deliberately not used" n
 ### 6. Reference
 
 - Origin of the law: "Es kann nicht sein, dass alles mit Closure erschlagen wird." and "alle Werkzeuge, die jardis hat, nicht nur die von mir genannten" (product owner, 2026-10-08, "Grundgesetz der Entwicklung mit Jardis"); Reihenfolge der Mittel "Prozess, Query, Aggregate, Closure".
-- Canonical sources in the Builder repository: `.claude/spec/FAEHIGKEITSKATALOG.md`, `.claude/spec/COMMAND-API-FORMEN.md`, `.claude/spec/QUERIES-JSON.md`, `.claude/spec/CLOSURES-JSON.md`, `.claude/spec/VALUELISTS-JSON.md`.
+- The source of truth for what the model can express is the generator itself: its validation (the blockers and warnings of `save_*` / `validate_*`) and the `jardis mcp` resources; not a file of your project.
 - Absence of per-field regex/read-only flag and configurable cascade in `Aggregate.json`: not in the capability catalog and not among the reserved keys of the aggregate definition (`internal/definition/data.go`, reserved-keys list).
 - Tool doors: `design-headless-mcp`. Process skills that require the table: `process-concept`, `process-write-prd`.
