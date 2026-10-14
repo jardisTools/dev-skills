@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.25.1] - 2026-10-14
+
+### Changed
+- `successOutput`: the query form is withdrawn, only fields remains (`design-headless-mcp`, `design-model-capabilities`, `generated-code-recipes`, `generated-code-extend`).
+
 ## [1.25.0] - 2026-10-14
 
 ### Added
