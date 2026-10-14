@@ -43,6 +43,8 @@ Merge and push are gates of the human: the session never merges or pushes on its
 ## Jardis projects
 
 Start with `start-orientation`: it walks packages, schema, design and code and names the skill for every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
+
+Platform boundary: packages and generator are immutable (no `vendor/` patches, no generated-code edits); report gaps as issues, meanwhile write interim process-scope code.
 <!-- /profile:jardis -->
 
 <!-- profile:core -->
