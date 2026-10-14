@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.26.0] - 2026-10-14
+
+### Added
+- `packages-find-existing`: catalog line for `jardissupport/identity` v1.0.0 - framework-free identity management (users, tenants, memberships with roles, groups, invitations, password reset, tenant switch) on top of auth, repository, dbquery and validation (catalog regenerated).
+
 ## [1.25.1] - 2026-10-14
 
 ### Changed
