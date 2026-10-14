@@ -4,6 +4,14 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.23.0] - 2026-10-14
+
+### Added
+- `generated-code-recipes` (Recipe 6), `design-headless-mcp`, `design-model-capabilities`: the optional process key `successOutput` is documented. A process can declare its 200 `data` instead of deriving it from the end node, in exactly one of two forms: `fields` (`@type` plus exactly the declared fields from the end node's `data`, trimmed; nullable without a value answers `null`; a missing or mistyped required field is a 500 with rollback) or `query` (the list envelope `{@type, items, total, limit, offset}` of a public query of the own BC, run by the end node through the kernel seam). The OpenAPI types the same answer; an end node without payload (event, Rule) with a required field or the query form is the blocker `V-PROC-SUCCESSOUT`. Set through `save_process`; without the key the answer stays derived.
+
+### Changed
+- `generated-code-workflow-api`: the Process answer takes its `data` from the end node's return (`getChain()`), the `WorkflowContext` slot `response` / `setResponse()` is not read by the generated code. `generated-code-extend`: the two statements "a Process answers with the reference value" name the declared answer as the exception.
+
 ## [1.22.3] - 2026-10-14
 
 ### Changed

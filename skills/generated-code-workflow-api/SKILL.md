@@ -80,6 +80,8 @@ A Designer node can instead be marked **Rule** — it references one entry of th
 
 Slots are explicitly *not* meant for data flowing between sequential nodes — `WorkflowResult.data` and `WorkflowContext::getPrevious() / getLatest($fqcn) / getAll($fqcn) / getChain()` serve that purpose.
 
+**The Process answer does not use the `response` slot.** The generated orchestrator hands `getChain()` to `ResolveProcessOutcome`, so the answer's `data` is the return `data` of the node the process ends on (the host), trimmed to the fields of an optional `successOutput` declaration (`generated-code-recipes` Recipe 6) — a `setResponse(...)` in a node body is not read by the generated code and never reaches the wire. Return the payload from `logic()` instead.
+
 ### 5. R5 — routing safety
 
 The engine aborts without a throw if
