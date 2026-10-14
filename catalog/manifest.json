@@ -51,7 +51,7 @@
   },
   {
     "package": "jardiscore/app",
-    "capability": "HTTP delivery layer for Jardis-generated domains — a FastRoute router behind its own RouterInterface, a PSR-15 middleware pipeline, and the canonical DomainResponse-to-PSR-7 envelope mapper",
+    "capability": "HTTP delivery layer for Jardis-generated domains — a FastRoute router behind its own RouterInterface, a PSR-15 middleware pipeline (global and per-route, ready-made RequireSession), and the canonical DomainResponse-to-PSR-7 envelope mapper",
     "use_when": "you need to expose a Jardis-generated domain's read-facades/process()/rules over HTTP, with routing, PSR-15 middleware, and a ready-made {status,data,errors,meta} response envelope",
     "composer_require": "composer require jardiscore/app"
   },
