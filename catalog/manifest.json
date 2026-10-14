@@ -63,7 +63,7 @@
   },
   {
     "package": "jardissupport/auth",
-    "capability": "session management, password hashing and authentication, and role-based access control with domain events",
+    "capability": "session management with signed access tokens (no database access per request), password hashing and authentication, and role-based access control with domain events",
     "use_when": "you need user login, session lifecycle management, password verification, or role-based permission checks",
     "composer_require": "composer require jardissupport/auth"
   },
@@ -104,13 +104,6 @@
     "capability": "dependency injection container with reflection-based instantiation and optional backend container delegation",
     "use_when": "you need to resolve and wire service dependencies automatically without manual constructor calls",
     "composer_require": "composer require jardissupport/factory"
-  },
-  {
-    "package": "jardissupport/identity",
-    "capability": "framework-free identity management - users, tenants, memberships with roles, groups, invitations, password reset and tenant switching - built on auth, repository, dbquery and validation",
-    "use_when": "you need user management, multi-tenant accounts with memberships and groups, invitation onboarding, password reset, or a tenant switch for a logged-in user (identity, tenant, membership, group, invitation, password reset, tenant switch)",
-    "alternatives": "for sessions, password hashing and token authentication alone use jardissupport/auth instead",
-    "composer_require": "composer require jardissupport/identity"
   },
   {
     "package": "jardissupport/repository",
