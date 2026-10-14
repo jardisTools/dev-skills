@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.27.0] - 2026-10-14
+
+### Added
+- `generated-code-wire-transport`: the call chain through the app-wide middleware pipeline (`public/index.php` loads `bootstrap.php` -> `middleware` entry -> `Routes::middleware()` -> generated `routes.php`), the anonymous door (`door: anonymous` -> `$routes->anonymous()->{verb}`), session attributes in the handler (`RequestAttribute::SUBJECT`/`TENANT`/`SUBJECT_ID`/`SESSION`) and the 401/500 error path.
+- `design-headless-mcp`: the project setting `middleware` (`update_project_settings`, default `["session"]`, `[]` switches the session off), its read side (`jardis://root` `middleware`, `jardis://project` `middlewareEffective`), `door` on `save_process`/`save_queries` (full replace), rule V-DOOR-1 and `jardis://doors/{domain}`.
+
 ## [1.26.0] - 2026-10-14
 
 ### Added
