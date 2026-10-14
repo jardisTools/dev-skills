@@ -4,6 +4,13 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.25.0] - 2026-10-14
+
+### Added
+- `start-orientation`: a lookup row routes "cross-cutting concern at the HTTP front door (session, CORS, request id, rate limit)" to `core-app`, section Middleware.
+- `generated-code-extend` (decision tree): a branch for what applies to every door equally and needs no domain model - not a process node, not a closure, but PSR-15 middleware (`Routes::middleware()`, `core-app`); a missing general middleware is a gap to report in `jardisCore/app`.
+- `packages-find-existing`: the catalog line of `jardiscore/app` names the global and per-route PSR-15 pipeline and the ready-made `RequireSession` (catalog regenerated).
+
 ## [1.24.0] - 2026-10-14
 
 ### Added
