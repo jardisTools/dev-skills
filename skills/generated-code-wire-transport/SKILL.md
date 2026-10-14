@@ -201,6 +201,7 @@ public function __invoke(CreateCounterMessage $msg): void
 - DB transactions → Repository pipeline
 - Event collection → command handler (`addEvent`); publish-after-commit → Process node, not ad-hoc here
 - Auth → framework middleware, before the `$app->...` call
+- Request-attribute columns (`requestAttribute`, `identifier.scope`): the authenticating middleware stores subject and tenant under `RequestAttribute::SUBJECT` (`jardisSubject`) / `::TENANT` (`jardisTenant`) of `jardissupport/contracts` >= 2.8.0 before the generated `routes.php` runs; a scoped route without the attribute fails closed (500) instead of reading or writing outside a scope
 - Field mapping → FieldMap + `Hydrate*` Action
 
 ### 7. Anchors
