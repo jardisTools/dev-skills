@@ -52,6 +52,10 @@ final class RenderCatalogTable
                 . 'and no package requires `jardiscore/*`. '
                 . '`jardiscore/kernel` and `jardiscore/app` are the application layer for generated domains '
                 . 'and presuppose a Jardis domain.',
+            '',
+            'Packages are consumed from Packagist only: they are not forked, vendored or patched. '
+                . 'A capability a package lacks is an issue in that package\'s repository, '
+                . 'not project code that imitates the package.',
         );
 
         return implode("\n", $lines) . "\n";

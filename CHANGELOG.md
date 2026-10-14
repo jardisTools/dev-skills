@@ -4,6 +4,16 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.24.0] - 2026-10-14
+
+### Added
+- `start-orientation`: a "Platform boundary" block opens phase 1. The Jardis packages are the build platform and are used first; packages and the generator are immutable for an app developer (no patching of `vendor/`, no edits in generated trees); a gap in a package or the generator is reported as an issue in the affected Jardis repository (generator: `jardisTools/builder`, skills: `jardisTools/dev-skills`) instead of being rebuilt, and interim dev code lives in the process scope (Closure, Service, Query) until the gap is delivered. The two capability catalogs are named: `packages-find-existing` and `design-model-capabilities`.
+- `packages-find-existing`: a note after the catalog (generated from `RenderCatalogTable`) — packages are consumed from Packagist only; a missing capability is an issue in the package repository, not project code that imitates the package.
+- The managed `AGENTS.md` block (router, profile `jardis`) carries the same platform boundary in a short paragraph.
+
+### Changed
+- `design-model-capabilities`: the reference to files of the Builder repository (`.claude/spec/*`), which an app developer does not have, is replaced by the statement that the generator itself (validation, `jardis mcp` resources) is the source of truth.
+
 ## [1.23.0] - 2026-10-14
 
 ### Added
