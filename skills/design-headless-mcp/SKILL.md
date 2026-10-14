@@ -120,6 +120,20 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (`validate_process`, finding source `process`). A node whose `consumedCalls` resolve into a
    foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (Service `{Process}{Node}`
    derived).
+   **Success answer (`successOutput`).** A process answers by default what it derives from the node it
+   ends on. To name the 200 `data` yourself, put the key `successOutput` on the process wire of
+   `save_process` (top level of `process`, next to `input` / `nodes`); no Designer editor, a save is a
+   full replace, so carry the value you loaded — omitting the key means "derived" again. Exactly one of
+   two forms (blocker `V-PROC-SUCCESSOUT` otherwise; `validate_process` reports it):
+   - fields: `"successOutput": {"fields": [{"name": "total", "type": "int"}, {"name": "region", "type": "varchar"}, {"name": "note", "type": "varchar", "nullable": true}]}` —
+     `type` from the column-type vocabulary of `Schema.json`; the process answers `@type` (the
+     lcfirst process name) plus exactly these fields from the `data` of its end node, a missing or
+     mistyped non-nullable field is a 500 with rollback.
+   - query: `"successOutput": {"query": "orderByRegion"}` — a `public` query of the SAME BC
+     (`save_queries`); the process answers that query's list envelope `{@type, items, total, limit, offset}`,
+     its developer-owned end node runs the query through the kernel seam and hands the envelope over.
+   Needs a success exit that carries a payload: an event or Rule node at the end with a non-nullable
+   field or the query form is the blocker. Details and OpenAPI effect: `generated-code-recipes` Recipe 6.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a
