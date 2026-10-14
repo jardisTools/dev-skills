@@ -70,7 +70,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Design a `Schema.json`'s content from a domain idea, no database yet, and hand it to an authoring door (MCP `import_schema` / UI schema import) | `design-draft-schema` |
 | Extend generated Command/Handler/Action code; understand the hermetic Aggregate tree, `$bc->{agg}()`, V1–V13 | `generated-code-extend` |
 | Wire generated Commands/Queries into an HTTP/CLI/queue/worker transport layer | `generated-code-wire-transport` |
-| Cross-cutting concern at the HTTP front door (session, CORS, request id, rate limit) | `core-app`, section Middleware |
+| Cross-cutting concern at the HTTP front door (session, CORS, request id, rate limit); sessions use signed access tokens (`AUTH_TOKEN_KEY`, `support-auth`) | `core-app`, section Middleware |
 | Understand ClassVersion resolution, or add a versioned variant of a generated class | `generated-code-versioning` |
 | Use the Workflow-Engine API inside a Process orchestrator (routing statuses, `WorkflowConfig`) | `generated-code-workflow-api` |
 | Look up a Phase-3 recipe (event-to-Kafka, VO in a Process node, …) or troubleshoot a stuck build | `generated-code-recipes` |

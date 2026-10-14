@@ -4,6 +4,17 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.28.0] - 2026-10-14
+
+### Changed
+- `generated-code-wire-transport`: the middleware pipeline now names `jardiscore/app` >= 1.6 and the concrete wiring in the generated `middleware.php` (`RequireSession` over `SignedTokenAuthenticator`, no middleware factory); new bullet on the token model (signed access token, key `AUTH_TOKEN_KEY`, no database access per request, refresh through `DbTokenStore`); the `door: anonymous` example is a public read, no longer login or accept-invite (identity doors come from the package side).
+- `design-headless-mcp`: the `middleware` setting names `jardiscore/app` >= 1.6 and the env key `AUTH_TOKEN_KEY` the default session guard needs.
+- `packages-find-existing`: the `jardissupport/auth` line names signed sessions (catalog regenerated).
+- `start-orientation`: the front-door lookup row names signed access tokens (`AUTH_TOKEN_KEY`, `support-auth`).
+
+### Removed
+- `packages-find-existing`: the `jardissupport/identity` catalog line (identity is superseded; the Builder "Access" blueprint follows). A skill `support-identity` is not part of this bundle.
+
 ## [1.27.0] - 2026-10-14
 
 ### Added
