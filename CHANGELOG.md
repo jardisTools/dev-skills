@@ -4,6 +4,18 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.30.0] - 2026-10-16
+
+### Added
+- `design-model-capabilities`, `design-headless-mcp`, `generated-code-extend`: the aggregate root key `visibility: internal|public` (an internal aggregate has no outer form - no `{agg}()`/`{Agg}Read`, no exposed command, route or OpenAPI path; usable family-internally; rules `V-AGG-VIS-1` to `V-AGG-VIS-5`; MCP `save_aggregate` `graph.visibility`, `rename_aggregate` `visibility`).
+- `design-headless-mcp`, `design-model-capabilities`, `generated-code-extend`, `generated-code-recipes`: BC-declared ENV keys (`BC.json` `env[]` via MCP `save_bc_env`, values in the one project `.env` through `save_runtime_env` block `domain`, body reads `$this->resource()->env('<KEY>')`; rules `V-RT-10` to `V-RT-13`).
+- `generated-code-recipes`: how a Rule node binds its inputs (`ruleArgs[{param, source}]`, source `latest` of an earlier station), plus troubleshooting rows for internal aggregates, `V-QDEF-26`, the attribute 403 and refused ENV values.
+
+### Changed
+- `generated-code-workflow-api`, `design-headless-mcp`, `design-model-capabilities`: a Rule node is no longer limited to a Closure with exactly one command/aggregate input - the short form `ruleSubject.payloadField` stays, the long form `ruleArgs` binds every input (`V-PROC-RULE-ARGS`, `V-PROC-RULE-ARGS-XOR`).
+- `design-model-capabilities`, `design-headless-mcp`, `generated-code-extend`: `writeOnly` is readable family-internally through a declared query with visibility `internal`; no outer form carries it. `design-headless-mcp`: query rule range now `V-QDEF-1..26` (`V-QDEF-26`: a query name must not equal a derived read way).
+- `generated-code-wire-transport`, `generated-code-extend`, `design-model-capabilities`, `design-headless-mcp`: a door whose required request attribute is missing answers 403 `request.attributeMissing` through the per-route middleware `RequireRequestAttribute` (`jardiscore/app` >= 1.8) instead of a 500.
+
 ## [1.29.0] - 2026-10-15
 
 ### Changed
