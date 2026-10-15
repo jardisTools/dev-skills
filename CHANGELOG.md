@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.29.0] - 2026-10-15
+
+### Changed
+- `packages-find-existing`: catalog lines for `jardissupport/auth` (session and token services as one bundle, role claim in the session), `jardiscore/kernel` (the bootstrap packer assembles the session and token services from configuration), `jardissupport/contracts` (authentication, token and session-service ports) and `jardissupport/data` (field mapping can skip null values for write-only columns); catalog regenerated.
+
 ## [1.28.0] - 2026-10-14
 
 ### Changed
