@@ -57,13 +57,13 @@
   },
   {
     "package": "jardiscore/kernel",
-    "capability": "immutable infrastructure holder (the DomainKernel) for Jardis-generated domains, with an optional ENV-driven bootstrap packer",
-    "use_when": "you need to assemble and inject the infrastructure (db connection, cache, logger, events, HTTP client, mailer, filesystem) that a generated {Domain} facade takes via constructor injection",
+    "capability": "immutable infrastructure holder (the DomainKernel) for Jardis-generated domains, with an optional ENV-driven bootstrap packer that also assembles the ready-made session and token services from configuration",
+    "use_when": "you need to assemble and inject the infrastructure (db connection, cache, logger, events, HTTP client, mailer, filesystem, session and token services) that a generated {Domain} facade takes via constructor injection",
     "composer_require": "composer require jardiscore/kernel"
   },
   {
     "package": "jardissupport/auth",
-    "capability": "session management with signed access tokens (no database access per request), password hashing and authentication, and role-based access control with domain events",
+    "capability": "session management with signed access tokens (no database access per request) that carry subject, tenant and role, password hashing and authentication, a ready-made bundle of session and token services (also available through the kernel), and role-based access control with domain events",
     "use_when": "you need user login, session lifecycle management, password verification, or role-based permission checks",
     "composer_require": "composer require jardissupport/auth"
   },
@@ -75,13 +75,13 @@
   },
   {
     "package": "jardissupport/contracts",
-    "capability": "shared port interfaces and contracts for all Jardis packages",
+    "capability": "shared port interfaces and contracts for all Jardis packages, including the authentication, token and session-service ports",
     "use_when": "you need the interface definitions that Jardis adapters implement, without depending on any concrete implementation",
     "composer_require": "composer require jardissupport/contracts"
   },
   {
     "package": "jardissupport/data",
-    "capability": "entity hydration from raw data, change tracking, field mapping, and unique identifier generation",
+    "capability": "entity hydration from raw data, change tracking, field mapping with optional skipping of null values for write-only columns, and unique identifier generation",
     "use_when": "you need to hydrate domain entities from persistence data, detect changed fields, map column names, or generate unique entity identifiers",
     "composer_require": "composer require jardissupport/data"
   },
