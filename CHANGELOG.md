@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.31.1] - 2026-10-17
+
+### Changed
+- `start-orientation`: "Importing Access" lists the read doors of the Access blueprint, which are processes (POST): ListMembers and ListOpenInvitations (session doors, owners only, at most 100 entries), ReadInvitation (anonymous, lets the invitee see the invitation before accepting) and, in `tenant`, MyTenants; the variant descriptions name MyTenants (13 processes in `tenant`, 10 in `single`).
+
 ## [1.31.0] - 2026-10-16
 
 ### Added
