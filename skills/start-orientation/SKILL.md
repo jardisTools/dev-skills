@@ -47,6 +47,17 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
 4. **Implement** — write the behaviour inside the generated Command/Handler/Action stubs.
    → `generated-code-extend` (plus its siblings, see the routing map below); the order of work from model to QA is its §11 "The way".
 
+#### Importing Access — login, users and tenants without modelling them
+
+Who may enter the application is a generic subdomain, not something to model by hand: the Builder ships the blueprint `access` (read `jardis://blueprints`), imported with `import_blueprint` (`design-headless-mcp`; UI: tile "Blaupause" in the Context-Map library panel). The result is a normal BC with the processes Login, Refresh, Logout, Register, Invite, AcceptInvitation and ChangePassword.
+
+1. **Pick the variant.** `tenant` - users act in the name of a tenant: the entities User, Tenant, Membership (role per membership) and Invitation, plus TenantSwitch and RemoveMembership; the session carries the tenant as a slug. `single` - one system without tenants: the role sits on the user, no Tenant/Membership, no TenantSwitch/RemoveMembership.
+2. **Set `AUTH_TOKEN_KEY`** (base64 of exactly 32 bytes) in the process environment or the project `.env`, with a configured database (`DB_*`) whose token table exists (DDL ships in the `jardissupport/auth` package). Without the key `$kernel->auth()` is `null`; a malformed key, or a key without a configured database, throws `InvalidEnvConfigurationException` when the kernel is built. The processes call `auth()` (sessions, token issuer and redeemer, password hasher) - never `new` an auth service. → `core-kernel` ("Auth from ENV"), `support-auth`.
+3. **First admin through Register.** Register is an anonymous door: it creates the user (`tenant`: plus the tenant and an owner membership; `single`: the user with role owner). It answers 422 unless the project `.env` key `ACCESS_REGISTRATION` is `open` (a missing key means `invite-only`); the BC declares the key, write it with `save_runtime_env` block `domain`.
+4. **Invite hands over a token, it sends no mail.** Invite (session door, owners only) answers `{email, token}`; the one-time token is valid for 7 days. Deliver it yourself; the invitee calls AcceptInvitation (anonymous door) with token, password and display name. In `tenant` an invitee who already has an account confirms the existing password and joins; in `single` an existing mail is refused with 422.
+5. **Know the token model.** The access token is signed (15 minutes, no database access per request), the refresh token is opaque (7 days, stored). After a password change or a removed membership the refresh fails at once, an already issued access token still works until it expires. Other contexts read the session as request attributes `jardisSubject`, `jardisTenant` (the tenant slug) and `jardisRole`, set by the session middleware (`generated-code-wire-transport`, `core-app`); they do not call Access.
+6. **Build and extend as any BC.** Bodies are readable and replaceable like other developer code (`generated-code-extend`); a missing capability is reported, not patched.
+
 ### 2. Running the Builder
 
 This skill assumes the `jardis` binary is already available in your environment — it does not
@@ -79,6 +90,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Pick the right design pattern (Facade, Strategy, Repository, …) for a problem | `foundation-patterns` |
 | Write a test, or decide what to do about a failing one | `foundation-testing` |
 | Decide what to model: what a Jardis tool setting already generates (child commands, validators, business keys, value lists, query filters, process nodes), what Jardis lacks, and the capability table for a concept or PRD — before any interview | `design-model-capabilities` |
+| Get login, users, roles and (optionally) tenants without modelling them: import the Builder blueprint `access` (`tenant` or `single`), set `AUTH_TOKEN_KEY`, first admin, invitations | section 1 "Importing Access"; `design-headless-mcp` (`import_blueprint`), `support-auth`, `core-kernel` |
 | Drive an entire Jardis workspace headless — no browser, an AI or script calls `jardis mcp` directly | `design-headless-mcp` |
 | Classify a subdomain (Core/Supporting/Generic), maintain a BC's glossary or canvas ("Steckbrief"), or plan a not-yet-built BC — headless, additive to the code-generation workflow | `design-headless-mcp` |
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `design-headless-mcp` |

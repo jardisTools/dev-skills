@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.31.0] - 2026-10-16
+
+### Added
+- `design-headless-mcp`: blueprint import - the static resource `jardis://blueprints`, the tool `import_blueprint {domain, subdomain, bc, blueprint, variant}` (result, atomicity, name rewriting, bodies into `outputDir`) and its refusals 404, 412 `DOMAIN_NOT_CONFIGURED`, 409 `CONFLICT` (BC or output folder exists - here not "already done") and 409 with `details.collisions`; the imported BC is a normal BC.
+- `start-orientation`: "Importing Access" - choosing the `tenant` or `single` variant, `AUTH_TOKEN_KEY`, the first admin through Register (`ACCESS_REGISTRATION`), Invite handing over a token instead of sending mail, the token model and the request attributes `jardisSubject`, `jardisTenant`, `jardisRole`; routing row to `design-headless-mcp`, `support-auth`, `core-kernel`.
+
 ## [1.30.0] - 2026-10-16
 
 ### Added
