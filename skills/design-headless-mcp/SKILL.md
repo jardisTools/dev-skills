@@ -1,6 +1,6 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), blueprint import (`import_blueprint`, resource `jardis://blueprints`, its 404/412/409 refusals), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 zone: post-active
 persona: C
 profile: jardis
@@ -59,6 +59,26 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    a build writes them to `src/Api/{Domain}/versions.php` and into the OpenAPI contract
    (`generated-code-versioning` §3). The build warns `V-VERSION-DRIFT` when a declared version has
    no `v{N}/` class or a `v{N}/` directory is not declared.
+   **Blueprint import — a ready-made bounded context instead of `add_bc` plus hand-modelling.**
+   Read the static resource `jardis://blueprints` first (readable without a license): a list of
+   `{name, description, category, variants[]}`. `import_blueprint {domain, subdomain, bc, blueprint,
+   variant}` (all five required; a mutating tool, blocked without a license) writes one variant as a
+   NEW bounded context into an existing domain and subdomain: schema, aggregates, queries, closures
+   and processes, plus the hand-written bodies, which go into the BC's folder under the configured
+   `outputDir`. Every reference to the blueprint's own domain and BC name is rewritten to yours;
+   `bc` is PascalCase-normalized. The call is atomic - any failure leaves workspace and `outputDir`
+   untouched. Answer: `{bcPath, outputPath, artifacts[], bodies[], rewritten[], mentions[]}`;
+   `mentions[]` lists free-text occurrences of a source name that were NOT rewritten (reported,
+   never changed silently). Refusals: **404** (domain, subdomain, blueprint or variant unknown) ·
+   **412** `DOMAIN_NOT_CONFIGURED` (no `outputDir`: set it with `update_project_settings` first) ·
+   **409** `CONFLICT` (the BC name exists in this or another subdomain of the domain, or its output
+   folder exists - **here `CONFLICT` does NOT mean "already imported, treat as done"**: nothing was
+   written; choose another `bc`, never retry unchanged) · **409** `CONFLICT` with
+   `details.collisions[]` `{kind: table|aggregate, name, subdomain, bc}` (a table or aggregate name
+   of the blueprint already exists in another BC of the domain; the list names each). Afterwards the
+   imported BC is a normal BC with no marker and no protection: change it with the usual tools
+   (`save_aggregate`, `save_process`, `save_closures`, ...) and `build` as for any BC. The import is
+   a first import only (no re-import) and declares no Context-Map edge.
 2. **`import_schema`** — write the bounded context's schema, either from a database
    introspection or from a schema drafted for a domain idea (see `design-draft-schema`), whose
    JSON you pass in the `yaml` argument (wire-key kept for contract stability — it carries JSON
@@ -371,7 +391,7 @@ fallen behind.
 Every Tool/Resource failure comes back as one structured envelope — `code`, an optional
 `ruleId` + `location` for validator findings, a human `message`, and an actionable `hint` —
 never a bare error string. Recurring codes worth recognising by name: `CONFLICT` ("already
-exists" — safe to retry with a different name or treat as confirmation), `CONFIRM_REQUIRED`
+exists" — safe to retry with a different name or treat as confirmation; **not** for `import_blueprint`, where it means nothing was written), `CONFIRM_REQUIRED`
 (a destructive call — delete/rename with real impact — needs an explicit confirm flag; inspect
 the matching preview Resource first), `BUILD_RUNNING` / `DRAFT_EXISTS` (build-time guards, §2
 step 6), `NOT_FOUND`, `VALIDATION` (inspect `details` for field-level findings). Never retry a
