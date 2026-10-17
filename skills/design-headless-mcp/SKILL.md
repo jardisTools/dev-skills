@@ -134,7 +134,12 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    `date`, `datetime`, `time`, `decimal`, `uuid`, … plus `string|array|mixed`), and an input field
    may reference a value list of the BC as `valueList: <Name>` instead of `type`
    (`input.fields[].type` / `valueList`; an unknown list is the blocker `V-INPUT-VALUELIST`, a field typed
-   `array`/`mixed` warns `V-INPUT-UNTYPED`). **Transaction:** a process runs in one transaction by
+   `array`/`mixed` warns `V-INPUT-UNTYPED`). (FIX3) A field can also be a list (`list: true` with the element `type`; no minimum length, `[]`
+   is valid) or an object (`fields: [...]`, members scalar or object, at most two object levels;
+   `fields` + `list: true` = object list) — `save_process` refuses a third object level, an empty
+   object, `default` on a list/object, `accepts` inside an object and any key that contradicts the
+   kind, e.g. `fields` on a scalar (V-INPUT-OBJECT-DEPTH, V-INPUT-OBJECT-EMPTY, V-INPUT-SHAPE); a
+   wrong element answers 400 with its index path, never 500. **Transaction:** a process runs in one transaction by
    default — the key `runInTransaction` is absent in a normal process, the load answer / resource
    reports the effective value as `runsInTransaction`, and a 4xx end status rolls the run back
    (events only after the commit). `update_process_metadata` writes `runInTransaction` only when

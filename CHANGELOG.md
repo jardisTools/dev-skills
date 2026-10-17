@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.32.0] - 2026-10-17
+
+### Added
+- `design-headless-mcp`, `generated-code-recipes`: process input as a scalar list, object or object list - a field carries `list: true` (typed list, no minimum length, `[]` is valid) or `fields: [...]` (object, at most two object levels; `fields` + `list: true` = object list); `save_process` refuses a third level, an empty object, `default` on a list/object, `accepts` inside an object and keys that contradict the kind (`V-INPUT-OBJECT-DEPTH`, `V-INPUT-OBJECT-EMPTY`, `V-INPUT-SHAPE`); a wrong element answers 400 with its index path (`lines[1].quantity`), never 500; recipe with the typed DTO tree and the item class `{Process}{Field}Item`.
+
 ## [1.31.1] - 2026-10-17
 
 ### Changed
