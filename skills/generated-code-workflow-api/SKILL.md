@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Workflow-Engine API used by Process-Designer-generated Use-Case orchestrators — seven routing statuses (`ON_SUCCESS` / `ON_FAIL` / `ON_TIMEOUT` / `ON_SKIP` / `ON_CANCEL` / `ON_EVENT` / `ON_EXIT`), `WorkflowConfig`/`addNode` graph construction, the Event node ◇ variant, `handlerFactory` Closure conventions, three opaque `WorkflowContext` slots (`reference`, `response`, `exception`), R5 routing-safety rules.
+description: Process-engine API used by Process-Designer-generated use-case orchestrators (`workflow` 2.0) — `ProcessRunner::run()` with a generated `ProcessDefinition`, six named routes plus reject, the node contract `callable(ProcessContext): NodeResult`, `nodeFactory` conventions, `ProcessContext` reads, typed per-node responses, rule modes, events on the result, strict routing, transaction bracket with savepoints.
 zone: post-active
 persona: C
 profile: jardis
@@ -8,113 +8,100 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
-The Process-Designer-Orchestrator (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) wires a `WorkflowConfig` and calls `$workflow($config, $dto)`; the Engine walks the graph, invokes each Node-Action-Stub `__invoke(WorkflowContextInterface): WorkflowResultInterface`, and stamps every result with its producing handler FQCN. Knowing this API is mandatory both for Node bodies (whose editable `logic()` returns an `array{status, data}` that the generated `__invoke` wraps into a `WorkflowResult`) and for hand-written orchestrator-shell code.
+> Applies from `workflow` 2.0 (release after E3). Engine package itself: skill `support-workflow`.
 
-### 1. The seven routing statuses
+The Process-Designer-Orchestrator (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) calls `ProcessRunner::run($definition, $input, $actor, $nodeFactory)`. The runner validates the input, opens the transaction, walks the generated `ProcessDefinition`, invokes each node stub `__invoke(ProcessContext): NodeResult` and answers with one `ProcessOutcome` (status, response object, errors, events). Knowing this API is mandatory both for node bodies (Dev code) and for hand-written orchestrator-shell code.
 
-The editable node body is `protected function logic($cmd, WorkflowContextInterface $context): array` and returns exactly one of these as `['status' => WorkflowResult::ON_*, 'data' => [...]]` (same shape as the Event node below); the generated `__invoke` wraps that into a `WorkflowResult` automatically — never construct `WorkflowResult` inside the `logic()` body:
+### 1. Where it lives (target layout, decided 2026-10-17)
 
-| Constant | Meaning |
+| File under `{BC}/Process/{Name}/` | Content | Owner |
+|---|---|---|
+| `Command/{Name}.php` (+ parts) | process input | generated |
+| `Response/{Node}Response.php` | typed answer of a node; the answer of the end node IS the process answer | generated, hermetic |
+| `Command/Handler/{Name}Handler.php`, `{Name}Definition.php`, `{Name}Context.php` | wiring: handler calls the runner, definition, typed context | generated, hermetic |
+| `Command/Handler/Action/` | node stubs with the node body (dev-owned body) | Dev code |
+| `Event/` | event classes | generated |
+| `Query/`, `Repository/`, `Service/` | Dev territory | Dev code |
+
+### 2. The six routes and the reject
+
+A node returns a `NodeResult`; the route it takes picks the next node. The edge carries no data and no declaration.
+
+| Route | Meaning |
 |---|---|
-| `ON_SUCCESS` | Successful completion of the handler — default happy path. |
-| `ON_FAIL` | Business failure (validation, business rule violated). |
-| `ON_TIMEOUT` | Planned recovery path: service-side timeout translated into business routing. |
-| `ON_SKIP` | Handler not applicable — flow skips to the re-convergence point. |
-| `ON_CANCEL` | Business abort (cancellation, consent withdrawn) — cleanup path. |
-| `ON_EVENT` | Active async hand-off via DomainEvent — follow-up runs arise externally (no synchronous follow-up node). |
-| `ON_EXIT` | Loop/block termination — actively ends a loop or a block (no synchronous follow-up node). |
+| `Route::OnTrue` | Yes / success — the default path (`NodeResult::ok($data)` takes it) |
+| `Route::OnFalse` | No — a decision answered no, or a rule in decision mode violated |
+| `Route::OnSkip` | Node not applicable — flow skips to the re-convergence point |
+| `Route::OnTimeout` | Planned recovery path: a service-side timeout translated into business routing |
+| `Route::OnCancel` | Business abort (cancellation, consent withdrawn) — cleanup path |
+| `Route::OnExit` | Loop/block termination — actively ends a loop or a block |
 
-User code always leaves `handlerFqcn` as `null` — the engine stamps it itself via `WorkflowResult::withHandler()` as soon as it appends the result to the context.
+**There is no event route:** events hang on the result (`withEvents(...)`), they are not an edge.
 
-### 2. `WorkflowConfig` in the `config()` body
+**`reject` is not a route.** `NodeResult::reject(ResponseStatus::NotFound, 'order.unknown', $context)` ends the run at once: rollback, answer = the failure form of the status. Only 4xx is allowed (anything else throws `ConstructionException`). A thrown exception is a technical failure and answers 500.
 
-The generator emits a private `config(): WorkflowConfigInterface` that registers **every** node of the drawn graph via `addNode()` — even an end node appears as `addNode(X::class, [])`. Routing is a `[WorkflowResult::ON_* => NextNode::class]` map per node — the engine walks the drawn edges, exclusive branches run exclusively. Hand edits to the orchestrator (e.g. an additional transition) follow the same pattern:
+### 3. The generated `ProcessDefinition`
+
+The generator emits the graph as a fluent definition; hand edits follow the same pattern:
 
 ```php
-private function config(): WorkflowConfigInterface
-{
-    return (new WorkflowConfig())
-        ->addNode(ValidateInput::class, [
-            WorkflowResult::ON_SUCCESS => LoadAggregate::class,
-            WorkflowResult::ON_FAIL    => RejectInput::class,
-        ])
-        ->addNode(LoadAggregate::class, [
-            WorkflowResult::ON_SUCCESS => MutateState::class,
-            WorkflowResult::ON_SKIP    => RejectInput::class,
-        ])
-        ->addNode(MutateState::class, [
-            WorkflowResult::ON_SUCCESS => PersistAndEmit::class,
-            WorkflowResult::ON_CANCEL  => CompensateState::class,
-        ])
-        ->addNode(PersistAndEmit::class, [])
-        ->addNode(RejectInput::class, [])
-        ->addNode(CompensateState::class, []);
-}
+ProcessDefinition::for(PlaceOrder::class, 'PlaceOrder')
+    ->validate(PlaceOrderRules::class)->actor(Buyer::class)->context(PlaceOrderContext::class)
+    ->node(ValidateStock::class)->onTrue(ReserveStock::class)->onFalse(RejectOrder::class)
+    ->node(ReserveStock::class)->onTrue(ConfirmOrder::class)->response(ReserveStockResponse::class)
+        ->rejects(ResponseStatus::Conflict, 'stock.taken')
+    ->node(ConfirmOrder::class)->terminal()->response(ConfirmOrderResponse::class)
+    ->node(RejectOrder::class)->terminal()
+    ->build();
 ```
 
-End nodes (empty routing map `[]`) let the engine terminate properly.
+The first `node()` is the entry node. Every route a node can take must be declared — an undeclared route throws `UnroutedStatusException` (500) — and an end is declared with `terminal()` / `onX(null)`. `build()` rejects an unknown target and freezes the definition. `loopLimit(n)` caps the node steps of one run (default 100).
 
-### Event node ◇
+### 4. Node bodies: `NodeResult` and `ProcessContext`
 
-A Designer node can be marked as **Event ◇** instead of **Action** (`mode: async`). In the Designer the author declares an **event field binding** on the node — a list `eventFields: [{label, source}]`, where each `source` points to a command field of the process input (`ProcessEventFieldEditor.svelte`, details tab of the ticket panel).
+The editable node body returns exactly one `NodeResult`:
 
-**There is no dev task on the generated node body** — the only author activity is the field binding **in the Designer**, not in code. Rules for binding (V-EVT-*): at least one binding, source must be identity-bearing, no name collision, union branches same chain depth. A node source (`source.kind: latest|all`) must point to an **aggregate Command of the own BC** that carries an identity chain; anything else is rejected by `V-EVT-NODE-ELIGIBLE` (Blocker) at validation **and** at every build door: a Query call, a Process call, a foreign BC, a Sub-Process or Event node as source, or a referenced aggregate that cannot be loaded. An Event node without any event field is rejected too (`V-EVT-MIN-ONE`). An unresolved binding never reaches the generate — there is no throwing stub in the emitted `logic()`. The generated `logic()` returns the event object(s) in the reserved channel — `'data' => ['__jardis' => ['events' => [new <EventClass>(…)]]]` — and reads the event identity **flat** from the preceding node (`$context->getLatest(<PersistNode>::class)->getData()['<idProp>'] ?? throw …`, no handler-name or root level). `ResolveProcessOutcome` harvests the events from the chain and the orchestrator adds each with `addEvent($event, EventScope::Domain)`. Publication after commit is the caller's concern (event transport recipes: `generated-code-recipes` §1).
+| Factory | Use |
+|---|---|
+| `NodeResult::ok($data)` | success on `OnTrue`, `$data` is an array or object |
+| `NodeResult::route(Route $route, $data = null)` | take a named route; `null` data hands on the previous step's data |
+| `NodeResult::reject(ResponseStatus $status, $messageKey, $context = [], $errors = [])` | end the run with a 4xx |
+| `->withEvents(object ...$events)` | events travel with the result |
 
-### Rule-node
+A node reads the run through the `ProcessContext` it gets: `input()`, `actor()`, `previous()`, `latest($node)`, `all($node)`, `iteration($node)`, `chain()`, `depth()`. There are no free slots; data between nodes flows through the results in the chain, and the process answer is the data of the node the run ends on. The generated `{Name}Context` extends `ProcessContext` with typed getters over `latest()`/`all()` — the documented exception to composition over inheritance; the chain stays immutable.
 
-A Designer node can instead be marked **Rule** — it references one entry of the BC's own `Closures.json` catalog (`generated-code-extend`), never authoring predicate logic itself. Not every catalog entry qualifies: only a Closure with `output.type: verdict` and at least one input (any kind: `command`/`aggregate`/`scalar`/`valuelist`) can back a node; a non-verdict or input-less Closure is a build-blocking `V-PROC-RULE-SUBJECT` finding regardless of what the node declares. Every Closure input is bound at the node in one of two forms, never both on one node (`V-PROC-RULE-ARGS-XOR`). **Short form** — for a Closure with exactly one `command`/`aggregate` input (the guard-bindable shape `dockable.ruleNode` checks): `ruleSubject.payloadField` names exactly one field of the process's own input as the subject — for a `command`-subject entry a command-field whose `accepts:` list includes that Command, for an `aggregate`-subject entry a scalar root-identifier field; a missing or non-fitting `payloadField` is a `V-PROC-RULE-SUBJECT` finding at every door (Designer, `build`, `validate`). **Long form** — any other Closure: `ruleArgs: [{param, source}]` binds EVERY input exactly once under the Closure's own parameter name; `source` is a bare process-input field name, or `{kind: latest, node, field}` = a field of the latest result of an earlier station (a command node also carries `facade` + `method` and offers the fields of its identity chain; a hand-written node offers the fields of its `outputShape`; there is no `all`). A violated binding (missing, duplicate or unknown param, unfitting type, a source node that is not a mandatory station before the rule) is a `V-PROC-RULE-ARGS` finding. The generated adapter cannot invoke the Closure without a complete binding. Routing is fixed, not authored per node: `passed → ON_SUCCESS`, `rejected → ON_FAIL`.
+**Typed answers.** `response(Class, fields...)` on a node turns the data array of the node into an object of `Class` through its constructor (named arguments; none named = all fields). A required parameter without a value is a `ConstructionException` (500).
 
-### 3. handlerFactory closure
+**Call nodes** map the answer of a called operation with `MapResponse`: 2xx becomes `ok(data)`, 4xx a `reject`, every other status throws.
 
-`new Workflow($factory)` optionally accepts `Closure(string $fqcn, mixed $data): object`. The convention in the aggregate context is `fn($cls, $data) => $this->context($cls, $data, $this->version())`, so that every node gets a fresh BC with `$data` as payload — nodes read it via `$this->payload()`. With `$data === null`, `$this->handle($cls)` is the default, and the outer payload is retained. The version of a process call applies to every node and every sub-process of the run. The factory passes the run's `$this->version()` to `context()`, a sub-process node calls `$this->context(<SubHandler>::class, $in, $this->version())()`, and `handle()` inherits it, so a `v{N}/` variant of a node or sub-process handler is resolved by the version of the process-facade call; without a version everything stays baseline. Without a factory the engine calls `new $fqcn()` (`$data` ignored) — usable for pure PHP code outside the aggregate context.
+**Rule nodes.** A rule is a node that rejects with `ResponseStatus::RuleViolation` (422) or goes on. `ruleMode($node, RuleMode::Guard)` (default) ends the run on a violation; `RuleMode::Decision` turns a 422 into `Route::OnFalse` and the process goes on there. Which Closure backs the node and how its inputs are bound is Designer territory (`generated-code-extend`, the Closure catalog) — the engine only sees the node.
 
-### 4. Three opaque context slots
+**Event nodes.** A node that only announces something returns `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))`; its missing data hands on the previous step's answer. Events of all steps are reported in execution order, a rejected result and a failed run report none. **The package never publishes:** the caller publishes `$outcome->events()` after the run — the transaction is committed by then (event transport recipes: `generated-code-recipes` §1).
 
-`WorkflowContext` carries, besides the result chain, three free slots that are *not* inspected by routing:
+### 5. The `nodeFactory`
 
-| Slot | Getter / Setter | Usage |
+`run()` takes a `\Closure(class-string): callable(ProcessContext): NodeResult`. The runner asks it for each node when the node is due, by the class name the definition declares — also once per pass of a loop. The generated handler provides the factory; hand-written code returns any callable. Class-version resolution of nodes is a property of that factory (`generated-code-versioning`).
+
+### 6. Answer and failure forms
+
+| Outcome | Status | Response |
 |---|---|---|
-| `reference` | `reference()` / `setReference(mixed)` | Out-of-band channel orchestrator → node (e.g. pass on a pre-resolved aggregate identity). |
-| `response` | `response()` / `setResponse(mixed)` | Out-of-band channel node → orchestrator (e.g. store `DomainResponse` from the end node, instead of via `WorkflowResult.data`). |
-| `exception` | `getException()` / `setException(\Throwable)` | Feed in a caught `Throwable` without interrupting the engine loop — cleanup nodes can read it out and carry it over into the response mapping layer. |
+| run ends on a routed node | 200 | the data of the last node (typed when `response()` is declared) |
+| input invalid | 400 | `ValidationFailure` with `fields[]`, key `process.inputInvalid` — before the first node |
+| actor missing (`actor()` declared) | 401 | key `process.actorMissing` |
+| `reject(404/409/422)` | same | `NotFound` / `Conflict` / `RuleViolation` |
+| other `reject(4xx)` | same | `{messageKey, context}` |
+| thrown exception, unrouted route, loop limit | 500 | empty object, `$outcome->cause()` |
+| `TransientConflictException` in the owning run | 409 | key `process.transientConflict` |
 
-Slots are explicitly *not* meant for data flowing between sequential nodes — `WorkflowResult.data` and `WorkflowContext::getPrevious() / getLatest($fqcn) / getAll($fqcn) / getChain()` serve that purpose.
+A reject is never routed by the engine; only a Dev decision inside a node (for example a sub-process node) may map a 4xx to a route.
 
-**The Process answer does not use the `response` slot.** The generated orchestrator hands `getChain()` to `ResolveProcessOutcome`, so the answer's `data` is the return `data` of the node the process ends on (the host), trimmed to the fields of an optional `successOutput` declaration (`generated-code-recipes` Recipe 6) — a `setResponse(...)` in a node body is not read by the generated code and never reaches the wire. Return the payload from `logic()` instead.
+### 7. Transaction and sub-process
 
-### 5. R5 — routing safety
-
-The engine aborts without a throw if
-
-1. the current handler has no transitions configured at all, **or**
-2. no transition exists for the returned status, **or**
-3. the configured transition target is not itself registered via `addNode()`.
-
-In all three cases the caller receives the complete `WorkflowContext` back; the responsibility for "was that an intended end or a configuration error?" lies with the orchestrator shell (typically: `try/catch` + checking `$context->getException()` and `$context->getPrevious()`).
-
-### 6. The node channel `__jardis` and the status derivation at run end
-
-Field errors of the Process input never reach this channel: the orchestrator answers them as 400 before the first node (process gate, `generated-code-extend`), so the rule "the first 4xx wins" below starts after the gate.
-
-A node body may return `'responseStatus' => $response->getStatus()` and `'errors' => list<string>` next to `status`/`data` from `logic()`. The generated `__invoke` moves them into the **reserved channel** `data['__jardis'] = {status, errors, events}`; they never sit beside the business payload in `data`. Only the key `__jardis` is reserved — business fields named `responseStatus` or `domain` pass through unchanged in the node's `data` within the workflow context (at the process exit of a typed 4xx — 400/404/409/422 — only `@type` plus the form's fields remain, plus a declared `messageKey`; on a 200 and on a 4xx without a form `data` stays unchanged). The orchestrator hands the executed chain (`$ctx->getChain()`) to the generated, hermetic `{Domain}\Response\ResolveProcessOutcome`, which reads only that channel and strips it from the answer. Channel and status choice are generator emission, not engine behaviour.
-
-**Failure sink (generated node body).** A plain custom node whose incoming edges are all `onFail` and which has no outgoing edge is a failure sink; the generator writes its `logic()` itself: it reads `$context->getPrevious()?->getData()`, hands the payload on without the `__jardis` channel, returns the channel's 4xx `status` as `responseStatus` (and its messages as `errors`) with `WorkflowResult::ON_FAIL`. A predecessor without a 4xx status makes the sink throw (the process falls into the engine's exception path) — a failure without an answer is never routed on silently. The `responses[] exit table does not depend on this (it reads declarations and edges only).
-
-This is a refinement of the three-level separation from §1: **branching** (`ON_SUCCESS`/`ON_FAIL`
-= true/false) remains unchanged pure path selection; **response status** still always comes from the
-actual `DomainResponse` (carried in `__jardis.status`), but from the last decisive execution of the node (a retried node counts with its last status only; the first node whose last status is a 4xx wins, typed as `validation` / `notFound` / `concurrencyConflict` / `ruleViolation`, its `data` trimmed to `@type` plus that form's fields while a 4xx without a form, e.g. 401/403/405, passes through unchanged; a `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed; without a winning 4xx the Process answers 200), not from the
-edge declaration and not simply from the first or last chain member — a
-convergent No terminal (several predecessor nodes lead into the same reject node) makes "last
-chain member" structurally wrong, a healed retry of the same node makes "any earlier
-4xx" structurally wrong; **transaction**: the branch edge itself stays transaction-neutral
-(a No path may write), but the Process runs in ONE transaction and a **4xx END status rolls
-the whole run back** (the answer stays the 4xx) — and the answer then carries **no domain
-event** (events follow the transaction: they enter the answer only after the commit). A thrown
-technical error rolls back too. Use case + measured values: `generated-code-recipes`
-Recipe 11.
+The run opens ONE transaction (`transactional(false)` opts out); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`. A sub-process node calls `$runner->run($inner, $input, $actor, $innerNodes, $context)` with the surrounding context as parent; a rejected inner run rolls back to its savepoint and the outer node decides — reject again or route (`OnFalse`). Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
 
 ### Anchors
 
-- `generated-code-extend` (Generated baseline, override targets, decision tree).
+- `generated-code-extend` (generated baseline, override targets, decision tree, Closure catalog).
 - `support-workflow` (the engine implementation itself).
-- `generated-code-recipes` (Recipe 11 — Invariant as state, uses §6 of this file).
+- `generated-code-recipes` (event transport, Recipe 11).
