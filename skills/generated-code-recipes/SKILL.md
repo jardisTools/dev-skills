@@ -25,14 +25,14 @@ protected function eventDispatcher(): EventDispatcherInterface|false|null
 
 **The router is hermetic** (ForceOverwrite) — you never fill its bodies; the next build truncates them (V1). Transport is therefore authored where developer code is allowed: a **Process node**. The aggregate command records its events on its response (`$this->result()->addEvent($event, EventScope::Internal)` in the generated handler) — the handler **only collects, it does not dispatch**. Note `getEvents(?EventScope)` is **context-keyed** (`array<string, array<int, object>>`), so flatten it before iterating: `array_merge(...array_values($response->getEvents()))` (or a nested `foreach`). (Aggregate life-cycle events are `Internal`; a **Domain event** is announced by an **Event ◇ node** of the Process.)
 
-**What a node sees of the previous node.** `$context->getPrevious()->getData()` / `$context->getLatest(NodeFqcn::class)->getData()` is the previous node's **flat business payload** — an `array`, never a `DomainResponse`, and with no handler-name or root level around it. For the generated default body of an aggregate-call node that is the command's reference value, e.g. `['@type' => 'counter', 'counterIdentifier' => '018e…']` — read it flat: `$context->getLatest(PersistCounter::class)->getData()['counterIdentifier']`. Never read it with `?? null`: a misspelt key then yields a silent `null` instead of a failure (the generated Event node throws when the identity is missing). The node's `DomainResponse` and its `Internal` events are **not** forwarded by the default body.
+**What a node sees of the earlier nodes (workflow 3.0).** Nothing is handed on from node to node: the answer of a run is the data of the **last** node only, and a node that needs an earlier answer asks for it explicitly — `$ctx->latest(NodeFqcn::class)?->data()` / `$ctx->all(NodeFqcn::class)` (or the typed getter `$ctx-><node>()` of the generated `{Name}Context`, a `?NodeResult` over `latest()`); `$ctx->previous()` is only the node run last, which can be a node without data. The `data()` of a call node is the command's **flat reference value** — an `array`, never a `DomainResponse`, with no handler-name or root level around it, e.g. `['@type' => 'counter', 'counterIdentifier' => '018e…']` — read it flat: `$ctx->persistCounter()?->data()['counterIdentifier'] ?? throw …`. A misspelt key must fail loud (`?? throw`), never read as a silent `null`. The node's `DomainResponse` and its `Internal` events are **not** forwarded by the default body (`MapResponse`: 2xx becomes `ok(data)`, 4xx a `reject`).
 
 **Two ways events leave a Process:**
 
-1. **Event ◇ node (generated, no body to write).** The node's `logic()` returns the event object(s) in the reserved channel `data['__jardis']['events']`. The generated orchestrator hands the executed chain to the hermetic `{Domain}\Response\ResolveProcessOutcome` closure, which harvests only that channel and the orchestrator collects each event on the response with `addEvent($event, EventScope::Domain)`. The **caller** publishes after the commit, from `$response->getEvents(EventScope::Domain)`. The identity of the event is read flat from the preceding node: `getLatest(PersistHeartbeat::class)->getData()['heartbeatSignalId'] ?? throw …`. **Event class name and FQCN:** the event-data class is `{Domain}\{BC}\Process\{Process}\Event\<ucfirst(node name)>` (the node class beside it is `<ucfirst(node name)>Node`) — a node named `invoicePaid` emits `…\Event\InvoicePaid`. Listeners and hand-written transport import exactly that FQCN. A project built before the PascalCase derivation carried the raw lowercase name (`…\Event\invoicePaid`): the next build rewrites the event under the new name, reports "FQCN geändert: Listener-Importe prüfen" as a build Hinweis, and **your `use …\Event\invoicePaid;` imports must be updated by hand** (grep the project for the old FQCN after that build).
+1. **Event ◇ node (generated, no body to write).** The node ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))`: the events travel with the result, not in the data. The runner collects the events of all steps in execution order and reports them on the `ProcessOutcome` for a successful run only (a rejected result and a failed run report none); the generated handler adds each with `addEvent($event, EventScope::Domain)` and the **caller** publishes after the commit, from `$response->getEvents(EventScope::Domain)`. The identity of the event is read from the earlier node explicitly through the typed context — `$ctx->persistHeartbeat()?->data()['heartbeatSignalId'] ?? throw …` — because an event node routes without data and a process that ends on it answers with no fields of its own (on the wire `data` carries only the process `@type`, `{"@type":"<processName>"}`). **Event class name and FQCN:** the event-data class is `{Domain}\{BC}\Process\{Process}\Event\<ucfirst(node name)>` (the node class beside it is `<ucfirst(node name)>Node`) — a node named `invoicePaid` emits `…\Event\InvoicePaid`. Listeners and hand-written transport import exactly that FQCN. A project built before the PascalCase derivation carried the raw lowercase name (`…\Event\invoicePaid`): the next build rewrites the event under the new name, reports "FQCN geändert: Listener-Importe prüfen" as a build Hinweis, and **your `use …\Event\invoicePaid;` imports must be updated by hand** (grep the project for the old FQCN after that build).
 2. **Custom node that publishes itself (below).** The node calls the aggregate command through the kernel seam, so it holds that `DomainResponse` and its events in hand, and hands them to a transport via `handle()`.
 
-`__jardis` is a **reserved key** of a node's `data` (`{status, errors, events}`, written by the generated bodies; `ResolveProcessOutcome` reads it and strips it from the answer) — do not use it for business fields, and do not put events anywhere else in `data`.
+A node's `data` holds business fields only: status, rejects and events are carried by the `NodeResult` itself (`reject(...)`, `withEvents(...)`), never by a key inside `data` — do not put events or a status into `data`.
 
 **Event payload identity (X-3).** `<Agg>{ChildEntity}Added` events carry the affected child's business identifier (`<childIdentifier>`) when G4 is satisfied — otherwise the internal PK (same rule as the Command response, see Recipe 6). Wire your listener against the business key whenever you can; the internal PK is meaningful only inside the aggregate and changes on rebuild scenarios where data is reseeded.
 
@@ -41,20 +41,19 @@ protected function eventDispatcher(): EventDispatcherInterface|false|null
 **Kafka / RabbitMQ / Redis** via `jardisadapter/messaging`:
 
 ```php
-public function __invoke(WorkflowContextInterface $context): WorkflowResultInterface
+public function __invoke(CreateCounterContext $ctx): NodeResult
 {
-    /** @var CreateCounter $cmd */
-    $cmd = $this->payload();
-
     /** @var DomainResponseInterface $response */
-    $response = $this->handle(Counter::class)->createCounter($cmd->create);   // illustrative: `create` = the process-input field carrying the command DTO; the response is held here, not read from a previous node
+    $response = $this->handle(Counter::class)->createCounter($ctx->input()->create);   // illustrative: `create` = the process-input field carrying the command DTO; the response is held here, not read from an earlier node
 
-    foreach (array_merge(...array_values($response->getEvents())) as $event) {
-        $this->handle(MessagingService::class)
-            ->publish('meterdevice.counter.counter.created', $event);
+    if ($response->isSuccess()) {
+        foreach (array_merge(...array_values($response->getEvents())) as $event) {
+            $this->handle(MessagingService::class)
+                ->publish('meterdevice.counter.counter.created', $event);
+        }
     }
 
-    return new WorkflowResult(WorkflowResult::ON_SUCCESS, $response->getData());   // flat reference payload, the Process answers with it
+    return (new MapResponse())($response);   // 2xx → ok(flat reference payload), the run answers with it as the end node; 4xx → reject
 }
 ```
 
@@ -79,7 +78,7 @@ foreach (array_merge(...array_values($response->getEvents())) as $event) {
 - Never `new` publishers / clients inside the node — always `handle()` (V2 / V3).
 - Never fill the generated `<Agg>EventRouter` bodies — the tree is hermetic (V1); the router's channel-key comments are documentation for the topic names, nothing more.
 - A node runs **synchronously** in the workflow. Long operations → enqueue and let a consumer pick up, the node only hands off.
-- A throwing node flips the process response per its `ON_FAIL` routing (`generated-code-workflow-api` §5). Wrap `try/catch` inside the node only if "event delivery must not fail the process".
+- A throwing node ends the run as a technical failure: rollback, answer 500, the cause is logged once by the package (`generated-code-workflow-api` §7). A node does not catch an exception to route it; wrap `try/catch` inside the node only if "event delivery must not fail the process".
 - **Tenant / feature-flag transport variant:** because ClassVersion can resolve any generated class, a `v{N}/Event/<Agg>EventRouter.php` next to the baseline is the escape hatch for a per-version router — but version *creation* is out of scope; prefer the Process node (`generated-code-versioning` §1).
 
 ### 2. Phase-3 cookbook
@@ -109,18 +108,19 @@ final class ObisCode
 Use it from a custom-node body (`{BC}/Process/CounterChange/Command/Handler/Action/ValidateNewValue.php`):
 
 ```php
-public function __invoke(WorkflowContextInterface $context): WorkflowResultInterface
+public function __invoke(CounterChangeContext $ctx): NodeResult
 {
-    /** @var CounterChange $cmd */
-    $cmd = $this->payload();
+    try {
+        $this->handle(ObisCode::class, $ctx->input()->obis);
+    } catch (\InvalidArgumentException) {
+        return NodeResult::reject(ResponseStatus::RuleViolation, 'counter.obisInvalid', ['obis' => $ctx->input()->obis]);   // 422, the run ends, rollback
+    }
 
-    $this->handle(ObisCode::class, $cmd->obis);   // throws on bad input → ON_FAIL routing
-
-    return new WorkflowResult(WorkflowResult::ON_SUCCESS, []);
+    return NodeResult::route(Route::OnTrue);   // no data of its own: this node only decides
 }
 ```
 
-`handle()` constructs the VO (V2/V3 — never `new`). A bad OBIS throws and the node's `ON_FAIL` transition takes over. For a tenant-specific variant of any generated class, see the `v{N}/` escape hatch (`generated-code-versioning` §1).
+`handle()` constructs the VO (V2/V3 — never `new`). A bad OBIS throws in the constructor; the node translates it into a `reject` (422, the run ends and rolls back — `reject` is not a route). Declare the status in the node's `rejects[]` (here 422, key `counter.obisInvalid`) — a dev body that rejects with a literal status its node does not declare is the blocker `V-NODE-REJECT-UNDECLARED`. Without the `try/catch` the exception is a technical failure and answers 500. For a tenant-specific variant of any generated class, see the `v{N}/` escape hatch (`generated-code-versioning` §1).
 
 **Recipe 2 — Domain Service for external lookup**
 
@@ -159,7 +159,7 @@ No method is hand-written and nothing under `{Agg}/` is edited — both facades 
 **Case B — a BC-level operation or one that coordinates several aggregates.** Model a **Process** in the Process Designer. The Generator emits, under `{BC}/Process/<Name>/`:
 
 1. `Command/<Name>.php` — the self-contained input DTO (`readonly`, its own `input.fields` — Recipe 5). Namespace: `…\Process\<Name>\Command\<Name>`.
-2. `Command/Handler/<Name>Handler.php` — the Workflow orchestrator (`__invoke()` + `config()` building the full graph). ForceOverwrite — regenerated, not edited. Namespace: `…\Process\<Name>\Command\Handler\<Name>Handler`.
+2. `Command/Handler/<Name>Handler.php` — the wiring that starts the run (`ProcessRunner::forKernel(...)->run(...)`, events, answer), next to the graph `<Name>Definition.php`, the input gate `<Name>Validator.php`, the typed run view `<Name>Context.php` and (only if the process reads request attributes) `<Name>Actor.php` — `generated-code-workflow-api` §1/§6. ForceOverwrite — regenerated, not edited. Namespace: `…\Process\<Name>\Command\Handler\<Name>Handler`.
 3. `Command/Handler/Action/<NodeClass>.php` — one node stub per node. Custom nodes are `CreateIfNotExists` with an `@node-id` marker; **the body is yours** and survives rebuilds. Namespace: `…\Process\<Name>\Command\Handler\Action\<NodeClass>`.
 4. A thin-dispatch method on the hermetic `{BC}Process` facade: `return $this->context(<Name>Handler::class, $in, $version)();` — reached via `$bc->process()->{name}($dto)`.
 
@@ -173,20 +173,19 @@ A concrete instance of §1, way 2. Model a Process whose node invokes the aggreg
 
 ```php
 // {BC}/Process/CreateCounter/Command/Handler/Action/CreateAndPublish.php
-public function __invoke(WorkflowContextInterface $context): WorkflowResultInterface
+public function __invoke(CreateCounterContext $ctx): NodeResult
 {
-    /** @var CreateCounter $cmd */
-    $cmd = $this->payload();
-
     /** @var DomainResponseInterface $response */
-    $response = $this->handle(Counter::class)->createCounter($cmd->create);   // held in this node
+    $response = $this->handle(Counter::class)->createCounter($ctx->input()->create);   // held in this node
 
-    foreach (array_merge(...array_values($response->getEvents())) as $event) {
-        $this->handle(MessagingService::class)
-            ->publish('meterdevice.counter.counter.created', $event);
+    if ($response->isSuccess()) {
+        foreach (array_merge(...array_values($response->getEvents())) as $event) {
+            $this->handle(MessagingService::class)
+                ->publish('meterdevice.counter.counter.created', $event);
+        }
     }
 
-    return new WorkflowResult(WorkflowResult::ON_SUCCESS, $response->getData());
+    return (new MapResponse())($response);   // 2xx → ok(reference payload) = the answer of the run (this node is the end), 4xx → reject
 }
 ```
 
@@ -227,7 +226,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 | **Create** | `['@type' => 'counter', 'counterIdentifier' => …]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** / **Remove** / **Remove{Child}** | `['@type' => 'counter', 'counterIdentifier' => …]` — root identity only (Remove{Child} skips the child key) |
-| **Process** | `['@type' => '<aggregate of the success command>'] + <flat payload of the success node>`; a success exit the model does not name (event, query, custom, cross-BC node) answers by default with the reference value of the **last successfully run own Command node** of its paths (`@type` = the aggregate root key, e.g. `invoice`, not `createInvoice`; several shapes → `oneOf` in the OpenAPI) — only a process without any own Command node answers `['@type' => '<processName>']` (lcfirst process name) without a reference value (the build warns; a path without a Command next to reference paths warns with `path-without-command`); status **200**, never 201. This is the answer **without** a `successOutput` declaration; a process that declares one answers the declaration instead (**Declared success answer** below) |
+| **Process** | the answer of the run is the data of the **last node** only (workflow 3.0) — `@type` (lcfirst process name, or the aggregate root key for a command end) plus what that end node answers: a node with its own `response:` → exactly these fields; a command end (one own-BC aggregate command) → the reference value of the command, e.g. `['@type' => 'invoice', 'invoiceIdentifier' => …]`; a sub-process end → the success form of the inner process; a **rule or event end without `response:`** routes without data and answers with no fields of its own (on the wire `data` carries only the process `@type`, `{"@type":"<processName>"}`) — no answer of an earlier node is borrowed; any other end (dev body, query, cross-BC or external call) answers what its body returns, the model does not name it: the OpenAPI states the open fallback `{"@type":"<processName>"}` and the build warns per such end. A node that needs an earlier answer reads it explicitly (`$ctx->latest(...)`) and returns it — or the model names it with `response:`. Status **200**, never 201. This is the answer **without** a `successOutput` declaration; a process that declares one answers the declaration instead (**Declared success answer** below) |
 | **400 / 404 / 409 / 422** | `['@type' => 'validation', 'fields' => [{field, reason, message, messageKey}]]` / `['@type' => 'notFound', 'context']` / `['@type' => 'concurrencyConflict', 'reason', 'aggregate', 'context']` / `['@type' => 'ruleViolation', 'rule', 'messageKey', 'context']` |
 
 Exactly one context of a response may carry data; the generated `DomainResponseTransformer` takes that payload as `data` and throws a `LogicException` when two contexts carry data — it never merges silently.
@@ -242,7 +241,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) whe
 
 **Command response** never carries domain state — only the reference value(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
-**Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a Process answer, add fields to the flat payload your success node returns (`'data' => $response->getData() + ['extra' => $value]` — Decorator at process level, see `generated-code-extend` §4); the orchestrator puts `@type` in front and answers with it (not on a process with a `successOutput` declaration: it trims `data` to the declared fields, so an extra field must be declared to reach the wire). Do not use the keys `@type` or `__jardis` for business fields.
+**Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a Process answer, add fields to the flat payload your end node returns (`NodeResult::ok($response->getData() + ['extra' => $value])` — Decorator at process level, see `generated-code-extend` §4); `BuildResponseData` puts `@type` in front and answers with it (not on a process with a `successOutput` declaration: it trims `data` to the declared fields, so an extra field must be declared to reach the wire). Do not use the key `@type` for business fields.
 
 **Declared success answer (`successOutput`, optional process key).** By default a Process answers what it derives from the node it ends on (the row above). A process can instead **declare** its success `data` — set through MCP `save_process`, no Designer editor; a save is a full replace, so carry the value you loaded. The declaration beats the derivation: every success node counts as the determined host, the reference search and the host warning disappear. Without the key nothing changes. The block is `{fields: [...]}` (blocker `V-PROC-SUCCESSOUT`: an empty block, a duplicate field name, the name `@type`, a type outside the column-type vocabulary of `Schema.json`, or a process without a success exit):
 
@@ -250,7 +249,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) whe
 |---|---|---|---|
 | fields | `successOutput: {"fields": [{"name", "type", "nullable"?}]}` | `@type` = the process name (lcfirst) plus **exactly** these fields, taken from the flat `data` of the node the process ends on; everything else that node returns is trimmed and never reaches the wire | a nullable field without a value answers `null`; a missing or mistyped non-nullable field is a `LogicException` → rollback of the process transaction, **500** |
 
-The OpenAPI states the same: a typed 200 member `{BC}{Process}ProcessSuccess` with every field `required` (instead of the derived `oneOf`). **Blocker:** a declaration that needs data (a non-nullable field) on a process whose success exit is an **event node or a Rule node** — they carry no payload, the run would end in a certain 500 (`V-PROC-SUCCESSOUT`, decided by node kind). The payload always comes from the `data` of the ending node (`getChain()`); `WorkflowContext::setResponse()` is not read (`generated-code-workflow-api` §4). The declared answer is still a Process answer: 200, 4xx forms and the transaction bracket (Recipe 14) are unchanged.
+The OpenAPI states the same: a typed 200 member `{BC}{Process}ProcessSuccess` with every field `required` (instead of the derived `oneOf`). **Blocker:** a declaration that needs data (a non-nullable field) on a process whose success exit is an **event node or a Rule node** — they carry no payload, the run would end in a certain 500 (`V-PROC-SUCCESSOUT`, decided by node kind). The payload always comes from the `data` of the ending node (the last step of `chain()`); nothing from an earlier node is added (`generated-code-workflow-api` §4). The declared answer is still a Process answer: 200, 4xx forms and the transaction bracket (Recipe 14) are unchanged.
 
 
 **Recipe 7 — Bulk read: list → keys/ids → full aggregate records**
@@ -277,7 +276,7 @@ Edge behaviour is plain IN semantics either way: empty input → `[]` · duplica
 
 **Recipe 8 — Sub-process node: calling another process synchronously**
 
-A sub-process node is a **typed Dev-Stub** (`CreateIfNotExists` + `@node-id` body-preserve) — not a No-Op. The Generator emits the full skeleton on first build; subsequent builds preserve the developer body unchanged.
+A sub-process node is a **typed Dev-Stub** (`CreateIfNotExists` + `@node-id` body-preserve) — not a No-Op. The Generator emits the whole call frame on first build; subsequent builds preserve the developer body unchanged.
 
 **Generated skeleton** (example: main process `CounterChange`, sub-process node `NotifyOps` calling `SendOpsNotification`):
 
@@ -285,60 +284,38 @@ A sub-process node is a **typed Dev-Stub** (`CreateIfNotExists` + `@node-id` bod
 // {BC}/Process/CounterChange/Command/Handler/Action/NotifyOps.php
 // @node-id 2a48bb04
 
-protected function logic(WorkflowContextInterface $context): array
+public function __invoke(CounterChangeContext $ctx): NodeResult
 {
-    $in = new SendOpsNotification(
-        counterId: $this->counterId($context),  // throwing resolver
-        reason:    $this->reason($context),     // throwing resolver
+    $runner = ProcessRunner::forKernel(
+        $this->resource(),
+        new ObjectValidator(registry: (new SendOpsNotificationValidator())(), fieldPaths: true)
+    );
+    $outcome = $runner->run(
+        (new SendOpsNotificationDefinition())(),
+        new SendOpsNotificationInput(
+            counterId: $ctx->input()->counterId,   // derivable (same name and type in the calling input): handed on
+            reason: \call_user_func(static fn(): mixed => throw new \RuntimeException('Sub-DTO-Feld reason NotifyOps'))   // open place: the developer's
+        ),
+        null,
+        fn(string $class): object => $this->handle($class),
+        $ctx
     );
 
-    $res = $this->context(SendOpsNotificationHandler::class, $in)();
-
-    if ($res->getStatus() >= ResponseStatus::InternalError->value) {
-        throw new \RuntimeException(sprintf('Technischer Fehler im Sub-Prozess SendOpsNotification (Status %d).', $res->getStatus()));
-    }
-
-    $events = [];
-    foreach ($res->getEvents(EventScope::Domain) as $subEvents) {
-        foreach ($subEvents as $e) {
-            $events[] = $e;
-        }
-    }
-
-    return [
-        'status' => $res->isSuccess() ? WorkflowResult::ON_SUCCESS : WorkflowResult::ON_FAIL,
-        'data'   => array_merge($res->getData(), [               // the sub-process's own payload (a 4xx form: fields / context / rule) travels with the node
-            '__jardis' => ['events' => $events],                  // reserved channel, harvested by ResolveProcessOutcome
-        ]),
-        'responseStatus' => $res->getStatus(),
-        'errors' => array_merge(...array_values($res->getErrors())),   // may be [] on a 4xx — the sub-process's 4xx cause travels in `data` (merged above)
-    ];
-}
-
-// --- throwing resolvers (dev fills in the values) ---
-
-protected function counterId(WorkflowContextInterface $context): mixed
-{
-    throw new \RuntimeException('Sub-DTO-Feld counterId fuellen: ' . self::class);
-}
-
-protected function reason(WorkflowContextInterface $context): mixed
-{
-    throw new \RuntimeException('Sub-DTO-Feld reason fuellen: ' . self::class);
+    return (new MapOutcome())($outcome, null, 'SendOpsNotification');
 }
 ```
 
-**What the developer does:** replace each throwing resolver with the real value from `$context` (e.g. `return $this->payload()->counterId;`). The `$in` constructor call, the `$res = $this->context(…)()` call, the status mapping, and the event bubbling are generated — do not touch them.
+**What the developer does:** replace each open place (`Sub-DTO-Feld <field> <Node>`) with the real value from the surrounding run — `$ctx->input()->…`, or explicitly from an earlier node, `$ctx->latest(Node::class)?->data()['…']`. The runner call, the parent `$ctx` and the `MapOutcome` mapping are generated — do not touch them, and never map an outcome by hand.
 
-**Event bubbling (flat, Domain-scope only):** `EventScope::Domain` events from the sub-`DomainResponse` are collected flat into the reserved channel `data['__jardis']['events']`. The main-process orchestrator harvests them identically to events from any other node: it hands `getChain()` to the generated `ResolveProcessOutcome`, which reads only that channel, and adds each event with `addEvent(…, EventScope::Domain)`. `Internal` events of the sub-process stay sub-process-internal (they are not returned). The generated `__invoke` of the node additionally moves the `responseStatus` and `errors` keys of the `logic()` return into the same channel (`data['__jardis']['status'|'errors']`) — you never write those into `data` yourself.
+**What `MapOutcome` does with the inner answer** (`JardisSupport\Workflow\Handler\Node\MapOutcome`): success → `ok((array) response)` **carrying all events of the inner run**, so they travel up to the outer answer (an inner run that was rolled back reports none); a 4xx → a `reject` with the **same** status and the inner failure form (so the outer wire form equals the inner one); a 5xx → throws the inner `cause()`. Events are part of the result, not of the data — there is no channel to fill.
 
-**Routing (`onFail`):** add an `onFail` edge from the sub-process node in the Process Designer — the node's status set is derived from the drawn edges, so the `onFail` transition surfaces in the generated routing automatically. `onFail` = the sub-process run broke (exception or `InternalError` response); a business verdict (true/false) is data and is routed via a downstream decision node.
+**Routing instead of rejecting:** to carry on after a refused inner run, pass a `Route` as second argument (`(new MapOutcome())($outcome, Route::OnFalse, 'SendOpsNotification')`) — the node then routes without data, the inner savepoint is rolled back, and the outer run continues on that edge. That is a Dev decision; add the matching edge (here `onFalse`) in the Process Designer — an undeclared route is a 500 (`UnroutedStatusException`, `generated-code-workflow-api` §3). A business verdict (true/false) is data and is routed via a downstream decision node.
 
 **`subprocessOnly` flag:** a process that is only called as a sub-process (never directly via `$bc->process()`) should have `subprocessOnly: true` in its definition (UI toggle "In API sichtbar" (visible in API), default ON). This suppresses the thin-dispatch method on the `{BC}Process` facade — the process DTO, orchestrator, and node stubs are always generated regardless of the flag.
 
 **Rules:**
-- Never `new` the Sub-Handler directly — always `$this->context(SubHandler::class, $in)()` (V2 / V3).
-- Never return the `DomainResponse` object of the sub-call upstream — return the flat `['status' => …, 'data' => […]]` array. `data` is the node's flat business payload plus, where needed, the reserved channel `__jardis` (`{status, errors, events}`); the generated `ResolveProcessOutcome` reads the channel and strips it from the answer.
+- Never `new` the Sub-Handler or call it by hand — the generated runner call is the only way (V2 / V3).
+- Never return the `DomainResponse` or the `ProcessOutcome` upstream — `MapOutcome` is the one mapping.
 - The sub-process node body survives rebuilds (unlike ForceOverwrite nodes) — keep the `@node-id` marker intact.
 
 **Recipe 9 — Cross-BC write: translate → foreign `process()` → map response (G7)**
@@ -349,10 +326,10 @@ A Cross-BC-Call node whose target **mutates** state in a foreign BC must target 
 // {Domain}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
 final class CheckStockInCatalog extends EcommerceContext
 {
-    public function __invoke(WorkflowContextInterface $context): array
+    public function __invoke(ProcessContext $context): NodeResult
     {
         /** @var CrossBcServiceDemo $cmd */
-        $cmd = $this->payload();
+        $cmd = $context->input();
 
         /** @var Catalog $catalog */
         $catalog = $this->handle(Catalog::class);          // the foreign BC facade
@@ -362,7 +339,7 @@ final class CheckStockInCatalog extends EcommerceContext
             new QueryProductByIdentifier(identifier: $cmd->productIdentifier)
         );
         if (!$read->isSuccess() || $read->getData() === []) {
-            return ['status' => WorkflowResult::ON_FAIL, 'data' => ['productIdentifier' => $cmd->productIdentifier]];
+            return NodeResult::reject(ResponseStatus::NotFound, 'catalog.productNotFound', ['productIdentifier' => $cmd->productIdentifier]);   // 404, the run ends
         }
         $current = $read->getData();   // root fields flat: ['@type' => 'product', 'identifier' => …, …]; children are {Child}Response objects (->); [] when not found
 
@@ -379,19 +356,20 @@ final class CheckStockInCatalog extends EcommerceContext
 
         // 4) map the response back into the caller's own vocabulary (ACL) — never
         //    pass the foreign DTO through unchanged
-        return [
-            'status' => $response->isSuccess() ? WorkflowResult::ON_SUCCESS : WorkflowResult::ON_FAIL,
-            'data'   => ['productIdentifier' => $current['identifier'], 'newPrice' => $cmd->newPrice],
-        ];
+        $answer = ['productIdentifier' => $current['identifier'], 'newPrice' => $cmd->newPrice];
+
+        return $response->isSuccess() ? NodeResult::ok($answer) : NodeResult::route(Route::OnFalse, $answer);
     }
 }
 ```
 
-**Cross-BC read needs no `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC (its `{Agg}Read` methods) is a Cross-BC-Call node on its own: the Service is derived as `{Process}{Node}` (never written into the model), the generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's `ON_FAIL` / 404 to decide. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
+**Cross-BC read needs no `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC (its `{Agg}Read` methods) is a Cross-BC-Call node on its own: the Service is derived as `{Process}{Node}` (never written into the model), the generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's decision: a `reject` (404), or a `Route::OnFalse` when the process should carry on. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
+
+**Declarations the body needs:** the `reject(ResponseStatus::NotFound, …)` status belongs in the node's `rejects[]` (`V-NODE-REJECT-UNDECLARED`), and the `Route::OnFalse` branch needs an `onFalse` edge on the node (`V-PROC-ROUTE-UNDECLARED` warns, an undeclared route is a 500 at run time).
 
 **Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
-**Dev-body 4xx failure form.** What a dev body (custom, sub-process, cross-BC or external-call node) returns as `responseStatus`/`data` becomes the process answer through `ResolveProcessOutcome::failureData`. For the four statuses with a typed form — 400 `validation`, 404 `notFound`, 409 `concurrencyConflict`, 422 `ruleViolation` — `data` is trimmed to exactly `@type` plus that form's fields (`fields` / `context` / `reason, aggregate, context` / `rule, messageKey, context`); every other key of the node payload is dropped, and a form field you do not return stays empty (nothing is filled from `errors` or the node name). Any other 4xx (401/403/405) has no form of its own and is passed through unchanged. A `messageKey` declared on the node's exit edge is set on `data` after forming, for every 4xx status (also when it is not a field of the form, and also in the pass-through case) — without one the payload stays as formed. So to answer 404 or 422 from a cross-BC service, return `'responseStatus' => 404` with the form's fields in `data`, not free-form business keys. **Contract side:** a Process door declares 422 `ruleViolation` in its OpenAPI whenever a Rule or a dev body of its **own** BC is reachable (a Custom/Query node with a body, also through sub-processes) — with an own-BC dev body reachable the `messageKey` is an open string (no enum), with only Rules reachable it stays the enum of the Rule keys; a cross-BC or external call alone declares no 422 in the contract (it still passes through at runtime). `responses[]` never carries the 422 itself.
+**Dev-body 4xx failure form.** A dev body (custom, sub-process, cross-BC or external-call node) refuses with `NodeResult::reject(ResponseStatus, $messageKey, $context, $errors)` — only 4xx is allowed, a 5xx case is an exception, not a `reject()` (workflow 3.0, `generated-code-workflow-api` §2/§7). The package builds the failure form from the **context keys it knows** (`BuildFailureForm`): 400 `validation` from `fields`, 404 `notFound`, 409 `concurrencyConflict` from `reason` / `aggregate` / `violated`, 422 `ruleViolation` from `rule`; every other context key travels as the `context` of the form, and a form field you do not name stays empty (nothing is filled from `errors` or the node name). Any other 4xx (401/403/405) has no form of its own and is passed through as `{messageKey, context}`. The message key a node declares for the status (`rejects(status, key)` on the node's exit) joins `data['messageKey']` of every status >= 400; without one the key named in `reject(...)` is used. The status must be declared in the node's `rejects[]` (`V-NODE-REJECT-UNDECLARED`). So to answer 404 or 422 from a cross-BC service, `reject` with that status and the form's context keys, not free-form business keys. **Contract side:** a Process door declares 422 `ruleViolation` in its OpenAPI whenever a Rule or a dev body of its **own** BC is reachable (a Custom/Query node with a body, also through sub-processes) — with an own-BC dev body reachable the `messageKey` is an open string (no enum), with only Rules reachable it stays the enum of the Rule keys; a cross-BC or external call alone declares no 422 in the contract (it still passes through at runtime). `responses[]` never carries the 422 itself.
 
 **Recipe 10 — Guard a Command with a business Rule (Rules-Layer)**
 
@@ -427,9 +405,9 @@ final class CounterMustBeActive extends MeterDeviceContext
 
 **What's generated, what's yours:** the Generator emits the stub signature + the `Closure/Data/RuleResult.php` VO + a hermetic `Closure/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. When the catalog entry declares a `messageKey`, the generated Guard (and the generated Process Rule node) sets that key as a literal and the `messageKey` you pass to `reject()` is not taken over — the body only decides passed/rejected and supplies `context` (the work package's `output.rejectNote` says so); declare the key in the catalog and pass the same key in the body. Without a catalog `messageKey` the body's key passes through. Your only job is the `__invoke()` body above.
 
-**Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a catalog reference (matrix-ineligible, like a sub-process node), the generated adapter maps `passed → ON_SUCCESS` / `rejected → ON_FAIL`. This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time warning, not an Error: possible double-execution / inconsistent existing-data reads between the two runs).
+**Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a catalog reference (matrix-ineligible, like a sub-process node), the generated node is hermetic: `passed` takes `Route::OnTrue`, a violation is `NodeResult::reject(ResponseStatus::RuleViolation, …)` (422, the run ends — `ruleMode` `guard`, the default) or, with `ruleMode: decision`, a `Route::OnFalse` the process goes on over (a guard rule node declares no `onFalse` edge, `V-NODE-GUARD-ONFALSE`). This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time warning, not an Error: possible double-execution / inconsistent existing-data reads between the two runs).
 
-**Binding a Rule node's inputs.** Short form `ruleSubject.payloadField` serves a Rule with exactly one `command`/`aggregate` input (a field of the process input). Any other Rule — several inputs, scalar or value-list inputs — uses the long form `ruleArgs: [{param, source}]`, one entry per Rule input in the Rule's own parameter names, never mixed with `ruleSubject` on the same node. `source` is a process input field (bare name) or `{kind: latest, node, field}`: a field of the latest result of an earlier station (a command node: `facade` + `method` set, the fields of its identity chain; a hand-written node: a field of its declared `outputShape`). That earlier node must be a mandatory station before the Rule node; there is no `all` for Rule arguments. Example (neutral): a check `StockAvailable(sku, quantity)` fed `sku` from the input and `quantity` from the `outputShape` of a custom node `PriceLine`: `"ruleArgs": [{"param": "sku", "source": "sku"}, {"param": "quantity", "source": {"kind": "latest", "node": "PriceLine", "field": "quantity"}}]`. The Rule outcome stays `passed → ON_SUCCESS` / `rejected → ON_FAIL`; it carries no output value to later nodes.
+**Binding a Rule node's inputs.** Short form `ruleSubject.payloadField` serves a Rule with exactly one `command`/`aggregate` input (a field of the process input). Any other Rule — several inputs, scalar or value-list inputs — uses the long form `ruleArgs: [{param, source}]`, one entry per Rule input in the Rule's own parameter names, never mixed with `ruleSubject` on the same node. `source` is a process input field (bare name) or `{kind: latest, node, field}`: a field of the latest result of an earlier station (a command node: `facade` + `method` set, the fields of its identity chain; a hand-written node: a field of its declared `response:`). That earlier node must be a mandatory station before the Rule node; there is no `all` for Rule arguments. Example (neutral): a check `StockAvailable(sku, quantity)` fed `sku` from the input and `quantity` from the `response:` of a custom node `PriceLine`: `"ruleArgs": [{"param": "sku", "source": "sku"}, {"param": "quantity", "source": {"kind": "latest", "node": "PriceLine", "field": "quantity"}}]`. The Rule outcome stays `passed → OnTrue` / violation → 422 or `OnFalse` (decision mode); the node routes without data of its own — a later node that needs a value reads the earlier node explicitly (`$ctx->latest(...)`), and a process that ends on the Rule node answers with no fields of its own (on the wire `data` carries only the process `@type`).
 
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-capable, `Closure/v{N}/`).
@@ -464,8 +442,9 @@ race returns as an initial-creation race. Process flow:
 
 ```
 N1 "MarkInvoiced"          — conditional UPDATE fakturiert: false → true
-   ON_SUCCESS → N2 "CreateCustomerInvoice"   (unconditional INSERT)
-   ON_FAIL    → declared 409 edge (reject terminal)
+   OnTrue → N2 "CreateCustomerInvoice"   (unconditional INSERT)
+   lost CAS: the call answers 409, `MapResponse` turns it into a reject → the run ends with 409
+             (declare the key with `rejects(Conflict, key)`; no edge to draw, a reject is not a route)
 ```
 
 A convergent rejection — several functionally different predecessor nodes (not found / already
@@ -477,34 +456,34 @@ counter aggregate (`lastNumber: int`):
 
 ```
 N1 "ReserveInvoiceNumber"  — conditional UPDATE lastNumber: n → n+1
-   ON_SUCCESS → N2 uses the new value (passed on via WorkflowContext::getLatest() in the
-                node body — there is no declarative way for this in the corpus, dev surface)
-   ON_FAIL    → 409
+   OnTrue → N2 uses the new value (nothing is handed on: N2 reads it explicitly in its
+            node body via `$ctx->latest(ReserveInvoiceNumber::class)?->data()` — dev surface)
+   lost CAS: the call answers 409 → reject → the run ends with 409
 ```
 
 **Handing the read basis to the write (Case B, and any gatekeeper whose target may be recomputed).** The gatekeeper node reads the row (`$current`), computes the target from it and passes what it read as the CAS expectation through the write facade of the own aggregate: `…->update{Root}($dto, $version, expected: ['<outerField>' => $current])` (outer FieldMap name ⇒ value read; family-internal only — the parameter is not on the BC facade, the Rules door, a route or the OpenAPI document; root writers `Update{Root}` / `Set{Root}Computed` only, child writers and `Remove` do not carry it). The generated handler lays the value over the snapshot (the package's `Hydration::hydrate`) after the guard and before the apply, so the UPDATE's `WHERE` checks the value the node actually read; a second writer that read the same value gets 0 rows → 409 `stale_write`. An unknown key in `expected` is a loud error (`InvalidArgumentException` → 500), not a silent no-op.
 
 **Measured picture (20 concurrent workers, one number range, generated process).** MySQL, MariaDB and Postgres: 0 duplicate numbers (`COUNT(*) = COUNT(DISTINCT number)`), the count of 2xx answers equals the count of assigned numbers, every loser answers 409 `stale_write` with `violated: []`. All 20 workers reach a number **only with a client-side retry on 409** — the 409 is the normal loser answer, not a failure. The same run without `expected` assigns duplicates on Postgres.
 
-**A transient database conflict is a 409 too, not a 500 (contracts ≥ v2.6.0, repository ≥ v1.6.0).** The repository package types a transient concurrency failure of the database — MariaDB ≥ 11.6 with `innodb_snapshot_isolation=1` (error 1020), deadlock (1213 / Postgres 40P01), serialization failure (40001) — as `JardisSupport\Contract\Repository\Exception\TransientConflictException`; the generate only catches the type. The loser answers 409 `stale_write` (every write path except delete) or `stale_delete` (delete persist) with `violated: []`, the same envelope as a lost CAS. **How it reaches your node depends on the database:** where the generated persist owns its transaction or can roll back its savepoint (Postgres, or a Command without a process bracket), the 409 arrives at the node as an ordinary answer and routes like any 409 (the retry guard below stays possible). On MariaDB/MySQL the 1020/1213 rolls back the **whole** process transaction and the savepoint is gone — the conflict then does **not** arrive as an answer: the `TransientConflictException` is passed through unchanged by the Command handler and by the nodes, the process bracket (outermost owner) rolls back and answers 409 `stale_write` (`aggregate` = process name, `context` empty, no events); a node retry does not take place there. A nested run (sub-process, call from a node) never answers 409 itself; it rolls back its own savepoint if it can and rethrows to the outer owner. With `runInTransaction: false` the exception is thrown on. **The way to repeat is a new transaction — the client retries the whole request on 409 (or the caller starts a new process run); there is no server-side retry.** Dev code in a node that catches `\Throwable` and carries on swallows this type and would then write on after the transaction was destroyed — in autocommit, i.e. a half process; catch only the typed exceptions you translate, and let `TransientConflictException` pass.
+**A transient database conflict is a 409 too, not a 500 (contracts ≥ v2.6.0, repository ≥ v1.6.0).** The repository package types a transient concurrency failure of the database — MariaDB ≥ 11.6 with `innodb_snapshot_isolation=1` (error 1020), deadlock (1213 / Postgres 40P01), serialization failure (40001) — as `JardisSupport\Contract\Repository\Exception\TransientConflictException`; the generate only catches the type. The loser answers 409 `stale_write` (every write path except delete) or `stale_delete` (delete persist) with `violated: []`, the same envelope as a lost CAS. **How it reaches your node depends on the database:** where the generated persist owns its transaction or can roll back its savepoint (Postgres, or a Command without a process bracket), the 409 arrives at the node as an ordinary answer: a call node's `MapResponse` turns it into a `reject` 409 that ends the run (the engine routes no reject); only a Dev node that inspects the response itself can map it to a route (`Route::OnFalse`) — the retry guard below. On MariaDB/MySQL the 1020/1213 rolls back the **whole** process transaction and the savepoint is gone — the conflict then does **not** arrive as an answer: the `TransientConflictException` is passed through unchanged by the Command handler and by the nodes, the process bracket (outermost owner) rolls back and answers 409 `stale_write` (`aggregate` = process name, `context` empty, no events); a node retry does not take place there. A nested run (sub-process, call from a node) never answers 409 itself; it rolls back its own savepoint if it can and rethrows to the outer owner. With `runInTransaction: false` the exception is thrown on. **The way to repeat is a new transaction — the client retries the whole request on 409 (or the caller starts a new process run); there is no server-side retry.** Dev code in a node that catches `\Throwable` and carries on swallows this type and would then write on after the transaction was destroyed — in autocommit, i.e. a half process; catch only the typed exceptions you translate, and let `TransientConflictException` pass.
 
 **Retry is convenience, not correctness** and needs two obligations: an **upper bound**
-(attempt counter, the engine has no built-in loop brake) and — the documented defect of this
+(attempt counter via `$ctx->iteration($node)`; `loopLimit(n)` is only the coarse cap of the whole run, default 100) and — the documented defect of this
 class — the target value MUST be **recomputed per attempt**, from the freshly read
 `current` state. A hard-wired target value (`lastNumber: 1` on every attempt) produces on the
 second attempt a no-op UPDATE whose `rowCount()` interpretation turns out
 differently depending on the driver (MySQL accidentally reads it correctly as a conflict, Postgres wrongly as success → double
 assignment).
 
-**The give-up node must pass the gatekeeper's 409 on.** When the retry guard gives up after its upper bound, its terminal node hands the gatekeeper's 409 `DomainResponse` on to the error sink unchanged. A give-up node that builds its own answer without the predecessor's status ends the run as 500 ("predecessor without 4xx status") instead of the 409.
+**The give-up node must pass the gatekeeper's 409 on.** When the retry guard gives up after its upper bound, its terminal node ends the run with a `NodeResult::reject(ResponseStatus::Conflict, …)` that carries the gatekeeper's 409 (the `reason` and `aggregate` of the answer it kept). A give-up node that answers anything else does not end as the 409.
 
 **Status behaviour at process end.** A gatekeeper conflict must become visible outwardly as 409,
 not merely route internally. Without this refinement a healed retry wrongly reports 409 despite actual success
 including the side effect (documented, Postgres number range, see below).
 
-This is the three-level separation from `generated-code-workflow-api` §1: **branching** (ON_SUCCESS/ON_FAIL
-= true/false, pure path selection) · **response status** (always from the actual `DomainResponse`
-of the last decisive node, NEVER from the edge declaration) · **transaction** (the branch edge
+This is the three-level separation from `generated-code-workflow-api` §1: **branching** (`OnTrue`/`OnFalse`,
+pure path selection) · **response status** (a `reject` carries its 4xx status and ends the run; a routed run
+answers 200 — NEVER from an edge declaration) · **transaction** (the branch edge
 is transaction-neutral; the Process runs in ONE transaction by default, and a 4xx END status — also
 a declared 409 terminal — rolls the whole run back, as does a thrown technical error; the answer
 of a rolled-back run carries no domain event).
@@ -577,7 +556,7 @@ $response = $this->handle(Offer::class)->setOfferComputed(     // the aggregate 
         grossTotal: $gross,
     )
 );
-return ['status' => $response->isSuccess() ? WorkflowResult::ON_SUCCESS : WorkflowResult::ON_FAIL, 'data' => []];
+return (new MapResponse())($response);   // 2xx → ok(reference payload), 4xx (404 missing aggregate, 409 stale write) → reject, the run ends
 ```
 
 **Rules:** the command is applied through the position's regular aggregate method (root `set{Agg}`, `erm: one` `set{Sub}`, `erm: many` `update{Kind}`) — persist, change tracking and the stale-write 409 are exactly those of the regular write; a missing aggregate answers 404 like every loading command. Like every command it raises **exactly one event** (one event per command): its own `{Agg}ComputedUpdated` at the root, `{Agg}{Fragment}ComputedUpdated` below it — never the event of the position's regular Update/Set — collected by the handler (`EventScope::Internal`, not dispatched; the caller publishes after commit), registered in `{Agg}Events` and `{Agg}EventRouter`, carrying the entity's public fields after the write (children: identifier plus the computed fields). A `computed` column must be nullable or carry a DB default (`V-CALC-1`) — after Create it holds that null/default until this command writes it. A process **input** field named like a computed property is warned (`V-CALC-2`) and a Closure example using `command.<computed>` too (`V-CALC-3`): take the inputs the value is computed FROM, then write the result with this command. A `erm: one` entity that does not exist yet is created by the Set path with the computed values only — write the entity first. In the node catalogue the command is marked `internal` (no HTTP verb); it is a Command for the process classification (loads the aggregate, validated, identity chain).
@@ -593,7 +572,7 @@ Every Process runs in **one** transaction by default — nothing to model. `runI
 | Thrown technical error / 5xx / failing `commit` | rollback, `500`, no event |
 | Nested (sub-process, or a node calling `process()` of another BC inside the caller's bracket) | a **savepoint** with a per-run unique name instead of a second transaction; a rolled-back nested part delivers no events to the outer answer, a caller that carries on after the rejection harvests only the events of the part that was not rolled back |
 
-- **`ON_FAIL` is a branch, not an abort.** The No path may write; only the **END status** of the run decides rollback. Do not model a manual rollback.
+- **A route is a branch, a `reject` is an abort.** The `Route::OnFalse` path may write; only the **END status** of the run decides rollback — a 4xx `reject` or a technical failure rolls the whole run back. Do not model a manual rollback.
 - **One connection:** all BCs of a domain write through the same writer, so a Cross-BC write node (Recipe 9) is part of the caller's bracket — no saga.
 - **Events (Wurzel 3 unchanged):** the handler collects, nothing is dispatched; the caller publishes the events of the answer after the commit. With the opt-out there is no bracket, nothing is rolled back and the events are harvested unconditionally.
 - **Opt-out** `runInTransaction: false` is for a process that must keep partial writes on purpose; the build warns once per process (`V-PROC-TX-OPTOUT`, a warning, never a blocker).
@@ -605,30 +584,30 @@ Every Process runs in **one** transaction by default — nothing to model. `runI
 |---|---|---|
 | `LogicException: Cannot resolve ClassName` | BC vs. Model segment swapped in namespace | Namespace is `<Domain>\<BC>\Model\<Agg>\…` — BC and Model are two segments even when they share a name (the `Model/` segment sits between them) |
 | Edit under `{BC}/Model/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`), re-model the aggregate in the Designer, or (tenant variant) author a `v{N}/<Class>.php` next to the baseline (`generated-code-versioning` §1) |
-| `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — author transport in a **Process node** that publishes the events of the aggregate command's response (§1) — or let an Event ◇ node announce a Domain event via the channel `__jardis` |
+| `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — author transport in a **Process node** that publishes the events of the aggregate command's response (§1) — or let an Event ◇ node announce a Domain event with `NodeResult::route(Route::OnTrue)->withEvents(...)` |
 | Versioned override (`v2/…`) ignored | The call isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing | Thread the version through the call (`$bc->{agg}()->getCounterById($dto, 'v2')` for reads, or `$this->handle(Counter::class)->createCounter($dto, 'v2')` family-internally for writes) — there is **no** domain-wide `version()` default to set instead, the per-call argument is the only lever; the variant must sit at `{Agg}/…/v2/<Class>.php` (immediate neighbour of the baseline) — `generated-code-versioning` §1 |
 | Build/validation blocked by `V-EVT-NODE-ELIGIBLE` or `V-EVT-MIN-ONE` on an Event ◇ node | A node-source event field (`latest`/`all`) does not point to an aggregate Command of the own BC with an identity chain (it is a Query call, Process call, foreign BC, Sub-Process or Event node, or its aggregate cannot be loaded), or the Event node has no event field at all. Blocker at validation and at every build door; no throwing stub is emitted | Re-point the field to an aggregate Command node of the own BC (or add at least one event field) in the Designer; read the message — it names process, event node, field, source node and reason |
 | Directory under `{BC}/Process/` warned about, not deleted | It is not a process of the model and holds no generated node file (`@node-id`) — the build keeps it and names its path in the build result. Only a generator-created directory of a process removed from the model is deleted, with all its content | Move developer code to `{BC}/Process/{Name}/…` of a modelled process, or delete the directory yourself |
 | Process node body lost after rebuild | The custom node lost its `@node-id` marker, or the file had broken syntax so the body-preserve merger could not parse it | Keep the generated `@node-id` DocBlock marker intact; fix the parse error. The merger regenerates the node *header* but preserves the body keyed by `@node-id`. (The Designer's "Force" build path deliberately overwrites a node body.) |
-| Process node not invoked though it's in the graph | R5-Routing-Safety: the node isn't registered via `addNode()`, or the returned `ON_*` status has no transition in the current node | Every handler referenced in `->onSuccess()/onFail()/…` must be declared as its own `->node(...)`; add the missing status to the routing — `generated-code-workflow-api` §5 |
+| Process node not invoked though it's in the graph | The node is not declared with `node()` in the `ProcessDefinition`, or the route the previous node took has no declared target — an undeclared route throws `UnroutedStatusException` (500); an end is declared with `terminal(...)` / `onX(null)` | Declare every node as its own `node(...)` and every route a node can take (`onTrue(Next::class)`, `onFalse(...)`, `terminal(...)`) — `generated-code-workflow-api` §3 |
 | `Error: Cannot instantiate abstract class` / "Service X not in container" | Direct `new` bypassing `handle()` (V2 / V3) | Replace with `$this->handle(X::class, ...)` from inside the node |
 | `Cannot import OtherBC\...` review blocker | V6 violation (cross-BC import) | Add a Domain Service in the Process scope and call the other BC via `handle()` |
 | Process tries to extend an aggregate DTO (`extends platform:…`) | Not supported — a process input is self-contained (Recipe 5) | Declare the fields the process needs in `input.fields`; fetch aggregate data by running its query from a node |
-| Event node / node reading `getData()['<ctx>']` fails or yields `null` | `getData()` is flat — there is no handler-name or root level; a read keyed by context, or with `?? null`, misses | Read the field flat: `$context->getLatest(Node::class)->getData()['<idProp>']`, and let a missing key fail (`?? throw …`) instead of `?? null` |
+| Event node / node reading `data()['<ctx>']` fails or yields `null` | `data()` of an earlier node is flat — there is no handler-name or root level; a read keyed by context, or with `?? null`, misses; a node that routed without data (`route(...)`) has `data() === null`, and nothing is handed on from it | Read the field flat and explicitly: `$ctx->latest(Node::class)?->data()['<idProp>'] ?? throw …` — let a missing key fail instead of reading `null` |
 | PHPStan `throws.unusedType` on a node, Closure or Service body you just filled | A project built before the placeholder rule still carries the `@throws \RuntimeException` the old builder derived from the stub's placeholder `throw` (a freshly generated stub carries none: a `throw` whose statement holds a `Not implemented: …` marker is a placeholder, never a contract). The tag is reconciled against the body at the next build, not when you save the file; a real `throw` you write yourself keeps its tag | Run `build` / `build_domain` after filling the bodies, then PHPStan again |
-| `getData()` empty after `addData()` in a node | The node returned before augmenting `$this->result()`, or replaced the payload | Read aggregate data, then `addData(...)`/`setData(...)`, then return |
-| Process answers 400 although a Rule node or an earlier node should have decided first | By design: the process gate checks every command input with the aggregate's `Validate{Command}` before the first node and before the transaction (`rejectInvalidInput()`), so no node has run | Fix the input; to give that 400 a `messageKey`, declare a 400 `onFail` response on the node that consumes the field (`responses[]`) — list fields carry no key; `generated-code-extend` (process gate) |
-| Process node throws → whole process fails | Default: an uncaught node exception routes to `ON_FAIL` (or bubbles to 500 if unrouted) | Wrap the node body in `try/catch` only if its failure must not fail the process; otherwise add the `ON_FAIL` transition — §1, `generated-code-workflow-api` §5 |
+| Process answer lacks the fields a node computed | The answer is the data of the **last** node only; a field computed in an earlier node is not handed on | Have the end node read it explicitly (`$ctx->latest(Node::class)?->data()`) and return it in `NodeResult::ok([...])`, or name it with `response:` on the end node |
+| Process answers 400 although a Rule node or an earlier node should have decided first | By design: the runner's start validation checks the process input (and every command input with the aggregate's `Validate{Command}`) before the first node and before the transaction, so no node has run | Fix the input; the 400 lists one finding per field with `messageKey` `validation.missing` / `validation.invalid` (the package adds it from the `reason`) — a node declaration is not needed; `generated-code-extend` (process gate) |
+| Process node throws → whole process fails | A thrown exception is a technical failure: rollback, answer 500, the cause logged once by the package — it is not routed (there is no failure edge) | Catch inside the node only a failure that must not fail the process, and turn it into a `reject` (business refusal, 4xx) or a route; an uncaught exception stays a 500 — §1, `generated-code-workflow-api` §7 |
 | Sub-process node body overwritten after rebuild | Sub-process node lost its `@node-id` marker, or the file was built with an older Generator version (formerly ForceOverwrite No-Op) | Keep the `@node-id` DocBlock marker intact; if the file is an old No-Op, delete it — the next build emits the typed Dev-Stub fresh (Recipe 8) |
-| Sub-process throwing resolver throws at runtime | Expected — the resolver is a placeholder until the developer fills in the real value from `$context` | Replace `throw new \RuntimeException(…)` in each resolver with the real value (e.g. `return $this->payload()->counterId;`) |
-| Sub-process `Domain` events missing in main response | The node returned `Internal` events, or put the events anywhere but the reserved channel | The stub returns `'data' => ['__jardis' => ['events' => $events]]`; `ResolveProcessOutcome` harvests only that channel from the executed chain (`getChain()`) |
-| Process answers with a field named `responseStatus`/`domain` missing or changed | A business field collided with the reserved channel — only the key `__jardis` is reserved, business fields named `responseStatus` or `domain` pass through unchanged in the node's `data` within the workflow context (at the process exit of a typed 4xx — 400/404/409/422 — only `@type` plus the form's fields remain, plus a declared `messageKey`; on a 200 and on a 4xx without a form `data` stays unchanged) | Never write business data under `__jardis`; check the node returns the business fields beside it |
-| Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; use `$this->context(Handler::class, $dto)()` from another node; or unset the flag if the process should also be a public API entry |
+| Sub-process open input place throws at runtime | Expected — the open place (`Sub-DTO-Feld <field> <Node>`) is a placeholder until the developer fills in the real value | Replace the `\call_user_func(static fn(): mixed => throw new \RuntimeException(…))` by the real value (e.g. `$ctx->input()->counterId`) |
+| Sub-process `Domain` events missing in main response | The node did not return the `MapOutcome` result (the inner events travel on its `ok(...)->withEvents(...)`), or the inner run was refused/rolled back (a rejected or failed run reports no events), or the events were `Internal` events of an aggregate command (not forwarded) | Return `(new MapOutcome())($outcome, …)` unchanged; a Domain event is announced by an Event ◇ node of the inner process |
+| A business field is missing from a 4xx answer | At the exit of a typed 4xx (400/404/409/422) the data is the failure form: only the form's fields plus `context` and a declared `messageKey` remain; a 2xx answer carries the end node's data unchanged | Put extra values into the `context` of the `reject(...)` — they travel as the `context` of the form — and name the form's own keys (`fields`, `reason` / `aggregate`, `rule`) in it |
+| Process doesn't appear on `$bc->process()` facade | `subprocessOnly: true` is set — by design | The process is only callable as a sub-process node; call it from a sub-process node (Recipe 8); or unset the flag if the process should also be a public API entry |
 | Rule body edit gone after rebuild | Byte-for-byte matched an untouched generated stub (wholesale-migration path) — false-positive risk is a known, documented trade-off of the merge's exact-match check | Make a real edit (any content change) — the merger then treats the method as hand-edited and keeps it 100% verbatim on every future rebuild |
 | Rule stub throws `RuntimeException: Not implemented: write the rule predicate for …` | Expected — a freshly generated, not-yet-implemented Rule predicate throws instead of failing open with `RuleResult::pass()` (G03); a Guard-Closure never wraps its Rule dispatch in try/catch, so it propagates uncaught and surfaces through the generated Command handler's generic `catch (\Throwable $e)` as a 500, never the 422 a bound Rule is meant to produce | Implement `__invoke()`: return `RuleResult::pass()` / `RuleResult::reject(...)` per your existing-data check |
 | Command rejects with 422 but I expected the Command to just run | A bound Rule in `Closures.json` returned `RuleResult::reject(...)` — check `data.rule`/`data.messageKey` (the catalog key when declared)/`data.context` in the response (`data.@type` is `ruleViolation`) | Expected behaviour, not a bug — either the existing data genuinely fails the Rule, or the binding/chain in `Closures.json` is wrong for this Command |
 | `expose: true` binding warns or fails the build | Zero bound Rules only warns (`V-RULE-5`; exposed endpoints should be rule-guarded). A Create-Command is a blocker (`V-RULE-6`: name always collides with `{agg}()`, structurally never exposable). Child commands (`Add{Child}`, `Set…`, `Update…`, `Remove…`) are exposable like root commands | Bind ≥1 Rule before exposing; Create-Commands stay reachable only via a Process |
-| Command-calling Process node throws instead of routing `ON_FAIL` on a 500 | Intentional staircase semantics: `422 → ON_FAIL`, `5xx → exception path` — never a blanket `isSuccess() ? ON_SUCCESS : ON_FAIL` | Not a regression — add the `onFail` edge for the 422 case; a genuine 5xx is meant to surface as an exception, handle it like any other node exception (`generated-code-workflow-api` §5) |
+| Command-calling Process node throws on a 5xx | By design (`MapResponse`: 2xx → `ok`, 4xx → `reject`, every other status throws) — never a blanket `isSuccess() ? ok : route(OnFalse)` | Not a regression — a 4xx ends the run as that status; a genuine 5xx surfaces as an exception (500, cause logged); route a 4xx only where the Dev decision is explicit (`Route::OnFalse` in the node body) — `generated-code-workflow-api` §5 |
 | M7 warning ("doppelt gebunden" (bound twice)) on a Rule node | The same Rule is bound both at the endpoint (`Closures.json`) and as a node in a process calling that endpoint | Usually fine (early-check pattern) — only a problem if the two runs can see inconsistent existing data between them; drop the node binding if redundant |
 | `$bc->{agg}()` does not exist / no route or OpenAPI path for an aggregate | The aggregate has `visibility: internal` in `Aggregate.json` — it has no outer form by design | Use it family-internally (kernel seam, process node); expose a public aggregate's `{Agg}Read` or a process instead, or set the aggregate `public` |
 | Build fails: `V-AGG-VIS-2` / `-3` / `-4` | A `public` query, an `expose: true` binding or a foreign BC's `consumedCalls` points at an `internal` aggregate | Set the query `internal`, drop the exposure, route the foreign call through the target BC's `process()` or a public aggregate |
