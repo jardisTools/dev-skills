@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.33.0] - 2026-10-18
+
+### Changed
+- `generated-code-workflow-api`: rewritten for `workflow` 2.3 and the generator of that release - node classes `extends {Domain}Context` with no constructor and `__invoke({Name}Context): NodeResult`, the factory `$this->handle($class)`, reads through `read(handler, filter): ReadResult`, the actor (`{Name}Actor`, `$ctx->actor()` / `$this->actor()`), the generated handler with `ProcessRunner::forKernel` and `BuildResponseData`, the sub-process node through `MapOutcome`, hermetic rule nodes, event nodes ending `route(OnTrue)->withEvents(...)` (not `ok([])`), the envelope data per answer, message keys (`rejects`, `declaredMessageKey`, field `messageKey` of the start validation) and the 5xx cause logged by the package (`LogCause`), never by a node.
+
 ## [1.32.0] - 2026-10-17
 
 ### Added
