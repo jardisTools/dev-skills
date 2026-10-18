@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Process-engine API behind Process-Designer-generated use-case orchestrators (`workflow` 2.3) — generated handler wiring (`ProcessRunner::forKernel`, `BuildResponseData`), node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / actor inside a node, call, sub-process (`MapOutcome`), rule (hermetic) and event nodes, typed responses, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the package.
+description: Process-engine API behind Process-Designer-generated use-case orchestrators (`workflow` 3.0) — generated handler wiring (`ProcessRunner::forKernel`, `BuildResponseData`), node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / actor inside a node, call, sub-process (`MapOutcome`), rule (hermetic) and event nodes, typed responses, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the package.
 zone: post-active
 persona: C
 profile: jardis
@@ -8,7 +8,7 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
-> Applies to `workflow` 2.3 and the generator of that release. Engine package itself: skill `support-workflow` (the truth for the API).
+> Applies to `workflow` 3.0 and the generator of that release. Engine package itself: skill `support-workflow` (the truth for the API).
 
 The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) calls `ProcessRunner::run($definition, $input, $actor, $nodeFactory)`. The runner validates the input, checks the actor, opens the transaction, walks the generated `ProcessDefinition`, builds each node through the factory and invokes it, and answers with one `ProcessOutcome` (status, response object, errors, events, cause). Knowing this API is mandatory for node bodies (Dev code) and for hand-written code around the handler.
 
@@ -93,11 +93,11 @@ The body returns exactly one `NodeResult`:
 | Factory | Use |
 |---|---|
 | `NodeResult::ok($data)` | success on `OnTrue`, `$data` is an array or object |
-| `NodeResult::route(Route $route, $data = null)` | take a named route; `null` data hands on the previous step's data |
+| `NodeResult::route(Route $route, $data = null)` | take a named route; `null` data means a result without data — nothing is handed on from the previous step |
 | `NodeResult::reject(ResponseStatus $status, $messageKey, $context = [], $errors = [])` | end the run with a 4xx |
 | `->withEvents(object ...$events)` | events travel with the result (replaces earlier events of the same result) |
 
-There are no free slots; data between nodes flows through the results in the chain, and the process answer is the data of the node the run ends on. `{Name}Context` extends `ProcessContext` (the documented exception to composition over inheritance); the chain stays immutable.
+There are no free slots; results sit in the chain and nothing is handed on from node to node: a node that needs an earlier answer reads it explicitly (`latest()` / `all()` / the typed getter), and the process answer is the data of the node the run ends on only. `{Name}Context` extends `ProcessContext` (the documented exception to composition over inheritance); the chain stays immutable.
 
 **Typed answers.** `response(Class, fields...)` on a node turns the data array of the node into an object of `Class` through its constructor (named arguments; none named = all fields). A required parameter without a value is a `ConstructionException` (500).
 
@@ -122,7 +122,7 @@ return (new MapOutcome())($outcome, null, 'NotifyMember');
 
 **Rule node.** Hermetic: the generator writes the whole body (it is rebuilt on every build, do not edit). It calls each rule of the chain through `$this->handle(Rule::class)(...)`, short-circuits, and on a violation returns `reject(ResponseStatus::RuleViolation, $messageKey, ['rule' => ..., ...context])` (422), else `route(OnTrue)`. `ruleMode($node, RuleMode::Guard)` (default) ends the run on a violation; `RuleMode::Decision` turns a 422 into `Route::OnFalse` and the process goes on there. Which Closure backs the node and how its inputs are bound is Designer territory (`generated-code-extend`, the Closure catalog).
 
-**Event node.** A node that only announces something ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))` — never `ok([])->withEvents(...)`: `ok([])` sets empty data and swallows the previous step's answer, while `route(...)` without data passes it through. Events of all steps are reported in execution order; a rejected result and a failed run report none. **The package never publishes:** the handler collects `$outcome->events()` (`addEvent($event, EventScope::Domain)`) and the caller publishes them after the commit (event transport recipes: `generated-code-recipes` §1).
+**Event node.** A node that only announces something ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))` as the generated event nodes do. The node routes without data of its own and nothing is handed on from earlier nodes (workflow 3.0), so a process that ends on an Event node answers with no fields of its own — on the 2xx wire `data` carries only the process `@type`, `{"@type":"<processName>"}` (wire-contract case `200-empty`); the identity the event carries is read explicitly from the earlier node (`$ctx-><node>()` / `$ctx->all(Node::class)`, throwing when it is missing). Events of all steps are reported in execution order; a rejected result and a failed run report none. **The package never publishes:** the handler collects `$outcome->events()` (`addEvent($event, EventScope::Domain)`) and the caller publishes them after the commit (event transport recipes: `generated-code-recipes` §1).
 
 ### 6. The handler and the `nodeFactory`
 

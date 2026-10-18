@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.34.0] - 2026-10-18
+
+### Changed
+- Skills on `workflow` 3.0, stated explicitly instead of passed through: `generated-code-workflow-api`, `generated-code-extend`, `generated-code-recipes`, `generated-code-wire-transport`, `design-headless-mcp`, `design-model-capabilities` and `foundation-testing` describe the flat envelope `data` (the business object with its `@type`, no map keyed by context name) and the generated handler on `ProcessRunner::forKernel`.
+- An end node without an answer: `data` carries only `@type` (`{}` on the wire), stated in `generated-code-recipes`, `generated-code-wire-transport`, `generated-code-workflow-api` and `foundation-testing`.
+
 ## [1.33.0] - 2026-10-18
 
 ### Changed
