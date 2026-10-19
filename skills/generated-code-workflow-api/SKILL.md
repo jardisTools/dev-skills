@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Process-engine API behind Process-Designer-generated use-case orchestrators (`workflow` 3.0) — generated handler wiring (`ProcessRunner::forKernel`, `BuildResponseData`), node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / actor inside a node, call, sub-process (`MapOutcome`), rule (hermetic) and event nodes, typed responses, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the package.
+description: Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 4.0 engine, `response` door steps, `repository` transaction bracket) — generated handler as the door (`ValidateInput`, `CheckActor`, `RunInTransaction`, `ProcessRunner`, `BuildResponseData`), node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / actor inside a node, call, sub-process (`MapResponse`), rule (hermetic) and event nodes, typed responses, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
 zone: post-active
 persona: C
 profile: jardis
@@ -8,9 +8,9 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
-> Applies to `workflow` 3.0 and the generator of that release. Engine package itself: skill `support-workflow` (the truth for the API).
+> Applies to `workflow` 4.0 (engine only) and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
-The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) calls `ProcessRunner::run($definition, $input, $actor, $nodeFactory)`. The runner validates the input, checks the actor, opens the transaction, walks the generated `ProcessDefinition`, builds each node through the factory and invokes it, and answers with one `ProcessOutcome` (status, response object, errors, events, cause). Knowing this API is mandatory for node bodies (Dev code) and for hand-written code around the handler.
+The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`), the actor (`CheckActor`) and the required kernel resources, opens the transaction bracket (`RunInTransaction`) around `ProcessRunner::run($definition, $input, $actor, $nodeFactory, $depth)`, and builds the answer (`BuildResponseData`, `TransformResponse`). The runner is the engine only: it walks the generated `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction and answers no 5xx. Knowing this API is mandatory for node bodies (Dev code) and for hand-written code around the handler.
 
 ### 1. Where it lives
 
@@ -18,7 +18,7 @@ The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process
 |---|---|---|
 | `Command/{Name}.php` (+ parts) | process input (readonly DTO) | generated |
 | `Response/{Node}Response.php` | typed answer of a node; the answer of the end node IS the process answer | generated, hermetic |
-| `Command/Handler/{Name}Handler.php` | wiring: requires, runner, events, answer | generated, hermetic |
+| `Command/Handler/{Name}Handler.php` | the door: input check, actor, requires, bracket, runner, events, answer | generated, hermetic |
 | `Command/Handler/{Name}Definition.php`, `{Name}Validator.php`, `{Name}Context.php`, `{Name}Actor.php` | graph, input gate, typed run view, request attributes (`{Name}Actor` only if the process reads some) | generated, hermetic |
 | `Command/Handler/Action/` | one class per node | action / call / sub-process / event: generated stub with an `@node-id` marker, edits to the body are preserved on rebuild; rule: generated whole, hermetic |
 | `Event/` | event classes | generated |
@@ -60,7 +60,7 @@ return ProcessDefinition::for(LendBook::class, 'LendBook')
     ->build();
 ```
 
-The first `node()` is the entry node. Every route a node can take must be declared — an undeclared route throws `UnroutedStatusException` (500) — and an end is declared with `terminal(...)` / `onX(null)`. `rejects(status, key)` declares the message key of a node's reject for that status. `response(Class, fields...)` types the answer of a node. `build()` rejects an unknown target and freezes the definition. `loopLimit(n)` caps the node steps of one run (default 100).
+`transactional`, `validate`, `actor` and `requires` are declarations for the door: the engine ignores them, the generated handler reads them (`getValidatorClass()`, `getActorClass()`, `getRequires()`, `isTransactional()`). The first `node()` is the entry node. Every route a node can take must be declared — an undeclared route throws `UnroutedStatusException` (500) — and an end is declared with `terminal(...)` / `onX(null)`. `rejects(status, key)` declares the message key of a node's reject for that status. `response(Class, fields...)` types the answer of a node. `build()` rejects an unknown target and freezes the definition. `loopLimit(n)` caps the node steps of one run (default 100).
 
 ### 4. Node classes
 
@@ -105,70 +105,84 @@ There are no free slots; results sit in the chain and nothing is handed on from 
 
 **Call node, aggregate command.** `$this->handle(Loan::class)->createLoan(new CommandLoan(...))` returns a `DomainResponseInterface`; `(new MapResponse())($response)` maps it: 2xx becomes `ok(data)`, 4xx a `reject` with the callee's plain context, every other status throws.
 
-**Sub-process node.** The stub carries the whole call; only the input mapping is Dev territory:
+**Sub-process node.** The stub carries the whole call; only the input mapping is Dev territory. The node runs the inner process through the inner door (`$this->context(<Inner>Handler::class, <input>, actor: null, depth: $ctx->depth() + 1)()`) and hands the `DomainResponseInterface` it answers to `MapResponse`:
 
 ```php
-$runner = ProcessRunner::forKernel(
-    $this->resource(),
-    new ObjectValidator(registry: (new NotifyMemberValidator())(), fieldPaths: true)
-);
-$outcome = $runner->run((new NotifyMemberDefinition())(), new NotifyMemberInput(...), null,
-    fn(string $class): object => $this->handle($class), $ctx);
+$response = $this->context(
+    NotifyMemberHandler::class,
+    new NotifyMember(...),
+    actor: null,
+    depth: $ctx->depth() + 1
+)();
 
-return (new MapOutcome())($outcome, null, 'NotifyMember');
+return (new MapResponse())($response);
 ```
 
-`MapOutcome` is the one mapping, never map an outcome by hand: success is `ok((array) response)` with all inner events; a 4xx rejects again with the SAME status and the inner failure form (so the outer wire form equals the inner one) or, when you pass a `Route` as second argument, routes there (a Dev decision); 5xx throws the inner `cause()`. The third argument names the inner process for the error message.
+`MapResponse` (`JardisSupport\Workflow\Handler\Node\MapResponse`) is the one mapping, never map a response by hand: success is `ok((array) data)` with the Domain events of the inner run (its Internal events stay behind); a 4xx rejects again with the SAME status and the callee's plain context (so the outer wire form equals the inner one) or, when you pass a `Route` as second argument, routes there (a Dev decision); a 5xx throws a `CalleeFailureException` (the inner door has already reported the cause, the outer door does not log it again).
 
 **Rule node.** Hermetic: the generator writes the whole body (it is rebuilt on every build, do not edit). It calls each rule of the chain through `$this->handle(Rule::class)(...)`, short-circuits, and on a violation returns `reject(ResponseStatus::RuleViolation, $messageKey, ['rule' => ..., ...context])` (422), else `route(OnTrue)`. `ruleMode($node, RuleMode::Guard)` (default) ends the run on a violation; `RuleMode::Decision` turns a 422 into `Route::OnFalse` and the process goes on there. Which Closure backs the node and how its inputs are bound is Designer territory (`generated-code-extend`, the Closure catalog).
 
-**Event node.** A node that only announces something ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))` as the generated event nodes do. The node routes without data of its own and nothing is handed on from earlier nodes (workflow 3.0), so a process that ends on an Event node answers with no fields of its own — on the 2xx wire `data` carries only the process `@type`, `{"@type":"<processName>"}` (wire-contract case `200-empty`); the identity the event carries is read explicitly from the earlier node (`$ctx-><node>()` / `$ctx->all(Node::class)`, throwing when it is missing). Events of all steps are reported in execution order; a rejected result and a failed run report none. **The package never publishes:** the handler collects `$outcome->events()` (`addEvent($event, EventScope::Domain)`) and the caller publishes them after the commit (event transport recipes: `generated-code-recipes` §1).
+**Event node.** A node that only announces something ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))` as the generated event nodes do. The node routes without data of its own and nothing is handed on from earlier nodes (workflow 4.0), so a process that ends on an Event node answers with no fields of its own — on the 2xx wire `data` carries only the process `@type`, `{"@type":"<processName>"}` (wire-contract case `200-empty`); the identity the event carries is read explicitly from the earlier node (`$ctx-><node>()` / `$ctx->all(Node::class)`, throwing when it is missing). Events of all steps are reported in execution order; a rejected result and a failed run report none. **The package never publishes:** the door collects `$outcome->events()` (`addEvent($event, EventScope::Domain)`) and the caller publishes them after the commit (event transport recipes: `generated-code-recipes` §1).
 
-### 6. The handler and the `nodeFactory`
+### 6. The handler (door) and the `nodeFactory`
 
-The generated handler is the only place that starts a run:
+The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine, none of them is written out in the handler:
 
 ```php
 $definition = (new LendBookDefinition())();
-(new CheckRequires())($this->resource(), $definition->getRequires());
-$runner = ProcessRunner::forKernel(
-    $this->resource(),
-    new ObjectValidator(registry: (new LendBookValidator())(), fieldPaths: true)
-);
-$outcome = $runner->run($definition, $this->payload(), $this->actor(), fn(string $class): object => $this->handle($class));
-// events -> $this->result()->addEvent(...), errors -> addError(...)
-$this->result()->setData((new BuildResponseData())($outcome, $definition->getName()));
-return ($this->transformer())($this->result(), $outcome->status());
+$input = $this->payload();
+$findings = ($this->handle(ValidateInput::class, validator: $validator))($input);   // fields !== [] -> 400
+if (!($this->handle(CheckActor::class))($definition->getActorClass() !== null, $this->actor())) { /* 401 */ }
+// one line per `requires` name: $this->resource()->auth() ?? throw new ConfigurationException(...)
+$connection = ($this->handle(ResolveConnection::class))($this->resource()->dbConnection());
+$owner = $connection?->inTransaction() !== true;
+try {
+    $run = fn(): ProcessOutcome => ($this->handle(ProcessRunner::class))->run(
+        $definition, $input, $this->actor(), fn(string $class): object => $this->handle($class), $depth
+    );
+    $outcome = ($this->handle(RunInTransaction::class))(
+        $connection, 'sp_' . $depth, $run,
+        static fn(ProcessOutcome $outcome): bool => $outcome->status()->value >= 400,
+        $depth > 0
+    );
+    // events -> $this->result()->addEvent($event, EventScope::Domain), errors -> addError(...)
+    // a rejected outcome -> (BuildFailureOutcome)(status, messageKey, context, errors, true)
+    $this->result()->setData(($this->handle(BuildResponseData::class))($status, $response, $outcome->messageKey(), $definition->getName()));
+    return ($this->transformer())($this->result(), $status);
+} catch (Throwable $e) {
+    $failure = ($this->handle(MapThrowable::class))($e, $owner, $definition->getName());   // 4xx mapped, 5xx for the owner
+    // owner and 5xx: (LogCause)($e, $definition->getName())
+}
 ```
 
-`run()` takes a `\Closure(class-string): object`. The runner asks it for each node when the node is due, by the class name the definition declares — also once per pass of a loop — and checks the object is callable. The generated factory is `$this->handle($class)`, so the node is built through the kernel seam and class-version resolution of nodes is a property of that seam (`generated-code-versioning`). `forKernel` resolves the transaction writer and the logger from the kernel.
+The complete door with every line is the Quick Start of the `response` README. `run()` takes a `\Closure(class-string): object`. The runner asks it for each node when the node is due, by the class name the definition declares — also once per pass of a loop — and checks the object is callable. The generated factory is `$this->handle($class)`, so the node is built through the kernel seam and class-version resolution of nodes is a property of that seam (`generated-code-versioning`). `$depth` is `$this->depth()`: 0 for a top-level run, the depth of the calling run plus one for a sub-process.
 
 ### 7. Answer and failure forms
 
 | Outcome | Status | Response |
 |---|---|---|
 | run ends on a routed node | 200 | the data of the last node (typed when `response()` is declared) |
-| input invalid | 400 | the validation form with `fields[]` (`field`, `reason`, `message`, `messageKey` `validation.missing` / `validation.invalid`), form key `process.inputInvalid` — before the first node |
-| actor missing (`actor()` declared) | 401 | key `process.actorMissing`, empty data |
+| input invalid (door, before the first node) | 400 | the validation form with `fields[]` (`field`, `reason`, `message`, `messageKey` `validation.missing` / `validation.invalid`), form key `validation` |
+| actor missing (`actor()` declared; door) | 401 | empty data |
 | `reject(404/409/422)` | same | `NotFound` / `Conflict` / `RuleViolation` |
 | other `reject(4xx)` | same | `{messageKey, context}` |
-| thrown exception, unrouted route, loop limit | 500 | empty object, `$outcome->cause()` |
-| `TransientConflictException` in the owning run | 409 | key `process.transientConflict` |
+| thrown exception, unrouted route, loop limit (door: `MapThrowable`) | 500 | empty object; the cause is logged once by the owner |
+| `TransientConflictException` in the owning run | 409 | key `process.transientConflict`, reason `stale_write` |
 
 A reject is never routed by the engine; only a Dev decision inside a node (for example a sub-process node with a `Route`) may map a 4xx to a route.
 
-**Envelope data.** `BuildResponseData` is the one place an answer becomes the envelope's `data`: 2xx `@type` (process name, first letter lower case) plus the public fields of the response; 400 `{@type: validation, fields}`; 404 `{@type: notFound, context}`; 409 `{@type: concurrencyConflict, reason, aggregate, context, violated}`; 422 `{@type: ruleViolation, rule, messageKey, context}`; other 4xx the data as given without `@type`; 5xx empty. Every `DateTimeInterface` in `data` goes out as an ATOM string.
+**Envelope data.** `BuildResponseData` (package `response`) is the one place an answer becomes the envelope's `data`: 2xx `@type` (process name, first letter lower case) plus the public fields of the response; 400 `{@type: validation, fields}`; 404 `{@type: notFound, context}`; 409 `{@type: concurrencyConflict, reason, aggregate, context, violated}`; 422 `{@type: ruleViolation, rule, messageKey, context}`; other 4xx the data as given without `@type`; 5xx empty. Every `DateTimeInterface` in `data` goes out as an ATOM string.
 
-**Message keys.** The key a node declares with `rejects(status, key)` (else the one it names in `reject(...)`) is `ProcessOutcome::declaredMessageKey()` and joins `data['messageKey']` of every status >= 400. The package's own keys (`process.inputInvalid`, `process.actorMissing`, `process.transientConflict`) stay out of `data`. `->input('customer')` on a node prefixes the `fields[].field` of that node's 400 reject with `customer.`; the start validation already answers paths below the input root (`items[1].qty`).
+**Message keys.** The key a node declares with `rejects(status, key)` (else the one it names in `reject(...)`) is `ProcessOutcome::messageKey()`, the door hands it to `BuildResponseData`, and it joins `data['messageKey']` of every status >= 400. The door's own keys (`process.inputInvalid`, `process.actorMissing`, `process.transientConflict`) stay out of `data`. `->input('customer')` on a node prefixes the `fields[].field` of that node's 400 reject with `customer.`; the start validation already answers paths below the input root (`items[1].qty`).
 
-**5xx cause.** The package logs it: the outermost layer (`LogCause`) writes the cause once to the runner's logger (`error`, context `exception` and `process`, owning run and 5xx only; no logger = nothing). A node does not log a failure and does not catch an exception just to log it — it lets it fly.
+**5xx cause.** The door logs it: `LogCause` writes the cause once to the kernel logger (`error`, context `exception` and `process`, owning run and 5xx only; no logger = nothing; a cause marked `ReportedFailureExceptionInterface`, e.g. from `MapResponse`, is skipped). A node does not log a failure and does not catch an exception just to log it — it lets it fly.
 
 ### 8. Transaction and sub-process
 
-The run opens ONE transaction (`transactional(false)` opts out); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`. A sub-process node passes the surrounding context as parent; a rejected inner run rolls back to its savepoint and the outer node decides — reject again (the default of `MapOutcome`) or route. Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
+The door opens ONE transaction around the run through `RunInTransaction` (package `repository`; `transactional(false)` opts out and the handler has no bracket); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`; the owner of the transaction is decided at the door's entry (no transaction open) and only the owner answers a 5xx and logs it. A sub-process node passes `depth + 1`; a rejected inner run rolls back to its savepoint and the outer node decides — reject again (the default of `MapResponse`) or route. Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
 
 ### Anchors
 
 - `generated-code-extend` (generated baseline, override targets, decision tree, Closure catalog).
-- `support-workflow` (the engine implementation itself).
+- `support-workflow` (the engine implementation itself), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 - `generated-code-recipes` (event transport, Recipe 11).
