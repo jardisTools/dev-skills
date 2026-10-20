@@ -31,7 +31,7 @@ The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in 
 Baseline (the generated stub class — always present):
   MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\ValidateNewValue
 
-Versioned variant (you author it; Generator neither emits nor deletes v{N}/):
+Versioned variant (a versioned build writes a fresh stub frame, you fill its body; the Generator never deletes v{N}/):
   MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2\ValidateNewValue
   (file: {BC}/Process/CounterChange/Command/Handler/Action/v2/ValidateNewValue.php)
 ```
@@ -41,9 +41,9 @@ There is **no `Platform` segment** and **no dev-baseline-shadow** stage: the bas
 **Two resolution modes:**
 
 - **No version** (`$version = ''`, the 99 % case): the generated baseline runs. Nothing to configure. The aggregate is hermetic, so to *change* the baseline you re-model in the Designer or author a **Process** — not an in-place override (`generated-code-extend` §2).
-- **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants of a stub class: author the variant in the stub's `v{N}/` subdir (`Action/v{N}/<Node>.php`, `Closure/v{N}/<Name>.php`, `Service/v{N}/<Name>.php`) and select it **per call** through the `$version` argument of the facade door that starts the run (a process: `$bc->process()->counterChange($dto, 'v2')`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The version of a process call applies to every node and every sub-process of the run: a node variant is selected by the one `$version` of the process-facade call; a class without a variant stays baseline. The variant survives rebuilds — the Generator does not emit or clean `v{N}/` directories.
+- **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants of a stub class: author the variant in the stub's `v{N}/` subdir (`Action/v{N}/<Node>.php`, `Closure/v{N}/<Name>.php`, `Service/v{N}/<Name>.php`) and select it **per call** through the `$version` argument of the facade door that starts the run (a process: `$bc->process()->counterChange($dto, 'v2')`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The version of a process call applies to every node and every sub-process of the run: a node variant is selected by the one `$version` of the process-facade call; a class without a variant stays baseline. A versioned build (`build`/`build_process`/`build_domain` with `version`, CLI `build:domain --version`) writes the starting point: one fresh `final` stub frame per stub class under `v{N}/` — same signature and parent as the baseline stub, namespace `…\v{N}`, no `extends` of the baseline, the body still open; the body you write there survives every rebuild, and the Generator never cleans `v{N}/` directories. A hermetic class gets no frame. A frame whose body you leave open answers with the open-stub error under that version — delete the file to fall back to the baseline.
 
-> **Scope:** version **resolution** is wired, and since the versioned front door (§3) the HTTP caller can select a version and the set of selectable versions is declared in the domain manifest. No generator emits a `v{N}/` class — authoring the variant of a stub is hand code at row 11 of the table in `generated-code-extend` §10 (the recipe in §4). Declarative design of *what* a version changes (affected Closure, behaviour change) does not exist in the definition format.
+> **Scope:** version **resolution** is wired, and since the versioned front door (§3) the HTTP caller can select a version and the set of selectable versions is declared in the domain manifest. Only the versioned build writes a `v{N}/` class, and only the empty stub frame of a stub class — the body of the variant is hand code at row 11 of the table in `generated-code-extend` §10 (the recipe in §4). Declarative design of *what* a version changes (affected Closure, behaviour change) does not exist in the definition format.
 
 Optional `ClassVersionConfig` (only when you need fallback chains):
 
@@ -128,7 +128,7 @@ Comparison is exact and case-sensitive; a version has the form `^v[1-9][0-9]*$`.
 A neutral example: domain `MeterDevice`, BC `Counter`, a Process `CounterChange` with the node `ValidateNewValue`.
 
 1. **Declare the version** in the domain manifest: MCP `update_domain_manifest` with `versions: ["v2"]` (or UI *Stammdaten* → "Bekannte Versionen"). Format `v{N}`, no duplicates.
-2. **Author the variant** next to the baseline stub, as hand code (the Generator never emits or deletes `v{N}/`):
+2. **Author the variant** next to the baseline stub: run a versioned build once (`build` with `version: "v2"`) to get the fresh stub frame, then write its body as hand code (the Generator keeps that body and never deletes `v{N}/`):
    `{BC}/Process/CounterChange/Command/Handler/Action/v2/ValidateNewValue.php`, namespace `MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2` (skeleton in §1). A Rule variant lives at `{BC}/Closure/v2/{Name}.php`, a Domain Service variant at `{BC}/Service/v2/{Name}.php`; a hermetic class has none.
 3. **Build** (`build` / `build_domain`). This rewrites `routes.php`, `versions.php` and the OpenAPI contract; V-VERSION-DRIFT is quiet once step 1 and 2 agree.
 4. **Call it:**
