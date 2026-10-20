@@ -445,6 +445,21 @@ Hand code is written only into the stubs a build produces and into `App/**` deli
 | 11 | `v{N}/` subdir next to a stub class (rows 5, 6, 8) | frame: versioned build (fresh `final` stub frame, no `extends`), **body hand** | ClassVersion-resolved variant of a stub; body-preserve on every rebuild; never beside a hermetic class | those of the stub it varies |
 | 12 | `tests/**` | **hand** (the tests); Generator (scaffold: `tests/Support/{Domain}/`, `tests/Unit/Closure/{Domain}/ClosureTestCase.php`) | no production-code place — Jardis generates the scaffold, never the test | — |
 
+**The context head of a stub (PHPDoc chain).** Business meaning is description (Domain → BC → Process → Node) and lands as PHPDoc, the context the AI reads where it implements. The Domain description stands at `<Domain>.php`, the BC description at `{BC}/{BC}.php`, the process description at `{P}Handler` (rows 1, 2, 4); every stub of rows 5, 6 and 8 carries the chain as the last block of its class docblock — generated frame, so every build refreshes it and the hand-written body is never touched:
+
+```
+ * Kontext-Kette (von oben nach unten):
+ * Domain: <Name>
+ *     <description of the Domain, indented, may span lines>
+ * BC: <Name>
+ *     <description of the BC>
+ * Prozess: <Name>            (node stubs only)
+ *     <description of the process>
+ * Knoten: <Class>            (Closure: / Service: for a stub without a process)
+```
+
+A level line is `<Level>: <Name>` at the start of a docblock line and carries the name only; description lines are indented, an empty description leaves the level line without text (the registry warns `V-DESC-EMPTY` for an empty Domain, BC or process description). The node, Closure or Service's own description is the prose above the chain. The Gesetz-Gate (invariant D, `StubChainRule`) checks the level lines — a node stub needs Domain, BC, Prozess, Knoten; a Closure stub Domain, BC, Closure; a Domain Service stub Domain, BC, Service — never the text.
+
 **If the model cannot express it,** no hand-code place opens up: a missing capability is a gap in Jardis. When you work on Jardis itself, build it in the package or the generator first and use it afterwards; when you work on an app, report it as an issue and wait. A substitute in the project — an interim, a workaround, a class in a place that is not in the table — is a violation, not progress.
 
 **Removed hand-code places** (a file there is a violation; the generator emits no new ones):
