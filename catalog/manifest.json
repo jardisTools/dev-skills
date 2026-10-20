@@ -113,6 +113,13 @@
     "alternatives": "for custom or complex SQL queries use jardissupport/dbquery instead"
   },
   {
+    "package": "jardissupport/response",
+    "capability": "the answer of one request-response use case in one shape: response objects, failure forms for 400/404/409/422, the data of the `{status, data, errors, meta}` envelope, read answers (`ReadResult`, `Reference`) and the door steps in front of a use case (input check, actor check, mapping of thrown failures, logging of the 5xx cause)",
+    "use_when": "you need to build, map or log the answer of a request-response use case, or a Jardis-style failure form and response envelope, without a process engine",
+    "composer_require": "composer require jardissupport/response",
+    "alternatives": "to run a node graph use jardissupport/workflow; for transactions use jardissupport/repository"
+  },
+  {
     "package": "jardissupport/scheduling",
     "capability": "cron expression parsing, task definition with tags and priority, and schedule validation",
     "use_when": "you need to define, parse, validate, or manage recurring scheduled tasks and cron-based job configurations",
@@ -133,8 +140,9 @@
   },
   {
     "package": "jardissupport/workflow",
-    "capability": "multi-step business process orchestration with sequential step execution and process state management",
-    "use_when": "you need to model and execute multi-step workflows or business processes with defined step sequences",
-    "composer_require": "composer require jardissupport/workflow"
+    "capability": "process engine for one request-response use case: node graph, routes, typed outcome (no door, no transaction)",
+    "use_when": "you need to declare and run a multi-node use case with routes; the transaction around it is the door's (jardissupport/repository)",
+    "composer_require": "composer require jardissupport/workflow",
+    "alternatives": "the answer, failure forms and door steps live in jardissupport/response"
   }
 ]
