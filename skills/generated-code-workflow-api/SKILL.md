@@ -10,7 +10,7 @@ next: []
 
 > Applies to `workflow` 4.0 (engine only) and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
-The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`), the actor (`CheckActor`) and the required kernel resources, opens the transaction bracket (`RunInTransaction`) around `ProcessRunner::run($definition, $input, $actor, $nodeFactory, $depth)`, and builds the answer (`BuildResponseData`, `TransformResponse`). The runner is the engine only: it walks the generated `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction and answers no 5xx. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
+The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`) and the actor (`CheckActor`), calls the generated run step `RunProcess` (next to it; the required kernel resources, then the transaction bracket `RunOwnedTransaction` around `ProcessRunner::run($definition, $input, $actor, $nodeFactory, $depth)`) and answers through the `response` closures (`AnswerFindings`, `AnswerUnauthorized`, `AnswerOutcome`, `AnswerThrowable`, `LogFailure`). The door itself computes nothing: it chains these calls and branches on what they hand back. The runner is the engine only: it walks the generated `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction and answers no 5xx. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
 
 ### 1. Where it lives
 
@@ -139,34 +139,26 @@ return (new MapResponse())($response);
 
 ### 6. The handler (door) and the `nodeFactory`
 
-The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine. The code below is the door as the generator emits it today; it still carries logic of its own (`if`, a status comparison, the owner calculation) — Rückführung auf P6 (the door only chains closures and branches on their returns) in `docs/gesetz-rueckfuehrung/` E2. No hand code is written into the door:
+The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine and orchestrates only (Gesetz P6): every step is a call onto a closure, the door branches on what a step hands back and has no loop, no status comparison, no `new`. No hand code is written into the door:
 
 ```php
-$definition = (new LendBookDefinition())();
+$definition = ($this->handle(LendBookDefinition::class))();
 $input = $this->payload();
-$findings = ($this->handle(ValidateInput::class, validator: $validator))($input);   // fields !== [] -> 400
-if (!($this->handle(CheckActor::class))($definition->getActorClass() !== null, $this->actor())) { /* 401 */ }
-// one line per `requires` name: $this->resource()->auth() ?? throw new ConfigurationException(...)
-$connection = ($this->handle(ResolveConnection::class))($this->resource()->dbConnection());
-$owner = $connection?->inTransaction() !== true;
-try {
-    $run = fn(): ProcessOutcome => ($this->handle(ProcessRunner::class))->run(
-        $definition, $input, $this->actor(), fn(string $class): object => $this->handle($class), $depth
-    );
-    $outcome = ($this->handle(RunInTransaction::class))(
-        $connection, 'sp_' . $depth, $run,
-        static fn(ProcessOutcome $outcome): bool => $outcome->status()->value >= 400,
-        $depth > 0
-    );
-    // events -> $this->result()->addEvent($event, EventScope::Domain), errors -> addError(...)
-    // a rejected outcome -> (BuildFailureOutcome)(status, messageKey, context, errors, true)
-    $this->result()->setData(($this->handle(BuildResponseData::class))($status, $response, $outcome->messageKey(), $definition->getName()));
-    return ($this->transformer())($this->result(), $status);
-} catch (Throwable $e) {
-    $failure = ($this->handle(MapThrowable::class))($e, $owner, $definition->getName());   // 4xx mapped, 5xx for the owner
-    // owner and 5xx: (LogCause)($e, $definition->getName())
+$findings = ($this->handle(ValidateInput::class, validator: $validator))($input);   // only where the input carries a rule
+if ($findings->failed()) { return ($this->handle(AnswerFindings::class))($this->result(), $this->transformer(), $findings); }   // 400
+if (!($this->handle(CheckActor::class))($definition->getActorClass() !== null, $this->actor())) {
+    return ($this->handle(AnswerUnauthorized::class))($this->result(), $this->transformer());                          // 401
 }
+$run = ($this->handle(RunProcess::class))($definition, $input, $this->actor(), $this->depth());   // OwnedResult
+if ($run->failure !== null) {
+    $answer = ($this->handle(AnswerThrowable::class))($this->result(), $this->transformer(), $run->failure, $run->owner, $definition->getName());
+    ($this->handle(LogFailure::class, logger: $this->resource()->logger()))($run->failure, $definition->getName(), $run->owner, $answer);
+    return $answer;
+}
+return ($this->handle(AnswerOutcome::class))($this->result(), $this->transformer(), $run->result, $definition->getName());
 ```
+
+`RunProcess` (`Command/Handler/RunProcess.php`, generated, hermetic) is the step that runs: one line per `requires` name (`$this->resource()->auth() ?? throw new ConfigurationException(...)`, before the bracket), `ProcessRunner::run($definition, $input, $actor, fn(string $class): object => $this->handle($class), $depth)` wrapped in `RunOwnedTransaction` (package `repository`: savepoint `sp_{depth}`, nested above depth 0, failure read from the outcome), and the `OwnedResult` it hands back (outcome, who owned the transaction, the failure instead of a throw). A process with `transactional(false)` has no bracket; its `RunProcess` reads the owner itself and builds the same `OwnedResult`. Where the answer has a temporal field, `RunProcess` projects the typed success onto its wire form (`ProjectWire`) inside the run. The door gets the actor and the depth from itself and hands them to the step: `handle()` starts a closure with the payload and the version of the run only.
 
 The complete door with every line is the Quick Start of the `response` README. `run()` takes a `\Closure(class-string): object`. The runner asks it for each node when the node is due, by the class name the definition declares — also once per pass of a loop — and checks the object is callable. The generated factory is `$this->handle($class)`, so the node is built through the kernel seam and class-version resolution of nodes is a property of that seam (`generated-code-versioning`). `$depth` is `$this->depth()`: 0 for a top-level run, the depth of the calling run plus one for a sub-process.
 
@@ -188,11 +180,11 @@ A reject is never routed by the engine; only a Dev decision inside a node (for e
 
 **Message keys.** The key a node declares with `rejects(status, key)` (else the one it names in `reject(...)`) is `ProcessOutcome::messageKey()`, the door hands it to `BuildResponseData`, and it joins `data['messageKey']` of every status >= 400. The door's own keys (`process.inputInvalid`, `process.actorMissing`, `process.transientConflict`) stay out of `data`. `->input('customer')` on a node prefixes the `fields[].field` of that node's 400 reject with `customer.`; the start validation already answers paths below the input root (`items[1].qty`).
 
-**5xx cause.** The door logs it: `LogCause` writes the cause once to the kernel logger (`error`, context `exception` and `process`, owning run and 5xx only; no logger = nothing; a cause marked `ReportedFailureExceptionInterface`, e.g. from `MapResponse`, is skipped). A node does not log a failure and does not catch an exception just to log it — it lets it fly.
+**5xx cause.** The door logs it as its own step: `LogFailure` (owner and 5xx decide) calls `LogCause`, which writes the cause once to the kernel logger (`error`, context `exception` and `process`, owning run and 5xx only; no logger = nothing; a cause marked `ReportedFailureExceptionInterface`, e.g. from `MapResponse`, is skipped). A node does not log a failure and does not catch an exception just to log it — it lets it fly.
 
 ### 8. Transaction and sub-process
 
-The door opens ONE transaction around the run through `RunInTransaction` (package `repository`; `transactional(false)` opts out and the handler has no bracket); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`; the owner of the transaction is decided at the door's entry (no transaction open) and only the owner answers a 5xx and logs it. A sub-process node passes `depth + 1`; a rejected inner run rolls back to its savepoint and the outer node decides — reject again (the default of `MapResponse`) or route. Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
+`RunProcess` opens ONE transaction around the run through `RunOwnedTransaction` (package `repository`, built on `RunInTransaction`; `transactional(false)` opts out and the run step has no bracket); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`; the owner of the transaction is decided at the door's entry (no transaction open) and only the owner answers a 5xx and logs it. A sub-process node passes `depth + 1`; a rejected inner run rolls back to its savepoint and the outer node decides — reject again (the default of `MapResponse`) or route. Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
 
 ### Anchors
 
