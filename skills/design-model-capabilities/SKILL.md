@@ -15,7 +15,7 @@ Capability map of the Jardis modelling tools for the AI that decides WHAT is mod
 ### 1. The law
 
 1. Whatever is built on Jardis must know and use the capabilities of EVERY Jardis tool completely, for every model element. Programming what a setting already generates is a defect, not a shortcut.
-2. Order of means: declarative tools first (Process, Query, Aggregate including its schema-column settings and value lists, field map, strategic layer) → a Closure only where a rule crosses an aggregate boundary → hand code only on the dev surfaces (§2.9).
+2. Order of means: declarative tools first (Process, Query, Aggregate including its schema-column settings and value lists, field map, strategic layer) → a Closure only where a rule crosses an aggregate boundary → hand code only in the hand-code places (§2.9; table in `generated-code-extend` §10).
 3. This knowledge is required when the interview is held and the PRD is written, not only at build time. Every option, concept line and PRD decision names the carrying capability.
 
 Doors: every write goes through a door (MCP tool or the matching UI surface). Hand-edited definition files are not a supported entry. "MCP" columns below name the tool or resource; "UI" names the surface.
@@ -181,7 +181,20 @@ Door: MCP `save_naming`, resource `naming/{d}/{s}/{bc}`; UI mapping tab. Sparse 
 | Reading | resources `catalog/{d}/{s}/{bc}`, `api/{domain}/routes`, `api/{domain}/openapi`, `code-tree`, `code-file`, `code-graph`, `interface-board`, `doors/{domain}` | contract and routes for tests and frontend; `catalog` lists every command name including child commands |
 | Studios | resource `studios/{name}`, tool `post_studio_card` | the AI posts a decision card; answering is the human's handle |
 | Human-only handles (no MCP door) | licence actions, studio create/remove/pause/answer, project create/restart, new domain, chat | ask the human |
-| Dev surfaces (hand code) | closure bodies `{BC}/Closure/`; process node bodies; `Query/`, `Repository/`, `Service/` under `{BC}/Process/{Name}/`; versioned variants `v{N}/` | the only places for written code; never inside `{BC}/Model/{Agg}/` (rebuilt on every build). Reusable building blocks: `packages-find-existing` |
+| Hand-code places (the corridor) | node bodies `{BC}/Process/{Name}/Command/Handler/Action/`, closure bodies `{BC}/Closure/`, Domain Services `{BC}/Service/`; `App/**` only for delivery, without domain logic | the only places for written code; a body uses Jardis artefacts only (kernel seam, packages, queries, commands, value lists). The table of places and allowed dependencies is `generated-code-extend` §10; never inside `{BC}/Model/{Agg}/` (rebuilt on every build). Reusable building blocks: `packages-find-existing` |
+
+Where the hand code sits (full table: `generated-code-extend` §10):
+
+```
+{BC}/
+├── Model/{Agg}/                                 generated, never edited
+├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand)
+├── Closure/{Name}.php                           rule / closure body (hand)
+└── Service/{Name}.php                           Domain Service (hand)
+App/                                             delivery only, no domain logic
+```
+
+A capability that is missing is not replaced by hand code: report it (app developer) or build it in the package or generator (Jardis developer).
 
 ### 3. What Jardis does NOT have — do not plan for it
 

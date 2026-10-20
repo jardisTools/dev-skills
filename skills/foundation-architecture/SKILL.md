@@ -66,7 +66,7 @@ final class BuildKey
 }
 ```
 
-**Orchestrator** — composition. Consumes Closures, **no own logic**. Closures bound in constructor via first-class callable syntax.
+**Orchestrator** — composition. Consumes Closures, **no own logic**: at most it decides a branch from the return value of a Closure. This holds for every orchestrator, also for a generated door or handler. Closures bound in constructor via first-class callable syntax.
 
 ```php
 final class Filesystem
@@ -92,6 +92,8 @@ Multi-method interfaces (`hash`/`verify`/`needsRehash`) → each method delegate
 
 ### 4. Directory structure
 
+This structure holds for building a Jardis package. In an app, hand code sits only in the places of `generated-code-extend` section 10.
+
 ```
 src/
 ├── Orchestrator1.php         ← root-namespace Orchestrator
@@ -114,7 +116,7 @@ tests/Support/                ← Test fakes (NOT in src/)
 | Handlers scattered in feature dirs | Centralise under `Handler/` |
 | VOs/Enums **scattered** in feature dirs | Centralise under `Data/` (or a cohesive sub-package like `Config/`) |
 | Test fakes in `src/` | Move to `tests/Support/` |
-| `new Handler()` direct call | Bind via `(new Handler())->__invoke(...)` |
+| `new Handler()` direct call | Package building: bind via `(new Handler())->__invoke(...)`. In a `handle()` class of an app: no `new`, call through `->handle()` |
 
 ### 6. Per-class checklist
 
