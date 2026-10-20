@@ -21,31 +21,29 @@ The aggregate tree is hermetic and **Platform-free** (no `Platform/` segment in 
 **How `LoadClassFromSubDirectory` resolves** `$this->context(<Class>::class, $dto, $version)` / `$this->handle(<Class>::class)`. What matters for placing your override:
 
 1. The version is **injected before the last namespace segment** (the class name), per class:
-   `…\Command\Handler\CreateCounter` + `v2` → `…\Command\Handler\v2\CreateCounter`.
-   The `v2/` subdir is the class's **immediate neighbour** — not an aggregate-root `v2/` tree.
+   `…\Command\Handler\Action\ValidateNewValue` + `v2` → `…\Command\Handler\Action\v2\ValidateNewValue`.
+   The `v2/` subdir is the class's **immediate neighbour** — not a root `v2/` tree. Only a stub class (node, Closure/Rule, Domain Service) has such a variant; a hermetic class has none (`generated-code-extend` §10).
 2. The version comes from the `$version` argument threaded through the facade method (`string $version = ''`, verified on `{Agg}/{Agg}.php`). Empty version → **no version subdir is tried**; resolution falls straight to the baseline.
 3. With a non-empty version and a `ClassVersionConfig` present, the fallback chain is tried in order (e.g. `v3 → [v3, v2, v1]`); without config only `[$version]`.
 4. First match wins; missing versioned class → falls back to the **baseline** (the generated class itself); missing even that → `InvalidArgumentException`.
 
 ```
-Baseline (the generated, hermetic class — always present):
-  MeterDevice\Counter\Model\Counter\Command\Handler\CreateCounter
+Baseline (the generated stub class — always present):
+  MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\ValidateNewValue
 
-Versioned override (you author it; Generator neither emits nor deletes v{N}/):
-  MeterDevice\Counter\Model\Counter\Command\Handler\v2\CreateCounter
-  (file: {BC}/Model/{Agg}/Command/Handler/v2/CreateCounter.php)
+Versioned variant (you author it; Generator neither emits nor deletes v{N}/):
+  MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2\ValidateNewValue
+  (file: {BC}/Process/CounterChange/Command/Handler/Action/v2/ValidateNewValue.php)
 ```
 
-Namespace = `<Domain>\<BC>\Model\<Agg>\…`. There is **no `Platform` segment** and **no dev-baseline-shadow** stage: the baseline *is* the generated class. The only override surface inside the aggregate tree is a per-class `v{N}/` subdir; everything else is hermetic (`generated-code-extend` §1–§2).
+There is **no `Platform` segment** and **no dev-baseline-shadow** stage: the baseline *is* the generated class. A per-class `v{N}/` subdir exists only beside a stub class (node, Closure/Rule, Domain Service); the aggregate tree and every other generated class are hermetic and take no variant (`generated-code-extend` §1–§2, §10).
 
 **Two resolution modes:**
 
 - **No version** (`$version = ''`, the 99 % case): the generated baseline runs. Nothing to configure. The aggregate is hermetic, so to *change* the baseline you re-model in the Designer or author a **Process** — not an in-place override (`generated-code-extend` §2).
-- **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants: author the variant at `{Agg}/.../v{N}/<Class>.php` and select it **per call** (reads: `$bc->{agg}()->getCounterById($q, 'v2')`; writes family-internally via the kernel seam: `$this->handle(Counter::class)->createCounter($dto, 'v2')` — the BC accessor returns the read-only `{Agg}Read`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The version of a process call applies to every node and every sub-process of the run. A `v{N}/` node variant (`{BC}/Process/{Name}/Command/Handler/Action/v{N}/<Node>.php`) or a versioned sub-process handler is therefore selected by the one `$version` of the process-facade call; a class without a variant stays baseline. The variant survives rebuilds — the Generator does not emit or clean `v{N}/` directories.
+- **Versioned** (`v1`, `v2`, …) for tenant / feature-flag variants of a stub class: author the variant in the stub's `v{N}/` subdir (`Action/v{N}/<Node>.php`, `Closure/v{N}/<Name>.php`, `Service/v{N}/<Name>.php`) and select it **per call** through the `$version` argument of the facade door that starts the run (a process: `$bc->process()->counterChange($dto, 'v2')`). There is **no domain-wide default** (see the note above) — every caller threads its own `$version` argument. The version of a process call applies to every node and every sub-process of the run: a node variant is selected by the one `$version` of the process-facade call; a class without a variant stays baseline. The variant survives rebuilds — the Generator does not emit or clean `v{N}/` directories.
 
-> **Handler signature in `v{N}` variants.** The handler of a root writer (`Update{Root}`, `Set{Root}Computed`) is invoked as `__invoke(array $expected = [])`. A `v{N}/` variant of such a handler must adopt that signature, because the write facade forwards `$expected` to whichever class `classVersion()` resolves. Two cases: (a) the variant `extends` the generated baseline (the normal case, recipe §4) — a parameterless `__invoke()` is then a PHP fatal error at class load (signature incompatible with the baseline `__invoke(array $expected = [])`); (b) the variant does not inherit from the baseline — a parameterless `__invoke()` receives the forwarded argument silently ignored (PHP accepts surplus arguments) and so loses the caller's read basis; the CAS then checks the freshly loaded state again. Either way the variant takes `__invoke(array $expected = [])` and passes `$expected` on (e.g. `parent::__invoke($expected)`). Handlers of other commands are unchanged.
-
-> **Scope:** version **resolution** is wired, and since the versioned front door (§3) the HTTP caller can select a version and the set of selectable versions is declared in the domain manifest. No generator emits a `v{N}/` class — authoring the `v{N}/` variant itself stays hand-written Dev code (the recipe in §4). Declarative design of *what* a version changes (affected Closure, behaviour change) does not exist in the definition format.
+> **Scope:** version **resolution** is wired, and since the versioned front door (§3) the HTTP caller can select a version and the set of selectable versions is declared in the domain manifest. No generator emits a `v{N}/` class — authoring the variant of a stub is hand code at row 11 of the table in `generated-code-extend` §10 (the recipe in §4). Declarative design of *what* a version changes (affected Closure, behaviour change) does not exist in the definition format.
 
 Optional `ClassVersionConfig` (only when you need fallback chains):
 
@@ -56,17 +54,18 @@ $config = new ClassVersionConfig(
 );
 ```
 
-Versioned override skeleton (the `v2/` subdir sits next to the baseline class; you may extend the generated baseline):
+Versioned variant skeleton (the `v2/` subdir sits next to the baseline stub; the stub is `final`, so the variant is a full class of its own with the same entry point):
 
 ```php
 declare(strict_types=1);
-namespace MeterDevice\Counter\Model\Counter\Command\Handler\v2;
+namespace MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2;
 
-use MeterDevice\Counter\Model\Counter\Command\Handler\CreateCounter as Base;
-
-final class CreateCounter extends Base
+final class ValidateNewValue extends MeterDeviceContext
 {
-    // version-specific behaviour; parent::__invoke(...) reuses the generated pipeline
+    public function __invoke(CounterChangeContext $ctx): NodeResult
+    {
+        // version-specific body — same signature, same declared routes and rejects as the baseline stub
+    }
 }
 ```
 
@@ -79,7 +78,7 @@ Versions in Jardis are about behaviour, not data shape. Five guiding principles 
 - **Additive comes before version.** New nullable fields, new enum members, new optional tables go into the base schema without bumping a version.
 - **Version changes behaviour, never the API.** `v1` and `v2` of the same aggregate share identical Commands / Queries / Events / Payloads. Only the implementation differs. There is exactly one API surface per aggregate.
 - **Data break = new aggregate.** A removed field, flipped type, or shifted semantic of a load-bearing field is honest enough to warrant `<Agg>V4` — its own name, its own tree, its own spec, its own entities.
-- **Code rescue runs through abstraction, not through mechanics.** When data breaks, behaviour is rescued by Domain Services authored in the **Process scope** (`{BC}/Process/`), not by version-merge tricks. Entity-agnostic logic survives any data break; entity-bound logic on the broken fields does not.
+- **Code rescue runs through abstraction, not through mechanics.** When data breaks, behaviour is rescued by Domain Services (`{BC}/Service/`), not by version-merge tricks. Entity-agnostic logic survives any data break; entity-bound logic on the broken fields does not.
 - **One API surface per aggregate — full stop.** No v{N}-API matrices, no delta-merge variants.
 
 **Rule of thumb — when to use what:**
@@ -87,12 +86,12 @@ Versions in Jardis are about behaviour, not data shape. Five guiding principles 
 | Change | Path |
 |---|---|
 | New nullable column / new enum member / new optional relation | Extend the schema additively, no version. Goes into base definition; FieldMap learns the new key; rebuild. |
-| New business rule, different calculation, tenant variant, tightened validation | A **Process** (`{BC}/Process/`) for new behaviour, or a **`v{N}` override** at `{Agg}/.../v{N}/<Class>.php` for a tenant/feature-flag variant of an existing generated class, selected via `$version`. Spec stays invariant. |
+| New business rule, different calculation, tenant variant, tightened validation | A **Process** (`{BC}/Process/`) for new behaviour, or a **`v{N}` variant** of a stub class (node, Closure/Rule, Domain Service) in the stub's `v{N}/` subdir for a tenant/feature-flag variant, selected via `$version`. Spec stays invariant. |
 | Field removed, type flips, semantic of load-bearing field changes | **New aggregate `<Agg>V4`**, its own tree, its own spec. Generator regenerates separately. |
 
-**Service-layer note.** Version-free, entity-agnostic code belongs in the **Process layer** (`{BC}/Process/`) — the only developer surface, because the aggregate tree is hermetic. This service layer is used by `v1` / `v2` / `v3` AND a later `<Agg>V4`. The consequence of pillar 4 (`foundation-architecture` — Data-Behavior-Separation): logic that need not depend on the entity type should be extracted now as a service in the Process scope — it survives every data break. (Where exactly shared VOs/Services live in the Process scope is a developer convention; see `ARCHITECTURE_VERSIONING.md` "Open points" #2 "Service-layer standard".)
+**Service-layer note.** Version-free, entity-agnostic code belongs in a Domain Service (`{BC}/Service/`) — the one location for shared logic (`generated-code-extend` §10), because the aggregate tree is hermetic. This service layer is used by `v1` / `v2` / `v3` AND a later `<Agg>V4`. The consequence of pillar 4 (`foundation-architecture` — Data-Behavior-Separation): logic that need not depend on the entity type should be extracted now as a Domain Service — it survives every data break.
 
-**Rules-Layer precision on "Version changes behaviour, never the API".** A Rule (`{BC}/Closure/{Name}.php`, `generated-code-extend` §1) is ClassVersion-capable the same way any generated class is (`Closure/v{N}/{Name}.php`), but the guiding principle needs a Rule-specific reading: **API** = the `__invoke({Cmd}DTO): RuleResult` signature **plus** the rejection payload shape (`{rule, messageKey, context}`, `messageKey` stable for i18n — guaranteed by the catalog when the entry declares a `messageKey`, since the 422 carries that key whatever the versioned body passes to `reject()`) — this must not change across versions. **Behaviour** = the accepted set — a `v2` Rule is exactly the place to *tighten* what passes (e.g. add a new precondition), never to change what a rejection looks like to the caller. The Command the Rule guards (its "endpoint identity") is versionless; only the Rule class itself is versioned.
+**Rules-Layer precision on "Version changes behaviour, never the API".** A Rule (`{BC}/Closure/{Name}.php`, `generated-code-extend` §1) is ClassVersion-capable the same way any stub class is (`Closure/v{N}/{Name}.php`), but the guiding principle needs a Rule-specific reading: **API** = the `__invoke({Cmd}DTO): RuleResult` signature **plus** the rejection payload shape (`{rule, messageKey, context}`, `messageKey` stable for i18n — guaranteed by the catalog when the entry declares a `messageKey`, since the 422 carries that key whatever the versioned body passes to `reject()`) — this must not change across versions. **Behaviour** = the accepted set — a `v2` Rule is exactly the place to *tighten* what passes (e.g. add a new precondition), never to change what a rejection looks like to the caller. The Command the Rule guards (its "endpoint identity") is versionless; only the Rule class itself is versioned.
 
 ### 3. HTTP front door — `X-Jardis-Version`
 
@@ -126,20 +125,20 @@ Comparison is exact and case-sensitive; a version has the form `^v[1-9][0-9]*$`.
 
 ### 4. Recipe — serve a `v2` variant over HTTP
 
-A neutral example: domain `MeterDevice`, BC `Counter`, aggregate `Counter`, whose Command `createCounter` runs through a Process.
+A neutral example: domain `MeterDevice`, BC `Counter`, a Process `CounterChange` with the node `ValidateNewValue`.
 
 1. **Declare the version** in the domain manifest: MCP `update_domain_manifest` with `versions: ["v2"]` (or UI *Stammdaten* → "Bekannte Versionen"). Format `v{N}`, no duplicates.
-2. **Author the variant** next to the baseline class, as Dev code (the Generator never emits or deletes `v{N}/`):
-   `{BC}/Model/{Agg}/Command/Handler/v2/CreateCounter.php`, namespace `MeterDevice\Counter\Model\Counter\Command\Handler\v2`, `extends` the generated `CreateCounter` (skeleton in §1). A Process node variant lives at `{BC}/Process/{Name}/Command/Handler/Action/v2/<Node>.php`, a Rule at `{BC}/Closure/v2/{Name}.php`.
+2. **Author the variant** next to the baseline stub, as hand code (the Generator never emits or deletes `v{N}/`):
+   `{BC}/Process/CounterChange/Command/Handler/Action/v2/ValidateNewValue.php`, namespace `MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2` (skeleton in §1). A Rule variant lives at `{BC}/Closure/v2/{Name}.php`, a Domain Service variant at `{BC}/Service/v2/{Name}.php`; a hermetic class has none.
 3. **Build** (`build` / `build_domain`). This rewrites `routes.php`, `versions.php` and the OpenAPI contract; V-VERSION-DRIFT is quiet once step 1 and 2 agree.
 4. **Call it:**
-   `curl -H 'X-Jardis-Version: v2' -X POST …/counters -d '{…}'` — the answer carries `"meta": {"version": "v2", …}`. The same call without the header runs the baseline and carries the empty baseline version; `-H 'X-Jardis-Version: v9'` (not declared) answers `400` with `request.versionUnknown`.
+   `curl -H 'X-Jardis-Version: v2' -X POST …/counter/counterChange -d '{…}'` — the answer carries `"meta": {"version": "v2", …}`. The same call without the header runs the baseline and carries the empty baseline version; `-H 'X-Jardis-Version: v9'` (not declared) answers `400` with `request.versionUnknown`.
 
 Version changes behaviour, never the API (§2): the route, the DTO and the envelope are identical for every version.
 
 ### Anchors
 
-- `generated-code-extend` (hermetic aggregate layout, the customization surfaces incl. the Rule catalog, prohibitions).
+- `generated-code-extend` (hermetic aggregate layout, the one place-table §10, the Rule catalog, prohibitions).
 - `generated-code-recipes` (Phase-3 recipes, event transport, troubleshooting).
 - `core-app` (`ResolveVersion`, request attribute `jardisVersion`, `AppConfig(knownVersions:)`, the 400 form of the front door).
 - `generated-code-wire-transport` (how the version reaches a facade door from a hand-written transport).

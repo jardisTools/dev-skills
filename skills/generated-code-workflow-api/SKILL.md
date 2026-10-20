@@ -10,7 +10,7 @@ next: []
 
 > Applies to `workflow` 4.0 (engine only) and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
-The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`), the actor (`CheckActor`) and the required kernel resources, opens the transaction bracket (`RunInTransaction`) around `ProcessRunner::run($definition, $input, $actor, $nodeFactory, $depth)`, and builds the answer (`BuildResponseData`, `TransformResponse`). The runner is the engine only: it walks the generated `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction and answers no 5xx. Knowing this API is mandatory for node bodies (Dev code) and for hand-written code around the handler.
+The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`), the actor (`CheckActor`) and the required kernel resources, opens the transaction bracket (`RunInTransaction`) around `ProcessRunner::run($definition, $input, $actor, $nodeFactory, $depth)`, and builds the answer (`BuildResponseData`, `TransformResponse`). The runner is the engine only: it walks the generated `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction and answers no 5xx. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
 
 ### 1. Where it lives
 
@@ -22,7 +22,20 @@ The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process
 | `Command/Handler/{Name}Definition.php`, `{Name}Validator.php`, `{Name}Context.php`, `{Name}Actor.php` | graph, input gate, typed run view, request attributes (`{Name}Actor` only if the process reads some) | generated, hermetic |
 | `Command/Handler/Action/` | one class per node | action / call / sub-process / event: generated stub with an `@node-id` marker, edits to the body are preserved on rebuild; rule: generated whole, hermetic |
 | `Event/` | event classes | generated |
-| `Query/`, `Repository/`, `Service/` | Dev territory | Dev code |
+
+```
+{BC}/
+├── Closure/                          ← Closure/Rule bodies (hand code, §10 of generated-code-extend)
+├── Service/                          ← Domain Services (hand code, the one location, §10 of generated-code-extend)
+└── Process/{Name}/
+    ├── Command/{Name}.php            ← input DTO (+ parts)
+    ├── Command/Handler/              ← {Name}Handler, {Name}Definition, {Name}Validator, {Name}Context, {Name}Actor (hermetic)
+    │   └── Action/{Node}.php         ← one class per node — the body of a node stub is hand code
+    ├── Response/{Node}Response.php   ← typed node answers (hermetic)
+    └── Event/                        ← event classes (hermetic)
+```
+
+Hand code stands only at the places of `generated-code-extend` §10 — the node bodies above, Closure/Rule bodies, `{BC}/Service/` and `App/**`; there is no other place under a process.
 
 ### 2. The six routes and the reject
 
@@ -43,7 +56,7 @@ A node returns a `NodeResult`; the route it takes picks the next node. The edge 
 
 ### 3. The generated `ProcessDefinition`
 
-The generator emits the graph as a fluent definition (hermetic, rebuilt on every build); hand edits follow the same pattern:
+The generator emits the graph as a fluent definition (hermetic, rebuilt on every build, never edited by hand):
 
 ```php
 return ProcessDefinition::for(LendBook::class, 'LendBook')
@@ -105,7 +118,7 @@ There are no free slots; results sit in the chain and nothing is handed on from 
 
 **Call node, aggregate command.** `$this->handle(Loan::class)->createLoan(new CommandLoan(...))` returns a `DomainResponseInterface`; `(new MapResponse())($response)` maps it: 2xx becomes `ok(data)`, 4xx a `reject` with the callee's plain context, every other status throws.
 
-**Sub-process node.** The stub carries the whole call; only the input mapping is Dev territory. The node runs the inner process through the inner door (`$this->context(<Inner>Handler::class, <input>, actor: null, depth: $ctx->depth() + 1)()`) and hands the `DomainResponseInterface` it answers to `MapResponse`:
+**Sub-process node.** The stub carries the whole call; only the input mapping is yours (the node body). The node runs the inner process through the inner door (`$this->context(<Inner>Handler::class, <input>, actor: null, depth: $ctx->depth() + 1)()`) and hands the `DomainResponseInterface` it answers to `MapResponse`:
 
 ```php
 $response = $this->context(
@@ -126,7 +139,7 @@ return (new MapResponse())($response);
 
 ### 6. The handler (door) and the `nodeFactory`
 
-The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine, none of them is written out in the handler:
+The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine. The code below is the door as the generator emits it today; it still carries logic of its own (`if`, a status comparison, the owner calculation) — Rückführung auf P6 (the door only chains closures and branches on their returns) in `docs/gesetz-rueckfuehrung/` E2. No hand code is written into the door:
 
 ```php
 $definition = (new LendBookDefinition())();
