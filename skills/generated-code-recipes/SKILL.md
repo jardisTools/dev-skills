@@ -1,6 +1,6 @@
 ---
 name: generated-code-recipes
-description: Phase-3 recipes and troubleshooting for Designer-generated code — Event transport from a Process node (Kafka/RabbitMQ/Redis/HTTP-webhook/projection in the same process; the generated `<Agg>EventRouter.php` is hermetic), VO in a Process node, Domain Service, new aggregate op vs. new Process, self-contained Process input, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), write a computed field from a process node (`Set{Entity}Computed`), cross-BC read as a derived Cross-BC-Call Service (no `crossBcCall`), typed Process inputs (date/datetime/time/decimal/uuid/`valueList`, strict date gate), default or declared (`successOutput`) Process answer, the process transaction bracket (default on, 4xx rollback, events only after commit, `runInTransaction: false` opt-out), Invariant as state (uniqueness invariant via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act, status aggregate/invoicing and number range/reservation-with-retry cases), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, `@node-id` body-preserve, routing-safety, cross-BC, listener exceptions, Rule-merge/422 pitfalls).
+description: Phase-3 recipes and troubleshooting for Designer-generated code — Event announce from an Event ◇ node and transport in `App/**` delivery code (Kafka/RabbitMQ/Redis/HTTP-webhook), validating a domain concept with a Closure, external lookup through an External-Call node (Domain Service at `{BC}/Service/`), new aggregate op vs. new Process, Response shapes per operation, bulk read list→ids→`get{Agg}ByIds` (or, with a unique key, list→keys→`get{Agg}By{PluralKey}`), sub-process node, cross-BC write (DTO-translation → foreign `process()` → response-mapping), guard a Command with a business Rule (Rules-Layer), write a computed field from a process node (`Set{Entity}Computed`), cross-BC read only through the doors of the foreign BC (`{Agg}Read`, from a Cross-BC-Call node and its Service; writes through `process()`), typed Process inputs (date/datetime/time/decimal/uuid/`valueList`, strict date gate), default or declared (`successOutput`) Process answer, the process transaction bracket (default on, 4xx rollback, events only after commit, `runInTransaction: false` opt-out), Invariant as state (uniqueness via a first-writing gatekeeper node + CAS-UPDATE instead of check-then-act), troubleshooting table (ClassVersion misses, hermetic-tree edits lost, routing-safety, Rule-merge/422 pitfalls).
 zone: post-active
 persona: C
 profile: jardis
@@ -8,7 +8,7 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
-> **Layout context.** The aggregate tree `{BC}/Model/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); developer code lands only in the BC-level Process scope `{BC}/Process/{Name}/`, reached via `$bc->process()`. `$bc->{agg}()` reaches only the read facade `{Agg}Read` (the BC facade's public surface); the write facade `{Agg}` is family-internal via the kernel seam `$this->handle({Agg}::class)`. Canonical layout + vocabulary glossary (aggregate facade / read facade / public surface / kernel seam / Context family): `generated-code-extend` §1–§2.
+> **Layout context.** The aggregate tree `{BC}/Model/{Agg}/` (abbreviated `{Agg}/` in this skill) is hermetic — ForceOverwrite, never edited (V1); hand code stands only at the places of the one table in `generated-code-extend` §10 (node bodies of a process reached via `$bc->process()`, Closure/Rule bodies, `{BC}/Service/`, `App/**`). `$bc->{agg}()` reaches only the read facade `{Agg}Read` (the BC facade's public surface); the write facade `{Agg}` is family-internal via the kernel seam `$this->handle({Agg}::class)`. Canonical layout + vocabulary glossary (aggregate facade / read facade / public surface / kernel seam / Context family): `generated-code-extend` §1–§2.
 
 ### 1. Event transport — authored in a Process node
 
@@ -23,125 +23,67 @@ protected function eventDispatcher(): EventDispatcherInterface|false|null
 }
 ```
 
-**The router is hermetic** (ForceOverwrite) — you never fill its bodies; the next build truncates them (V1). Transport is therefore authored where developer code is allowed: a **Process node**. The aggregate command records its events on its response (`$this->result()->addEvent($event, EventScope::Internal)` in the generated handler) — the handler **only collects, it does not dispatch**. Note `getEvents(?EventScope)` is **context-keyed** (`array<string, array<int, object>>`), so flatten it before iterating: `array_merge(...array_values($response->getEvents()))` (or a nested `foreach`). (Aggregate life-cycle events are `Internal`; a **Domain event** is announced by an **Event ◇ node** of the Process.)
+**The router is hermetic** (ForceOverwrite) — you never fill its bodies; the next build truncates them (V1). Events therefore leave a Process only through an **Event ◇ node**, and the transport of an announced event is delivery code in `App/**` (row 10 of the table in `generated-code-extend` §10), never an edit of the router. The aggregate command records its events on its response (`$this->result()->addEvent($event, EventScope::Internal)` in the generated handler) — the handler **only collects, it does not dispatch**. Note `getEvents(?EventScope)` is **context-keyed** (`array<string, array<int, object>>`), so flatten it before iterating: `array_merge(...array_values($response->getEvents()))` (or a nested `foreach`). (Aggregate life-cycle events are `Internal`; a **Domain event** is announced by an **Event ◇ node** of the Process.)
 
 **What a node sees of the earlier nodes (workflow 4.0).** Nothing is handed on from node to node: the answer of a run is the data of the **last** node only, and a node that needs an earlier answer asks for it explicitly — `$ctx->latest(NodeFqcn::class)?->data()` / `$ctx->all(NodeFqcn::class)` (or the typed getter `$ctx-><node>()` of the generated `{Name}Context`, a `?NodeResult` over `latest()`); `$ctx->previous()` is only the node run last, which can be a node without data. The `data()` of a call node is the command's **flat reference value** — an `array`, never a `DomainResponse`, with no handler-name or root level around it, e.g. `['@type' => 'counter', 'counterIdentifier' => '018e…']` — read it flat: `$ctx->persistCounter()?->data()['counterIdentifier'] ?? throw …`. A misspelt key must fail loud (`?? throw`), never read as a silent `null`. The node's `DomainResponse` and its `Internal` events are **not** forwarded by the default body (`MapResponse`: 2xx becomes `ok(data)`, 4xx a `reject`).
 
-**Two ways events leave a Process:**
+**How events leave a Process.** Only an **Event ◇ node** announces a Domain event (generated, no body to write). The node ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))`: the events travel with the result, not in the data. The runner collects the events of all steps in execution order and reports them on the `ProcessOutcome` for a successful run only (a rejected result and a failed run report none); the generated handler adds each with `addEvent($event, EventScope::Domain)` and the **caller** publishes after the commit, from `$response->getEvents(EventScope::Domain)`. The identity of the event is read from the earlier node explicitly through the typed context — `$ctx->persistHeartbeat()?->data()['heartbeatSignalId'] ?? throw …` — because an event node routes without data and a process that ends on it answers with no fields of its own (on the wire `data` carries only the process `@type`, `{"@type":"<processName>"}`). **Event class name and FQCN:** the event-data class is `{Domain}\{BC}\Process\{Process}\Event\<ucfirst(node name)>` (the node class beside it is `<ucfirst(node name)>Node`) — a node named `invoicePaid` emits `…\Event\InvoicePaid`. Listeners and hand-written transport import exactly that FQCN. A project built before the PascalCase derivation carried the raw lowercase name (`…\Event\invoicePaid`): the next build rewrites the event under the new name, reports "FQCN geändert: Listener-Importe prüfen" as a build Hinweis, and **your `use …\Event\invoicePaid;` imports must be updated by hand** (grep the project for the old FQCN after that build).
 
-1. **Event ◇ node (generated, no body to write).** The node ends `NodeResult::route(Route::OnTrue)->withEvents(new <Event>(...))`: the events travel with the result, not in the data. The runner collects the events of all steps in execution order and reports them on the `ProcessOutcome` for a successful run only (a rejected result and a failed run report none); the generated handler adds each with `addEvent($event, EventScope::Domain)` and the **caller** publishes after the commit, from `$response->getEvents(EventScope::Domain)`. The identity of the event is read from the earlier node explicitly through the typed context — `$ctx->persistHeartbeat()?->data()['heartbeatSignalId'] ?? throw …` — because an event node routes without data and a process that ends on it answers with no fields of its own (on the wire `data` carries only the process `@type`, `{"@type":"<processName>"}`). **Event class name and FQCN:** the event-data class is `{Domain}\{BC}\Process\{Process}\Event\<ucfirst(node name)>` (the node class beside it is `<ucfirst(node name)>Node`) — a node named `invoicePaid` emits `…\Event\InvoicePaid`. Listeners and hand-written transport import exactly that FQCN. A project built before the PascalCase derivation carried the raw lowercase name (`…\Event\invoicePaid`): the next build rewrites the event under the new name, reports "FQCN geändert: Listener-Importe prüfen" as a build Hinweis, and **your `use …\Event\invoicePaid;` imports must be updated by hand** (grep the project for the old FQCN after that build).
-2. **Custom node that publishes itself (below).** The node calls the aggregate command through the kernel seam, so it holds that `DomainResponse` and its events in hand, and hands them to a transport via `handle()`.
-
-A node's `data` holds business fields only: status, rejects and events are carried by the `NodeResult` itself (`reject(...)`, `withEvents(...)`), never by a key inside `data` — do not put events or a status into `data`.
+A node's `data` holds business fields only: status, rejects and events are carried by the `NodeResult` itself (`reject(...)`, `withEvents(...)`), never by a key inside `data` — do not put events or a status into `data`. A node does not publish: announcing is the Event ◇ node's job, publishing is the delivery code's.
 
 **Event payload identity (X-3).** `<Agg>{ChildEntity}Added` events carry the affected child's business identifier (`<childIdentifier>`) when G4 is satisfied — otherwise the internal PK (same rule as the Command response, see Recipe 6). Wire your listener against the business key whenever you can; the internal PK is meaningful only inside the aggregate and changes on rebuild scenarios where data is reseeded.
 
-**Publish from a Process node** (`{BC}/Process/<Name>/Command/Handler/Action/<NodeClass>.php`, `extends <Domain>Context`). The node calls the aggregate command itself (kernel seam), takes the command's events off **that** response and publishes them. The reusable part is the `handle()` call into the transport package — never `new` a publisher/client (V2/V3).
+**Publish from delivery code (`App/**`).** After the commit the caller holds the answer of the door and publishes its Domain events. That code is delivery code — row 10 of the table in `generated-code-extend` §10: it takes the events from the answer, hands them to the transport package, and carries no business decision. It reaches the BC only through the doors `{agg}()` / `process()`, and the transport package through the kernel's accessors (`$kernel->messaging()`, `$kernel->httpClient()`); never `Model/**`, a repository or `DbQuery`.
 
 **Kafka / RabbitMQ / Redis** via `jardisadapter/messaging`:
 
 ```php
-public function __invoke(CreateCounterContext $ctx): NodeResult
-{
-    /** @var DomainResponseInterface $response */
-    $response = $this->handle(Counter::class)->createCounter($ctx->input()->create);   // illustrative: `create` = the process-input field carrying the command DTO; the response is held here, not read from an earlier node
+// App/** — delivery code, no business logic
+$response = $app->counter()->process()->createCounter($dto);   // the public door of the BC
 
-    if ($response->isSuccess()) {
-        foreach (array_merge(...array_values($response->getEvents())) as $event) {
-            $this->handle(MessagingService::class)
-                ->publish('meterdevice.counter.counter.created', $event);
-        }
+if ($response->isSuccess()) {
+    foreach (array_merge(...array_values($response->getEvents(EventScope::Domain))) as $event) {
+        $kernel->messaging()?->publish('meterdevice.counter.counter.created', $event);   // MessagingServiceInterface of the DomainKernel
     }
-
-    return (new MapResponse())($response);   // 2xx → ok(flat reference payload), the run answers with it as the end node; 4xx → reject
 }
 ```
 
-**HTTP webhook** via `jardisadapter/http`:
-
-```php
-foreach (array_merge(...array_values($response->getEvents())) as $event) {
-    $this->handle(HttpClient::class)->post($webhookUrl, (array) $event);   // event array → JSON body; headers = 3rd arg
-}
-```
-
-**Projection in the same process** (projection, audit trail) — a synchronous call from the node body through `handle()`, not an event subscription:
-
-```php
-foreach (array_merge(...array_values($response->getEvents())) as $event) {
-    $this->handle(CounterProjector::class)->onCreated($event);
-}
-```
+An **HTTP webhook** goes the same way through the kernel's PSR-18 `httpClient()` (`adapter-http`). A projection or audit trail is not a free projector class: model it as a Process (or an aggregate Command) that the delivery code calls through `process()`.
 
 **Rules:**
 
-- Never `new` publishers / clients inside the node — always `handle()` (V2 / V3).
+- Never `new` publishers / clients — take them from the DomainKernel accessors (V2 / V3).
 - Never fill the generated `<Agg>EventRouter` bodies — the tree is hermetic (V1); the router's channel-key comments are documentation for the topic names, nothing more.
-- A node runs **synchronously** in the workflow. Long operations → enqueue and let a consumer pick up, the node only hands off.
-- A throwing node ends the run as a technical failure: rollback, answer 500, the cause is logged once by the package (`generated-code-workflow-api` §7). A node does not catch an exception to route it; wrap `try/catch` inside the node only if "event delivery must not fail the process".
-- **Tenant / feature-flag transport variant:** because ClassVersion can resolve any generated class, a `v{N}/Event/<Agg>EventRouter.php` next to the baseline is the escape hatch for a per-version router — but version *creation* is out of scope; prefer the Process node (`generated-code-versioning` §1).
+- A node runs **synchronously** in the workflow and publishes nothing; the delivery code publishes after the commit and decides nothing about the business.
+- A throwing node ends the run as a technical failure: rollback, answer 500, the cause is logged once by the package (`generated-code-workflow-api` §7). A node does not catch an exception to route it; wrap `try/catch` inside the node only to turn a failure into a `reject` or a route.
 
 ### 2. Phase-3 cookbook
 
-Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives under `{BC}/Model/{Agg}/` (hermetic, never edited); **all developer code lands under `{BC}/Process/<Name>/`** — node bodies in `Command/Handler/Action/` (`@node-id` body-preserve), VOs in `ValueObject/`, Domain Services in `Service/`, optional reads in `Query/`, repos in `Repository/`.
+Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives under `{BC}/Model/{Agg}/` (hermetic, never edited); **hand code stands only at the places of the table in `generated-code-extend` §10** — node bodies in `{BC}/Process/<Name>/Command/Handler/Action/` (`@node-id` body-preserve), Closure/Rule bodies in `{BC}/Closure/`, Domain Services in `{BC}/Service/`, delivery code in `App/**`.
 
-**Recipe 1 — VO used for validation (in a Process node)**
+**Recipe 1 — Validating a domain concept (in a Process)**
 
-The aggregate's generated Hydrate/Build pipeline is hermetic — you cannot inject a VO into it. Validate the domain concept in a **Process node** that runs before (or instead of) the aggregate command. Author the VO in the Process scope:
+The aggregate's generated Hydrate/Build pipeline is hermetic. A value is checked by the model first: column type, value list and length in the Schema, the process input type. A pattern the model has no setting for (an OBIS code, an IBAN) is a **Closure**: declare a catalog entry with a scalar input and the verdict output (Closure editor or MCP `save_closures`), drop it into the Process as a Rule node, and write the check into the stub body. No free value-object class exists (`generated-code-extend` §10).
 
-VO `{BC}/Process/CounterChange/ValueObject/ObisCode.php`:
+Rule stub `{BC}/Closure/ObisCodeIsValid.php` (frame generated, body yours):
 
 ```php
-namespace MeterDevice\Counter\Process\CounterChange\ValueObject;
-
-final class ObisCode
+final class ObisCodeIsValid extends MeterDeviceContext
 {
-    public function __construct(public readonly string $code)
+    public function __invoke(string $obis): RuleResult
     {
-        if (!preg_match('/^\d+-\d+:\d+\.\d+\.\d+\*\d+$/', $code)) {
-            throw new \InvalidArgumentException("Invalid OBIS: {$code}");
-        }
+        return preg_match('/^\d+-\d+:\d+\.\d+\.\d+\*\d+$/', $obis) === 1
+            ? RuleResult::pass()
+            : RuleResult::reject(rule: self::class, messageKey: 'counter.obisInvalid', context: ['obis' => $obis]);
     }
 }
 ```
 
-Use it from a custom-node body (`{BC}/Process/CounterChange/Command/Handler/Action/ValidateNewValue.php`):
+In the Process the Rule node binds the input with the long form `ruleArgs: [{"param": "obis", "source": "obis"}]` (Recipe 10): a violation is `reject(ResponseStatus::RuleViolation, …)` — 422 with the catalog `messageKey` `counter.obisInvalid`, the run ends and rolls back (`reject` is not a route); a passed check takes `Route::OnTrue`. Without a catalog `messageKey` the body's key passes through. For a tenant-specific variant of the Rule see `Closure/v{N}/` (`generated-code-versioning` §1).
 
-```php
-public function __invoke(CounterChangeContext $ctx): NodeResult
-{
-    try {
-        $this->handle(ObisCode::class, $ctx->input()->obis);
-    } catch (\InvalidArgumentException) {
-        return NodeResult::reject(ResponseStatus::RuleViolation, 'counter.obisInvalid', ['obis' => $ctx->input()->obis]);   // 422, the run ends, rollback
-    }
+**Recipe 2 — External lookup (External-Call node, Domain Service)**
 
-    return NodeResult::route(Route::OnTrue);   // no data of its own: this node only decides
-}
-```
-
-`handle()` constructs the VO (V2/V3 — never `new`). A bad OBIS throws in the constructor; the node translates it into a `reject` (422, the run ends and rolls back — `reject` is not a route). Declare the status in the node's `rejects[]` (here 422, key `counter.obisInvalid`) — a dev body that rejects with a literal status its node does not declare is the blocker `V-NODE-REJECT-UNDECLARED`. Without the `try/catch` the exception is a technical failure and answers 500. For a tenant-specific variant of any generated class, see the `v{N}/` escape hatch (`generated-code-versioning` §1).
-
-**Recipe 2 — Domain Service for external lookup**
-
-Author the Service in the Process scope (`{BC}/Process/CounterChange/Service/ResolveMeterLocationName.php`):
-
-```php
-namespace MeterDevice\Counter\Process\CounterChange\Service;
-
-final class ResolveMeterLocationName
-{
-    public function __construct(private readonly HttpClientInterface $http) {}
-    public function __invoke(string $meterLocationIdentifier): string
-    {
-        $r    = $this->http->get("/meter-locations/{$meterLocationIdentifier}");  // ResponseInterface (PSR-7)
-        $data = json_decode($r->getBody()->getContents(), true);
-        return (string) ($data['name'] ?? $meterLocationIdentifier);
-    }
-}
-```
-
-Call it from a custom-node body via `$this->handle(ResolveMeterLocationName::class, $cmd->meterLocationIdentifier)`. V9: the service reads only, no persistence — persistence stays in the aggregate command the process invokes.
+Model an **External-Call** node in the Process Designer. The generator emits the Service stub `{BC}/Service/ResolveMeterLocationName.php` (extends the Domain Context, header-aware merge, `generated-code-extend` §1) with the PSR-18 scaffold via `$this->resource()->httpClient()` (null-guarded) and a docblock with the transport-error convention (`Route::OnFalse` / `Route::OnTimeout`); the node body delegates to it (`return $this->handle(ResolveMeterLocationName::class)->__invoke($context);`). Your part is the body of the Service's `__invoke()`: build the request, call the client, translate the answer into your own vocabulary (ACL), return a `NodeResult`. V9: the Service reads only — it writes nothing in its own BC. The routes the body takes (`onFalse`, `onTimeout`) are drawn in the Process Designer; an undeclared route is a 500. The HTTP client is described in `adapter-http`.
 
 **Recipe 3 — A new operation: aggregate command/query vs. BC-level Process**
 
@@ -159,33 +101,29 @@ No method is hand-written and nothing under `{Agg}/` is edited — both facades 
 **Case B — a BC-level operation or one that coordinates several aggregates.** Model a **Process** in the Process Designer. The Generator emits, under `{BC}/Process/<Name>/`:
 
 1. `Command/<Name>.php` — the self-contained input DTO (`readonly`, its own `input.fields` — Recipe 5). Namespace: `…\Process\<Name>\Command\<Name>`.
-2. `Command/Handler/<Name>Handler.php` — the door that starts the run (`ValidateInput`, `CheckActor`, `RunInTransaction` around `ProcessRunner::run(...)`, events, answer), next to the graph `<Name>Definition.php`, the input gate `<Name>Validator.php`, the typed run view `<Name>Context.php` and (only if the process reads request attributes) `<Name>Actor.php` — `generated-code-workflow-api` §1/§6. ForceOverwrite — regenerated, not edited. Namespace: `…\Process\<Name>\Command\Handler\<Name>Handler`.
+2. `Command/Handler/<Name>Handler.php` — the door that starts the run (`ValidateInput`, `CheckActor`, the run step `RunProcess` with `RunOwnedTransaction` around `ProcessRunner::run(...)`, answer closures of `response`), next to the run step `RunProcess.php`, the graph `<Name>Definition.php`, the input gate `<Name>Validator.php`, the typed run view `<Name>Context.php` and (only if the process reads request attributes) `<Name>Actor.php` — `generated-code-workflow-api` §1/§6. ForceOverwrite — regenerated, not edited. Namespace: `…\Process\<Name>\Command\Handler\<Name>Handler`.
 3. `Command/Handler/Action/<NodeClass>.php` — one node stub per node. Custom nodes are `CreateIfNotExists` with an `@node-id` marker; **the body is yours** and survives rebuilds. Namespace: `…\Process\<Name>\Command\Handler\Action\<NodeClass>`.
 4. A thin-dispatch method on the hermetic `{BC}Process` facade: `return $this->context(<Name>Handler::class, $in, $version)();` — reached via `$bc->process()->{name}($dto)`.
 
-The segments `Query/`, `Repository/`, and `Service/` are **not emitted** by the Generator — they are developer-authored as needed (AI-/Dev-owned).
+Hand code in a process stands only in the custom-node bodies; a Domain Service lives at `{BC}/Service/` (`generated-code-extend` §10).
 
 Your logic lives in the custom-node bodies. The process has **no aggregate ownership** and invokes whichever aggregate commands/queries it needs via `$this->context(...)` / `$this->handle(...)` from a node.
 
 **Recipe 4 — Event to Kafka (end-to-end)**
 
-A concrete instance of §1, way 2. Model a Process whose node invokes the aggregate command and publishes its events in the same node body:
+A concrete instance of §1. Model a Process whose nodes call the aggregate command and then announce the Domain event with an Event ◇ node (generated, no body to write); the delivery code in `App/**` publishes it after the commit:
 
 ```php
-// {BC}/Process/CreateCounter/Command/Handler/Action/CreateAndPublish.php
-public function __invoke(CreateCounterContext $ctx): NodeResult
-{
-    /** @var DomainResponseInterface $response */
-    $response = $this->handle(Counter::class)->createCounter($ctx->input()->create);   // held in this node
+// Process CreateCounter: node 1 calls the aggregate command (generated default body),
+//                        node 2 is the Event ◇ node `counterCreated` — NodeResult::route(OnTrue)->withEvents(new CounterCreated(...))
 
-    if ($response->isSuccess()) {
-        foreach (array_merge(...array_values($response->getEvents())) as $event) {
-            $this->handle(MessagingService::class)
-                ->publish('meterdevice.counter.counter.created', $event);
-        }
+// App/** — delivery code, no business logic
+$response = $app->counter()->process()->createCounter($dto);
+
+if ($response->isSuccess()) {
+    foreach (array_merge(...array_values($response->getEvents(EventScope::Domain))) as $event) {
+        $kernel->messaging()?->publish('meterdevice.counter.counter.created', $event);
     }
-
-    return (new MapResponse())($response);   // 2xx → ok(reference payload) = the answer of the run (this node is the end), 4xx → reject
 }
 ```
 
@@ -241,7 +179,7 @@ Substitute the actual root identifier name (e.g. `counterId`, `meterNumber`) whe
 
 **Command response** never carries domain state — only the reference value(s) the caller needs to address what just changed (event-sourcing / correlation). For the full state after a write, the caller issues the matching read-base query — `get{Agg}By{UniqueKey}` with the echoed business key, or `get{Agg}ById` (CQRS).
 
-**Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a Process answer, add fields to the flat payload your end node returns (`NodeResult::ok($response->getData() + ['extra' => $value])` — Decorator at process level, see `generated-code-extend` §4); `BuildResponseData` puts `@type` in front and answers with it (not on a process with a `successOutput` declaration: it trims `data` to the declared fields, so an extra field must be declared to reach the wire). Do not use the key `@type` for business fields.
+**Adding a custom field.** The `setData(...)` block sits inside the generated, hermetic operation `__invoke()` body — you do not edit it (V1). To enrich a Process answer, add fields to the flat payload your end node returns (`NodeResult::ok($response->getData() + ['extra' => $value])`); `BuildResponseData` puts `@type` in front and answers with it (not on a process with a `successOutput` declaration: it trims `data` to the declared fields, so an extra field must be declared to reach the wire). Do not use the key `@type` for business fields.
 
 **Declared success answer (`successOutput`, optional process key).** By default a Process answers what it derives from the node it ends on (the row above). A process can instead **declare** its success `data` — set through MCP `save_process`, no Designer editor; a save is a full replace, so carry the value you loaded. The declaration beats the derivation: every success node counts as the determined host, the reference search and the host warning disappear. Without the key nothing changes. The block is `{fields: [...]}` (blocker `V-PROC-SUCCESSOUT`: an empty block, a duplicate field name, the name `@type`, a type outside the column-type vocabulary of `Schema.json`, or a process without a success exit):
 
@@ -317,10 +255,10 @@ public function __invoke(CounterChangeContext $ctx): NodeResult
 
 **Recipe 9 — Cross-BC write: translate → foreign `process()` → map response (G7)**
 
-A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`; the same rule is additionally sealed as a PHPStan boundary gate): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no process mandate). The generated Service (`{Domain}/Service/<Name>.php`, `generated-code-extend` §1) is the ACL — it never passes the caller's DTO through unchanged.
+A Cross-BC-Call node whose target **mutates** state in a foreign BC must target that BC's **process**, never its aggregate — the Designer/Validator enforce this (`V-XBC-WRITE-TARGET`): `consumedCalls` for a foreign write offers only process methods of the target BC. Reads stay on the foreign `{Agg}Read` (unrestricted, no process mandate). The generated Service (`{BC}/Service/<Name>.php` of the calling BC, `generated-code-extend` §1 and §10) is the ACL — it never passes the caller's DTO through unchanged.
 
 ```php
-// {Domain}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
+// {BC}/Service/<Name>.php — generated scaffolding, __invoke() body is yours
 final class CheckStockInCatalog extends EcommerceContext
 {
     public function __invoke(ProcessContext $context): NodeResult
@@ -360,11 +298,11 @@ final class CheckStockInCatalog extends EcommerceContext
 }
 ```
 
-**Cross-BC read needs no `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC (its `{Agg}Read` methods) is a Cross-BC-Call node on its own: the Service is derived as `{Process}{Node}` (never written into the model), the generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's decision: a `reject` (404), or a `Route::OnFalse` when the process should carry on. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
+**Cross-BC read: declare `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC (its `{Agg}Read` methods) is a Cross-BC-Call node on its own; declare `crossBcCall: {ServiceName}` on it so that one shared Service per target serves every node with that target (without the declaration the generator derives one shared Service per target, named from the target's facade segments after the domain prefix and its call key, e.g. `BillingInvoiceGetById`). The generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's decision: a `reject` (404), or a `Route::OnFalse` when the process should carry on. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
 
 **Declarations the body needs:** the `reject(ResponseStatus::NotFound, …)` status belongs in the node's `rejects[]` (`V-NODE-REJECT-UNDECLARED`), and the `Route::OnFalse` branch needs an `onFalse` edge on the node (`V-PROC-ROUTE-UNDECLARED` warns, an undeclared route is a 500 at run time).
 
-**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; only the foreign **write** facade stays off-limits (V6-sibling). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
+**Rules:** the foreign BC facade itself (`$this->handle({TargetBC}::class)`) is fine to hold — `product()`/`process()` are its own public surface, not an internal hop; a foreign aggregate, its write facade, its repository and SQL stay off-limits (V6). Same-BC writes stay on the kernel seam (Recipe 3 Case A) — this recipe is only for a write into a **different** BC.
 
 **Dev-body 4xx failure form.** A dev body (custom, sub-process, cross-BC or external-call node) refuses with `NodeResult::reject(ResponseStatus, $messageKey, $context, $errors)` — only 4xx is allowed, a 5xx case is an exception, not a `reject()` (workflow 4.0, `generated-code-workflow-api` §2/§7). The door builds the failure form from the **context keys it knows** (`BuildFailureForm`, package `response`): 400 `validation` from `fields`, 404 `notFound`, 409 `concurrencyConflict` from `reason` / `aggregate` / `violated`, 422 `ruleViolation` from `rule`; every other context key travels as the `context` of the form, and a form field you do not name stays empty (nothing is filled from `errors` or the node name). Any other 4xx (401/403/405) has no form of its own and is passed through as `{messageKey, context}`. The message key a node declares for the status (`rejects(status, key)` on the node's exit) joins `data['messageKey']` of every status >= 400; without one the key named in `reject(...)` is used. The status must be declared in the node's `rejects[]` (`V-NODE-REJECT-UNDECLARED`). So to answer 404 or 422 from a cross-BC service, `reject` with that status and the form's context keys, not free-form business keys. **Contract side:** a Process door declares 422 `ruleViolation` in its OpenAPI whenever a Rule or a dev body of its **own** BC is reachable (a Custom/Query node with a body, also through sub-processes) — with an own-BC dev body reachable the `messageKey` is an open string (no enum), with only Rules reachable it stays the enum of the Rule keys; a cross-BC or external call alone declares no 422 in the contract (it still passes through at runtime). `responses[]` never carries the 422 itself.
 
@@ -400,7 +338,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 }
 ```
 
-**What's generated, what's yours:** the Generator emits the stub signature + the `Closure/Data/RuleResult.php` VO + a hermetic `Closure/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. When the catalog entry declares a `messageKey`, the generated Guard (and the generated Process Rule node) sets that key as a literal and the `messageKey` you pass to `reject()` is not taken over — the body only decides passed/rejected and supplies `context` (the work package's `output.rejectNote` says so); declare the key in the catalog and pass the same key in the body. Without a catalog `messageKey` the body's key passes through. Your only job is the `__invoke()` body above.
+**What's generated, what's yours:** the Generator emits the stub signature (the verdict class `RuleResult` is the package's `JardisSupport\Response\Data\RuleResult`, imported by the stub header) + a hermetic `Closure/Guard/GuardUpdateCounter.php` that runs the bound chain (AND, short-circuit) from inside the generated `UpdateCounterHandler` — you never call the Guard yourself, and you never wire the rejection into a response: a chain rejection surfaces as `ResponseStatus::RuleViolation` (422) with `{rule, messageKey, context}` automatically. When the catalog entry declares a `messageKey`, the generated Guard (and the generated Process Rule node) sets that key as a literal and the `messageKey` you pass to `reject()` is not taken over — the body only decides passed/rejected and supplies `context` (the work package's `output.rejectNote` says so); declare the key in the catalog and pass the same key in the body. Without a catalog `messageKey` the body's key passes through. Your only job is the `__invoke()` body above.
 
 **Rule as a Process node:** the same catalog entry can additionally be dropped as a node in the Process Designer — a catalog reference (matrix-ineligible, like a sub-process node), the generated node is hermetic: `passed` takes `Route::OnTrue`, a violation is `NodeResult::reject(ResponseStatus::RuleViolation, …)` (422, the run ends — `ruleMode` `guard`, the default) or, with `ruleMode: decision`, a `Route::OnFalse` the process goes on over (a guard rule node declares no `onFalse` edge, `V-NODE-GUARD-ONFALSE`). This is for an **early** check in a flow (before expensive work), not a replacement for the endpoint chain — binding the same Rule both at the endpoint and as a node in a process that calls that endpoint is flagged (M7, a build-time warning, not an Error: possible double-execution / inconsistent existing-data reads between the two runs).
 
@@ -413,7 +351,7 @@ final class CounterMustBeActive extends MeterDeviceContext
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
 - A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
 - Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `generated-code-versioning`); a catalog-declared `messageKey` guarantees this across versions.
-- TOCTOU is a known v1 boundary (`generated-code-extend` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. Harden with a DB constraint if the invariant is truly hard.
+- TOCTOU is a known v1 boundary (`generated-code-extend` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. If the invariant is truly hard, close it in the model: a DB constraint in `Schema.json` (Recipe 12) or state with a conditional write (Recipe 11).
 
 **Recipe 11 — Invariant as state: securing a uniqueness invariant across process boundaries**
 
@@ -534,11 +472,11 @@ catch, rolls back (own transaction) or to its savepoint (open bracket), and thro
 an FK violation stays a technical 500. No driver knowledge in the generate, nothing to write.
 
 - Use Recipe 11 (gatekeeper) only where NO database UNIQUE index can carry the invariant (a state over several rows, a counter, a status transition).
-- Dev code that writes OUTSIDE the generated persist (own `Repository/` or `Service/` under `{BC}/Process/{Name}/`) catches `UniqueViolationException` itself and translates it to its own business answer (e.g. a 409 `DomainResponse`); it never inspects driver error codes or SQLSTATE.
+- Hand code never writes outside the generated persist (no own repository, no SQL): a write is an aggregate Command or a `process()` call, and its unique-key collision is the 409 `duplicate` described above.
 - Keep the DB UNIQUE index in `Schema.json` — it is the only carrier; without it nothing throws and the duplicate is stored.
-- **Concurrent losers are 409, not 500, also on a transient database conflict** (contracts ≥ v2.6.0, repository ≥ v1.6.0): a snapshot/serialization conflict or deadlock (MariaDB 1020 with `innodb_snapshot_isolation=1`, 1213, 40001, Postgres 40P01) is typed `TransientConflictException` and answers 409 `stale_write` / `stale_delete` with `violated: []` — see Recipe 11 Case B for how it reaches a process node (MariaDB/MySQL: the process bracket answers it, no node retry) and why the repeat is a client retry in a new transaction. Dev code that writes outside the generated persist and catches `\Throwable` must let this type pass.
+- **Concurrent losers are 409, not 500, also on a transient database conflict** (contracts ≥ v2.6.0, repository ≥ v1.6.0): a snapshot/serialization conflict or deadlock (MariaDB 1020 with `innodb_snapshot_isolation=1`, 1213, 40001, Postgres 40P01) is typed `TransientConflictException` and answers 409 `stale_write` / `stale_delete` with `violated: []` — see Recipe 11 Case B for how it reaches a process node (MariaDB/MySQL: the process bracket answers it, no node retry) and why the repeat is a client retry in a new transaction.
 
-**The 409 names the violated fields (`violated`).** The `duplicate` payload carries one more key: `violated: list<string>` — the **outer** field names (FieldMap) of the unique columns that were hit, so a form can mark the field: `{"@type":"concurrencyConflict","reason":"duplicate","aggregate":"…","context":{…},"violated":["email"]}`. A root field is its plain outer name; a child field is `<kindProperty>.<field>` (e.g. `phones.number`). Columns without an outer name (FKs, the internal `id`) are omitted. `violated` is `[]` — always a JSON list, never `{}` — when the columns are unknown and on every `stale_write` / `stale_delete` answer (those name no field). The columns come from the repository package (`UniqueViolationException::getColumns()` / `getTable()`, contracts ≥ v2.5.0, repository ≥ v1.5.0; `[]` = unknown, never a partial list); dev code that catches the exception itself can read the same two getters.
+**The 409 names the violated fields (`violated`).** The `duplicate` payload carries one more key: `violated: list<string>` — the **outer** field names (FieldMap) of the unique columns that were hit, so a form can mark the field: `{"@type":"concurrencyConflict","reason":"duplicate","aggregate":"…","context":{…},"violated":["email"]}`. A root field is its plain outer name; a child field is `<kindProperty>.<field>` (e.g. `phones.number`). Columns without an outer name (FKs, the internal `id`) are omitted. `violated` is `[]` — always a JSON list, never `{}` — when the columns are unknown and on every `stale_write` / `stale_delete` answer (those name no field). The columns come from the repository package (`UniqueViolationException::getColumns()` / `getTable()`, contracts ≥ v2.5.0, repository ≥ v1.5.0; `[]` = unknown, never a partial list).
 
 **Recipe 13 — Write a computed field from a process node (`Set{Entity}Computed`)**
 
@@ -580,15 +518,15 @@ Every Process runs in **one** transaction by default — nothing to model. `runI
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `LogicException: Cannot resolve ClassName` | BC vs. Model segment swapped in namespace | Namespace is `<Domain>\<BC>\Model\<Agg>\…` — BC and Model are two segments even when they share a name (the `Model/` segment sits between them) |
-| Edit under `{BC}/Model/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`), re-model the aggregate in the Designer, or (tenant variant) author a `v{N}/<Class>.php` next to the baseline (`generated-code-versioning` §1) |
-| `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — author transport in a **Process node** that publishes the events of the aggregate command's response (§1) — or let an Event ◇ node announce a Domain event with `NodeResult::route(Route::OnTrue)->withEvents(...)` |
-| Versioned override (`v2/…`) ignored | The call isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing | Thread the version through the call (`$bc->{agg}()->getCounterById($dto, 'v2')` for reads, or `$this->handle(Counter::class)->createCounter($dto, 'v2')` family-internally for writes) — there is **no** domain-wide `version()` default to set instead, the per-call argument is the only lever; the variant must sit at `{Agg}/…/v2/<Class>.php` (immediate neighbour of the baseline) — `generated-code-versioning` §1 |
+| Edit under `{BC}/Model/{Agg}/` gone after rebuild | The **whole** aggregate tree is hermetic (ForceOverwrite, V1) — every build truncates and rewrites it; there is no override slot inside it | Move the behaviour to a **Process** (`{BC}/Process/<Name>/Command/Handler/Action/`) or re-model the aggregate in the Designer |
+| `on<Event>()` edit gone after rebuild | Bodies were filled in the hermetic `<Agg>EventRouter.php` | Never edit the router — announce a Domain event with an Event ◇ node (`NodeResult::route(Route::OnTrue)->withEvents(...)`) and publish it from `App/**` delivery code after the commit (§1) |
+| Versioned variant (`v2/…`) ignored | The call isn't passing `'v2'` as `$version`, or a needed `ClassVersionConfig` fallback entry is missing, or the class is hermetic (a hermetic class takes no variant) | Thread the version through the facade door that starts the run (`$bc->process()->{process}($dto, 'v2')`) — there is **no** domain-wide `version()` default to set instead, the per-call argument is the only lever; the variant must sit in the stub's `v2/` subdir (immediate neighbour of the baseline stub: node, Closure/Rule or Domain Service) — `generated-code-versioning` §1 |
 | Build/validation blocked by `V-EVT-NODE-ELIGIBLE` or `V-EVT-MIN-ONE` on an Event ◇ node | A node-source event field (`latest`/`all`) does not point to an aggregate Command of the own BC with an identity chain (it is a Query call, Process call, foreign BC, Sub-Process or Event node, or its aggregate cannot be loaded), or the Event node has no event field at all. Blocker at validation and at every build door; no throwing stub is emitted | Re-point the field to an aggregate Command node of the own BC (or add at least one event field) in the Designer; read the message — it names process, event node, field, source node and reason |
-| Directory under `{BC}/Process/` warned about, not deleted | It is not a process of the model and holds no generated node file (`@node-id`) — the build keeps it and names its path in the build result. Only a generator-created directory of a process removed from the model is deleted, with all its content | Move developer code to `{BC}/Process/{Name}/…` of a modelled process, or delete the directory yourself |
+| Directory under `{BC}/Process/` warned about, not deleted | It is not a process of the model and holds no generated node file (`@node-id`) — the build keeps it and names its path in the build result. Only a generator-created directory of a process removed from the model is deleted, with all its content | Move the behaviour into a node body of a modelled process or into `{BC}/Service/`, or delete the directory yourself |
 | Process node body lost after rebuild | The custom node lost its `@node-id` marker, or the file had broken syntax so the body-preserve merger could not parse it | Keep the generated `@node-id` DocBlock marker intact; fix the parse error. The merger regenerates the node *header* but preserves the body keyed by `@node-id`. (The Designer's "Force" build path deliberately overwrites a node body.) |
 | Process node not invoked though it's in the graph | The node is not declared with `node()` in the `ProcessDefinition`, or the route the previous node took has no declared target — an undeclared route throws `UnroutedStatusException` (500); an end is declared with `terminal(...)` / `onX(null)` | Declare every node as its own `node(...)` and every route a node can take (`onTrue(Next::class)`, `onFalse(...)`, `terminal(...)`) — `generated-code-workflow-api` §3 |
 | `Error: Cannot instantiate abstract class` / "Service X not in container" | Direct `new` bypassing `handle()` (V2 / V3) | Replace with `$this->handle(X::class, ...)` from inside the node |
-| `Cannot import OtherBC\...` review blocker | V6 violation (cross-BC import) | Add a Domain Service in the Process scope and call the other BC via `handle()` |
+| `Cannot import OtherBC\...` review blocker | V6 violation (foreign-BC internals) | Reach the other BC only through its doors, from a Domain Service (`{BC}/Service/`) or a Cross-BC-Call node: `{Agg}Read` reads, `process()` writes; no foreign aggregate, repository or SQL |
 | Process tries to extend an aggregate DTO (`extends platform:…`) | Not supported — a process input is self-contained (Recipe 5) | Declare the fields the process needs in `input.fields`; fetch aggregate data by running its query from a node |
 | Event node / node reading `data()['<ctx>']` fails or yields `null` | `data()` of an earlier node is flat — there is no handler-name or root level; a read keyed by context, or with `?? null`, misses; a node that routed without data (`route(...)`) has `data() === null`, and nothing is handed on from it | Read the field flat and explicitly: `$ctx->latest(Node::class)?->data()['<idProp>'] ?? throw …` — let a missing key fail instead of reading `null` |
 | PHPStan `throws.unusedType` on a node, Closure or Service body you just filled | A project built before the placeholder rule still carries the `@throws \RuntimeException` the old builder derived from the stub's placeholder `throw` (a freshly generated stub carries none: a `throw` whose statement holds a `Not implemented: …` marker is a placeholder, never a contract). The tag is reconciled against the body at the next build, not when you save the file; a real `throw` you write yourself keeps its tag | Run `build` / `build_domain` after filling the bodies, then PHPStan again |

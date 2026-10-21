@@ -51,7 +51,7 @@ Private helpers are fine. A second public method means the class is two closures
 
 ### 3. Orchestrator: bind closures in the constructor
 
-The orchestrator binds its closures with first-class callable syntax and only chains them — output of one is input of the next. It holds no business logic.
+The orchestrator binds its closures with first-class callable syntax and only chains them — output of one is input of the next. It holds no business logic; at most it decides a branch from the return value of a closure. This holds for every orchestrator, also for a generated door or handler.
 
 ```php
 final class Filesystem
@@ -75,11 +75,13 @@ final class Filesystem
 }
 ```
 
-- Store the closure once (`(new Handler())->__invoke(...)`); never call `new Handler()` inline in a method body.
+- Store the closure once (`(new Handler())->__invoke(...)`); never call `new Handler()` inline in a method body. This is the form of package building. In a class that owns `handle()` (a Jardis app: generated or hand-written) there is no `new` on a class of the project namespace; a package closure is called through `->handle()` too (decision 2026-10-19).
 - A closure may wrap another closure (decorator): an authorisation closure takes the permission check as a closure argument, a retry closure wraps the transport closure.
 - When an interface prescribes several public methods, the orchestrator implements each one by delegating to its own closure.
 
 ### 4. Directory layout
+
+This layout holds for building a Jardis package. It does not hold for hand code in an app: there, hand code sits only in the places of `generated-code-extend` section 10, and no helper or base class is added beside them.
 
 ```
 src/
@@ -115,7 +117,7 @@ tests/
 | Handlers scattered in feature directories | Central `Handler/` with category subdirectories |
 | Value objects or enums scattered in feature directories | Central `Data/` or a cohesive `Config/` |
 | Test fakes in `src/` | Move to `tests/Support/` |
-| `new Handler()` called inline | Bind `(new Handler())->__invoke(...)` once |
+| `new Handler()` called inline | Package building: bind `(new Handler())->__invoke(...)` once. In a `handle()` class of an app: no `new`, call through `->handle()` |
 
 ### 6. Pattern syntax
 

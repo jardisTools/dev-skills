@@ -145,8 +145,8 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (events only after the commit). `update_process_metadata` writes `runInTransaction` only when
    you pass it; `false` is the explicit opt-out and draws the warning `V-PROC-TX-OPTOUT`
    (`validate_process`, finding source `process`). A node whose `consumedCalls` resolve into a
-   foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (Service `{Process}{Node}`
-   derived).
+   foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (ONE shared Service per target,
+   named from the target, derived).
    **Success answer (`successOutput`).** A process answers by default what it derives from the node it
    ends on. To name the 200 `data` yourself, put the key `successOutput` on the process wire of
    `save_process` (top level of `process`, next to `input` / `nodes`); no Designer editor, a save is a

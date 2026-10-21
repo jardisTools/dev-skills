@@ -37,11 +37,11 @@ Modelling and design decisions are not free: where data lives versus behaviour, 
 - The first idiom that comes to mind is an assumption until it passes that check.
 - A pure data container carries no behaviour or marker interface (data-behavior separation).
 - Prefer composition over inheritance; state dependencies explicitly.
-- When the strict reading produces clearly higher complexity, a conscious, stated compromise is allowed — never a silent one.
+- When the strict reading produces clearly higher complexity, a conscious, stated compromise is allowed — never a silent one. The compromise never applies to the places and the corridor of hand code (`generated-code-extend` section 10).
 
 ### 4. Use the platform before you program
 
-In a Jardis project, every model element is checked against the capabilities of the Jardis tools BEFORE any code, closure or workaround is planned. The order of means is: declarative tool settings (process, query, aggregate with its schema-column settings and value lists, field map, strategic layer), then a closure for a rule across aggregate boundaries, then hand code on the dev surfaces. Programming what a setting already generates is a defect. The required knowledge and the capability table are in `design-model-capabilities` (jardis profile; absent in a core-only installation), read at interview and PRD time.
+In a Jardis project, every model element is checked against the capabilities of the Jardis tools BEFORE any code or closure is planned. A missing capability is reported (app developer) or built in the package or generator (Jardis developer), never bypassed. The order of means is: declarative tool settings (process, query, aggregate with its schema-column settings and value lists, field map, strategic layer), then a closure for a rule across aggregate boundaries, then hand code in the hand-code places (`generated-code-extend` section 10). Programming what a setting already generates is a defect. The required knowledge and the capability table are in `design-model-capabilities` (jardis profile; absent in a core-only installation), read at interview and PRD time.
 
 ### 5. Reference
 
