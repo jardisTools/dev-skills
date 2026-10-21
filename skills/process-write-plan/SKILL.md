@@ -38,9 +38,9 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the PRD. The head must say phase `pl
 **AK:** numbered, each one checkable by a command or a file.
 ```
 
-Inside a stage the work runs in this order: first what is generated, then what is written by hand, then the tests as a step of their own. `Done when` names those tests: one test per acceptance criterion and per error case, written against the product of the undertaking, not against the mechanics of the generator (`foundation-testing` section 6). The four lines stay four; tests get no line of their own. Which work is generated and which is by hand: `generated-code-extend` section 10.
+Inside a stage the work runs in this order: first what is generated, then what is written by hand, then the tests as a step of their own. `Done when` names those tests: one test per acceptance criterion and per error case, written against the product of the undertaking, not against the mechanics of the generator (`foundation-testing` section 6). The four lines stay four; tests get no line of their own. Which work is generated and which is by hand: `generated-code-extend` section 10; `By hand` names only the places listed there, and what the model cannot carry is a gap to report, not a `By hand` entry.
 
-`Generated` is what a generator or tool produces, `By hand` what is written by hand. Both lines use one entry form: per thing `` <Kind> `<Name>` ``, optionally followed by ` · <note>`; several things are separated by `; `; nothing is `none`. It is the form of the lines under `## Affected` in the understanding sheet (`process-concept`).
+`Generated` is what a generator or tool produces, `By hand` what is written by hand. Both lines use one entry form: per thing `` <Kind> `<Name>` ``, optionally followed by ` · <note>`; several things are separated by `; `; nothing is `none`. It is the form of the lines under `## Affected` in the understanding sheet (`process-concept`). On the `By hand` line the kind is one of the corridor places: node body, closure body, Domain Service, or `App/**` without domain logic (`generated-code-extend` section 10).
 
 ### 3. Cut checks
 

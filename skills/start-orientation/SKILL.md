@@ -22,7 +22,7 @@ that) would only fragment the routing table this skill exists to provide.
 **Platform boundary.**
 (a) The Jardis packages are the build platform; use them first, never rebuild what they provide.
 (b) Packages and the generator are immutable for an app developer: never patch `vendor/`, never edit generated trees.
-(c) A gap in a package or the generator is reported, not rebuilt: open an issue in the affected Jardis repository (package: its GitHub repository; generator: `jardisTools/builder`; skills: `jardisTools/dev-skills`). Until it is delivered, write dev code in the process scope (Closure, Service, Query) and mark it as interim.
+(c) A gap in a package or the generator is reported, not rebuilt: open an issue in the affected Jardis repository (package: its GitHub repository; generator: `jardisTools/builder`; skills: `jardisTools/dev-skills`). There is no interim and no workaround: hand code stays in the hand-code places (`generated-code-extend` section 10) and uses Jardis artefacts only; the gap waits for its delivery. Building the capability in the package or generator first is the way of the Jardis developer.
 (d) Capability catalogs: `packages-find-existing` (packages), `design-model-capabilities` (model).
 
 The lifecycle of a Jardis project runs **packages → schema → design → code**:
@@ -46,6 +46,17 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
    instead via `jardis mcp` → `design-headless-mcp`.
 4. **Implement** — write the behaviour inside the generated Command/Handler/Action stubs.
    → `generated-code-extend` (plus its siblings, see the routing map below); the order of work from model to QA is its §11 "The way".
+
+   Hand code has exactly these places; the full table with allowed dependencies is `generated-code-extend` §10:
+
+   ```
+   {BC}/
+   ├── Model/{Agg}/                                 generated, never edited
+   ├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand)
+   ├── Closure/{Name}.php                           rule / closure body (hand)
+   └── Service/{Name}.php                           Domain Service (hand)
+   App/                                             delivery only, no domain logic
+   ```
 
 #### Importing Access — login, users and tenants without modelling them
 
