@@ -4,6 +4,15 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.38.0] - 2026-10-23
+
+### Changed
+- Skills on `workflow` 5.0 and `response` 2.0, the actor out of the engine: `generated-code-workflow-api`, `generated-code-extend`, `generated-code-recipes` and `generated-code-wire-transport` no longer name the door step `CheckActor`, the actor argument of `ProcessRunner::run`, `ProcessDefinition::actor()` or a per-process `{Name}Actor` class; the actor of a run is the `{Domain}Actor` of the domain context, a node reads it as `$this->actor()` and a sub-process node no longer passes `actor: null` to `context()`. The 401 of an app with a login comes from `RequireSession` of `core/app`, the 403 from `{Domain}CheckAccess` at the top of the door.
+- `generated-code-extend`: the location table lists the domain-root artefacts of the actor (`{Domain}Actor`, `{Domain}ActorKind`, `{Domain}Rights`, `{Domain}CheckAccess`, `{Domain}AccessDenied`).
+- `design-headless-mcp`, `generated-code-wire-transport`: rule V-DOOR-1 (process half) and the description of the door.
+- `start-orientation`: the read doors of the Access blueprint are queries.
+- `packages-find-existing`: `jardissupport/response` no longer lists an actor check among its door steps.
+
 ## [1.34.0] - 2026-10-18
 
 ### Changed
