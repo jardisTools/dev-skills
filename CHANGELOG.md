@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.38.1] - 2026-10-23
+
+### Fixed
+- `design-headless-mcp`, `design-model-capabilities`: the process input field `requestAttribute` takes only `session` (rule `V-INPUT-REQATTR`); tenant and acting subject are carried by the domain actor (`$this->actor()`), a Rule node on a tenant-scoped root takes its scope from `actor()->tenant`. The former `tenant|subject` marker on a process input field and the rule `V-PROC-SCOPE-SOURCE` (no longer existing) are gone from the text.
+- `generated-code-wire-transport`: the generated routes read the request attributes for scope columns and for the `session` process input.
+
 ## [1.38.0] - 2026-10-23
 
 ### Changed
