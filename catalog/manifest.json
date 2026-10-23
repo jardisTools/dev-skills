@@ -114,7 +114,7 @@
   },
   {
     "package": "jardissupport/response",
-    "capability": "the answer of one request-response use case in one shape: response objects, failure forms for 400/404/409/422, the data of the `{status, data, errors, meta}` envelope, read answers (`ReadResult`, `Reference`) and the door steps in front of a use case (input check, actor check, mapping of thrown failures, logging of the 5xx cause)",
+    "capability": "the answer of one request-response use case in one shape: response objects, failure forms for 400/404/409/422, the data of the `{status, data, errors, meta}` envelope, read answers (`ReadResult`, `Reference`) and the door steps in front of a use case (input check, mapping of thrown failures, logging of the 5xx cause)",
     "use_when": "you need to build, map or log the answer of a request-response use case, or a Jardis-style failure form and response envelope, without a process engine",
     "composer_require": "composer require jardissupport/response",
     "alternatives": "to run a node graph use jardissupport/workflow; for transactions use jardissupport/repository"
