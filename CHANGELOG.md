@@ -4,6 +4,18 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.39.0] - 2026-10-25
+
+### Changed
+- Skills on the access model of `jardiscore/app` 3.2, `jardissupport/response` 3.0 and `jardissupport/contracts` 2.17: tenant and user are the entity markers `tenant` / `user` (`design-model-capabilities`, `design-headless-mcp`, `generated-code-extend`); a process node reads `$ctx->input()->tenant` / `->user`, there is no actor object (`generated-code-workflow-api`, `generated-code-recipes`, `generated-code-extend`).
+- `generated-code-wire-transport`: the right per route (`RequireRight`, `access.rightMissing`), `rights.json`, the `routes.php` signature with `?Closure $revokeSession`, `RevokeSessionOnSuccess`, `Api/{Domain}/system.php` over `SignedInRun` and the template `bin/console system`; the 401/403 table.
+- `design-headless-mcp`: project settings `openRoutes` and `sessionProcesses`, Resources `jardis://domain/{domain}/rights` and `jardis://doors/{domain}`.
+- `start-orientation`: the Access blueprint with open routes and session processes.
+- `generated-code-extend`: the generated location table (`make ablage-tabelle`).
+
+### Removed
+- `identifier.scope`, the process-input attribute `tenant`/`subject`, `door` on a process or query, the actor and its domain-root classes from the skill texts.
+
 ## [1.38.1] - 2026-10-23
 
 ### Fixed
