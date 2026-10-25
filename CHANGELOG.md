@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.41.0] - 2026-10-25
+
+### Changed
+- `start-orientation`: "Importing Access" describes the one variant the blueprint catalog ships, `tenant`; the `single` variant is gone from the text.
+- `design-headless-mcp`, `design-model-capabilities`: a process input field takes no request attribute (the former `session` marker and rule `V-INPUT-REQATTR` are gone); the `writeOnly` exclusion names the `tenant`/`user`-marked column instead of the request-attribute column.
+
 ## [1.40.0] - 2026-10-25
 
 ### Changed
