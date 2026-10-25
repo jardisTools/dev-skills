@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.40.0] - 2026-10-25
+
+### Changed
+- Marker columns `tenant` / `user` may be varchar, char, uuid or integer (`design-model-capabilities`, `design-headless-mcp`).
+- A child entity that takes over the effective tenant column of an ancestor via `adopt` is tenant-filtered by derivation: every query rooted at it gets the automatic tenant filter, the value comes from `adopt`, a further marker on that `adopt` column is refused (`design-model-capabilities`, `design-headless-mcp`, `generated-code-extend`).
+
 ## [1.39.0] - 2026-10-25
 
 ### Changed
