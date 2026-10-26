@@ -113,7 +113,7 @@ final class CheckChangelogTopTest extends TestCase
     {
         $content = (string) file_get_contents($this->repoRoot() . '/CHANGELOG.md');
 
-        $result = (new CheckChangelogTop())($content, '1.42.3');
+        $result = (new CheckChangelogTop())($content, '1.42.4');
 
         self::assertNull($result, (string) $result);
     }

@@ -10,7 +10,7 @@ next: []
 
 ### 1. Call chain
 
-Two chains reach the transport layer — **read** and **process** — the BC facade's public surface (G2) exposes no aggregate writes:
+Two chains reach the transport layer — **read** and **process** — the BC facade's public surface (G2) exposes no general aggregate write accessor (a command door at stance `domain` or wider adds a narrow direct chain, G10 below):
 
 ```
 new MyApp($kernel)                ← final Domain facade, holds the DomainKernel (DomainKernelInterface), one per request/run
@@ -26,7 +26,7 @@ new MyApp($kernel)                ← final Domain facade, holds the DomainKerne
     ↓ ->createCounter($dto)       ← DomainResponseInterface
 ```
 
-Three method hops on the `MyApp` instance: BC accessor → `{agg}()`/`process()` accessor → use-case method. **There is no general third chain for aggregate writes from the transport layer.** The aggregate write facade `{Agg}/{Agg}.php` is reachable only family-internally, via the kernel seam (`$this->handle({Agg}::class)`), from classes that extend the Domain Context (Process node bodies, Services — the Context family). A PSR-15 controller, CLI command, or queue consumer is **outside** that family and has no `handle()` of its own — it can only reach `$app->{bc}()->{agg}()` (read) and `$app->{bc}()->process()->{process}()` (write). To let the transport layer trigger a write, model a **Process** around the aggregate command (`generated-code-extend` §2/§4) — a bare aggregate command with no Process is by design not externally callable (G6).
+Three method hops on the `MyApp` instance: BC accessor → `{agg}()`/`process()` accessor → use-case method. **There is no general third chain for aggregate writes from the transport layer.** The aggregate write facade `{Agg}/{Agg}.php` is reachable only family-internally, via the kernel seam (`$this->handle({Agg}::class)`), from classes that extend the Domain Context (Process node bodies, Services — the Context family). A PSR-15 controller, CLI command, or queue consumer is **outside** that family and has no `handle()` of its own — it can only reach `$app->{bc}()->{agg}()` (read), `$app->{bc}()->process()->{process}()` (write) and, for a command door at stance `domain` or wider, `$app->{bc}()->{command}($dto)` (write, G10 below). To let the transport layer trigger a write, model a **Process** around the aggregate command (`generated-code-extend` §2/§4) or open the command's door — a bare aggregate command with no Process and no door at `domain` or wider is by design not externally callable (G6).
 
 **Rules-Layer exception (G10).** A Command whose row in `Doors.json` stands at `domain` or wider (default `closed`; the Create command is the row `Create{Agg}`, method `create{Agg}()`; carrying ≥1 bound Rule is advised — without one the build warns `V-RULE-5`) gets a **fourth, narrower** call chain straight off the BC facade: `$app->{bc}()->{lcfirst(Command)}($dto)` — two hops, no `process()`, no aggregate accessor. It still runs the Command's Rule chain (Guard) unconditionally, from inside the same generated CommandHandler every other caller uses — the shortcut is only at the transport hop, not a bypass of the guard. This exists specifically for Commands with no orchestration need beyond their Rule chain; a Command with real multi-step behaviour still belongs behind a Process.
 
@@ -108,7 +108,7 @@ CQRS: the Command response carries only identity — to get full state after a w
 
 ### 4. Transport patterns
 
-> **Where transport code stands.** A hand-written transport — controller, CLI command, queue consumer, event listener, project middleware — is delivery code in `App/**` (row 10 of the table in `generated-code-extend` §10). It carries no business logic, writes nothing itself, and calls only the doors `{agg}()` / `process()` of §1 and the kernel's accessors; never `Model/**`, a repository or `DbQuery`. The examples below show that shape.
+> **Where transport code stands.** A hand-written transport — controller, CLI command, queue consumer, event listener, project middleware — is delivery code in `App/**` (row 10 of the table in `generated-code-extend` §10). It carries no business logic, writes nothing itself, and calls only the doors of §1 — `{agg}()` (reads), `process()` and the direct command method `{BC}::{command}()` of a command door at stance `domain` or wider (HTTP route from `outside`) — and the kernel's accessors; never `Model/**`, a repository or `DbQuery`. The examples below show that shape.
 
 > **Process input DTO name:** the examples below assume a Process `CreateCounter` was modelled around the `Counter` aggregate's `createCounter` command (`generated-code-extend` §2/§4) — its input DTO lives at `{BC}/Process/CreateCounter/Command/CreateCounter.php` (namespace `…\Process\CreateCounter\Command`), distinct from the aggregate's own Command DTO of the same simple name. Constructor fields like `name`/`obis` are **illustrative**, domain-specific to this example — not a fixed API; the real fields come from your process's own `input.fields`.
 

@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.42.4] - 2026-10-26
+
+### Fixed
+- Delivery-Türen-Aufzählung ohne Command-Türen: `generated-code-recipes` (publish from delivery code, HTTP-webhook/projection, cross-BC status row), `generated-code-wire-transport` (chain intro, "where transport code stands", why a bare command is not callable) and `generated-code-extend` (call chains row, facade chain, "BC facade caches nothing") named only `{agg}()` / `process()` as the doors of a BC. Now also the direct command method `{BC}::{command}()` of a command door at stance `domain` or wider (HTTP route from `outside`).
+
 ## [1.42.3] - 2026-10-26
 
 ### Fixed
