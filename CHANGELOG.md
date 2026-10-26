@@ -4,6 +4,26 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.42.0] - 2026-10-26
+
+### Changed
+- Skills on the door list (Türenliste) of the Builder: who may reach a door is ONE switch per door, its stance `closed · domain · outside · open` as a row in the per-bounded-context file `Doors.json`. `design-headless-mcp` (tool `save_doors`, resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}`, refusal of the retired keys with `V-DOOR-0` and a hint naming `save_doors`), `design-model-capabilities` (new section 2.4a, stance rows for queries, commands and processes), `generated-code-extend`, `generated-code-recipes`, `generated-code-wire-transport` (rights per door, Create door, `open` process), `start-orientation` (the Access blueprint ships its own `Doors.json`; routing row for the stances).
+
+### Breaking changes (Builder behaviour the skills now describe)
+The way forward for every item is a rebuild of the model: there is no migration tool for external workspaces (the migration tool was deleted).
+
+1. **Read door by unique key.** Before: `{Agg}Read` has `get{Agg}ById`/`get{Agg}ByIds` on every aggregate. After: an aggregate with a public unique key has only `get{Agg}By{Key}`/`get{Agg}By{Key}s` (plus the list); `ById`/`ByIds` stay internal over the kernel seam; without a key `id` remains. Way forward: rebuild; switch callers of `getXById` to `getXBy{Key}`.
+2. **Right names per door.** Before: one right per aggregate, `{bc}.{agg}:read`. After: one right per door, `{bc}.{agg}:{row}` (e.g. `sales.order:orderList`, `catalog.product:productByIdentifier`, Create `sales.order:createOrder`); `{bc}.process:{name}` for a process. Way forward: rebuild; point `RightsOfRole`/the policy at the new names (or `{bc}.{agg}:*`), otherwise the route answers 403.
+3. **Format: stance switches retired.** Before: `visibility` (aggregate, query, process), `expose` (`Closures.json` binding), `subprocessOnly`, `openRoutes` (`project.json`). After: the stance of a door is only its row in `Doors.json`; a retired key is blocker `V-DOOR-0` (the MCP and HTTP write doors refuse it with a hint naming `save_doors`). Way forward: rebuild; write the stances as rows (`save_doors`).
+4. **Create guard renamed.** Before: `{BC}/Closure/Guard/Guard{Agg}.php`. After: `GuardCreate{Agg}.php` (one name in every form: `create{Agg}()`, handler `Create{Agg}`, guard). The old `Guard{Agg}.php` stays orphaned and unreferenced after the rebuild: delete it by hand. The guard is generator-owned (the chain comes from `Closures.json`); business logic written into it belongs in the bound closure/rule under `{BC}/Closure/`. Way forward: rebuild; delete the orphan.
+5. **Facade, route, OpenAPI, MCP, UI.**
+   - 5a. The Create command is a door: row `Create{Agg}`, facade method `create{Agg}()` from `domain`, route `POST /{bc}/{aggs}` (201) and right from `outside`. Before it was never exposable.
+   - 5b. An aggregate without an outer door is the state "no read way at `domain` or wider": no `{agg}()`/`{Agg}Read`; `V-AGG-VIS-*` are gone, successors `V-CONSUMED-EXISTS` (now a blocker for a foreign door that is missing or `closed`) and `V-DOOR-2`.
+   - 5c. A route and an OpenAPI path stand only at the stance `outside` or wider; `domain` is facade only (no path, no right); `open` stands on process rows only.
+   - 5d. MCP: the retired keys of `save_aggregate`, `rename_aggregate`, `save_queries`, `save_closures`, `save_process`, `update_process_metadata` and `update_project_settings` are refused with `V-DOOR-0`; new tool `save_doors`, new resource template `jardis://doors/{domain}/{subdomain}/{bc}`.
+   - 5e. HTTP/UI: the switch "In API sichtbar", the `openRoutes` project setting and the visibility columns are replaced by the door table in the API row of the BC page; `PUT /api/doors-file/{domain}/{subdomain}/{bc}` and `POST …/gesture`.
+   - 5f. Generated PHPDoc speaks of stances instead of `visibility public`.
+
 ## [1.41.0] - 2026-10-25
 
 ### Changed
