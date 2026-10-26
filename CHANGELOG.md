@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.42.2] - 2026-10-26
+
+### Fixed
+- `generated-code-recipes` description still said cross-BC writes go "through `process()`"; now "through its doors" (process or command door at stance `domain` or wider).
+
 ## [1.42.1] - 2026-10-26
 
 ### Fixed
