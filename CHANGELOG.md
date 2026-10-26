@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.42.1] - 2026-10-26
+
+### Fixed
+- Skill texts named retired rules as effective: `generated-code-extend` (G7 service row, V9, table row "Write to another BC"), `generated-code-recipes` (description, Recipe 9) and `design-model-capabilities` (cross-BC call row) described the removed rule `V-XBC-WRITE-TARGET` (cross-BC writes only through the foreign `process()`). Now: a cross-BC write targets a door of the foreign BC at stance `domain` or wider, its `process()` or a command door; `V-CONSUMED-EXISTS` checks the owner's stance.
+
 ## [1.42.0] - 2026-10-26
 
 ### Changed
