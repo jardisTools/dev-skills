@@ -258,7 +258,7 @@ The aggregate tree is hermetic; **nothing** under `{Agg}/` is a developer overri
 | V3 | Never bypass `handle()` |
 | V4 | No logic in Command / Query Handler Orchestrators — logic belongs in Actions |
 | V5 | Never access Aggregate internals from outside — only via AggregateHandler |
-| V6 | No foreign-BC internals — a foreign BC is reached only through its doors (`{Agg}Read` reads, `process()` writes), from a node body or a Domain Service, e.g. through a modelled **Cross-BC-Call** node (generator emits the Service scaffolding, §1); a foreign aggregate, repository or SQL is prohibited |
+| V6 | No foreign-BC internals — a foreign BC is reached only through its doors (`{Agg}Read` reads; writes go through `process()` or a command door at `domain` or wider, `{BC}::{command}()`), from a node body or a Domain Service, e.g. through a modelled **Cross-BC-Call** node (generator emits the Service scaffolding, §1); a foreign aggregate, repository or SQL is prohibited |
 | V7 | No traits, no `abstract` (except Exception hierarchies) |
 | V8 | Never skip validation in Command → Entity → Aggregate chain |
 | V9 | No persistence in Domain Services — a Domain Service writes nothing in its own BC (own BC read-only, M9); a foreign BC is written only through its doors at `domain` or wider (`process()` or a command door) |

@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.42.3] - 2026-10-26
+
+### Fixed
+- Skill texts named `process()` as the only cross-BC write path: `generated-code-extend` (V6), `generated-code-recipes` (troubleshooting row), `design-headless-mcp` (door stances) and `design-model-capabilities` (outer door). Now: a cross-BC write goes through the foreign `process()` or a command door at stance `domain` or wider (`{BC}::{command}()`); reads through `{Agg}Read`.
+
 ## [1.42.2] - 2026-10-26
 
 ### Fixed
