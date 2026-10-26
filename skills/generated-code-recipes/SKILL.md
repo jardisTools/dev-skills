@@ -33,7 +33,7 @@ A node's `data` holds business fields only: status, rejects and events are carri
 
 **Event payload identity (X-3).** `<Agg>{ChildEntity}Added` events carry the affected child's business identifier (`<childIdentifier>`) when G4 is satisfied — otherwise the internal PK (same rule as the Command response, see Recipe 6). Wire your listener against the business key whenever you can; the internal PK is meaningful only inside the aggregate and changes on rebuild scenarios where data is reseeded.
 
-**Publish from delivery code (`App/**`).** After the commit the caller holds the answer of the door and publishes its Domain events. That code is delivery code — row 10 of the table in `generated-code-extend` §10: it takes the events from the answer, hands them to the transport package, and carries no business decision. It reaches the BC only through the doors `{agg}()` / `process()`, and the transport package through the kernel's accessors (`$kernel->messaging()`, `$kernel->httpClient()`); never `Model/**`, a repository or `DbQuery`.
+**Publish from delivery code (`App/**`).** After the commit the caller holds the answer of the door and publishes its Domain events. That code is delivery code — row 10 of the table in `generated-code-extend` §10: it takes the events from the answer, hands them to the transport package, and carries no business decision. It reaches the BC only through its doors — `{agg}()` (reads, `{Agg}Read`), `process()` and the direct command method `{BC}::{command}()` of a command door at stance `domain` or wider (HTTP route from `outside`) — and the transport package through the kernel's accessors (`$kernel->messaging()`, `$kernel->httpClient()`); never `Model/**`, a repository or `DbQuery`.
 
 **Kafka / RabbitMQ / Redis** via `jardisadapter/messaging`:
 
@@ -48,7 +48,7 @@ if ($response->isSuccess()) {
 }
 ```
 
-An **HTTP webhook** goes the same way through the kernel's PSR-18 `httpClient()` (`adapter-http`). A projection or audit trail is not a free projector class: model it as a Process (or an aggregate Command) that the delivery code calls through `process()`.
+An **HTTP webhook** goes the same way through the kernel's PSR-18 `httpClient()` (`adapter-http`). A projection or audit trail is not a free projector class: model it as a Process (or an aggregate Command) that the delivery code calls through `process()` (or, for a command door at `domain` or wider, `{BC}::{command}()`).
 
 **Rules:**
 
@@ -447,7 +447,7 @@ rolls it back — the loser has written nothing, its answer is the 409 and carri
 **Initial creation of the status row.** There is no event subscription inside the system — events are
 outbound (§1 above), nothing in the generated code reacts to them. The status row in Case A is therefore
 created by the process that completes the triggering step ("order delivered"): as a node in the same BC,
-or across BCs through a Cross-BC call to the owning BC's `process()`. Rows for data that already exists
+or across BCs through a Cross-BC call to a door of the owning BC (its `process()` or a command door at `domain` or wider). Rows for data that already exists
 come from a fixture seed / a one-off migration step.
 
 **Converting the real process.** An existing check-then-act decision node (reads via query
