@@ -82,7 +82,7 @@ Selector rule: when the path crosses a `many` ancestor, the command carries ONE 
 
 Response (every command): flat `data` with `@type` = aggregate key plus the root business identifier and the references of the touched children — never objects. Errors: 400 `{"@type":"validation","fields":[{field,reason,message,messageKey}]}` (`field` = outer name as a path with the list index, e.g. `orderItem[0].qty`), 404 `{"@type":"notFound","context"}` (a write that loaded its aggregate or child and found none — never a Create), 409 `{"@type":"concurrencyConflict",…}` or `duplicate`, 422 `{"@type":"ruleViolation","rule","messageKey","context"}`. A process calling a command answers 200.
 
-Outer door (BC facade): `{agg}(): {Agg}Read` (lookups by unique key — `id`/`ids` only for an aggregate without a public unique key — and lists) and `process()` — `{agg}()` only for an aggregate with a read door at `domain` or wider (`Doors.json`), none otherwise; the write facade is family-internal, a command is a facade door `{BC}::{command}()` only at `domain` or wider. Cross-BC writes go through the foreign `process()`, cross-BC reads through the foreign `{Agg}Read`.
+Outer door (BC facade): `{agg}(): {Agg}Read` (lookups by unique key — `id`/`ids` only for an aggregate without a public unique key — and lists) and `process()` — `{agg}()` only for an aggregate with a read door at `domain` or wider (`Doors.json`), none otherwise; the write facade is family-internal, a command is a facade door `{BC}::{command}()` only at `domain` or wider. Cross-BC writes go through the foreign `process()` or a command door at `domain` or wider, cross-BC reads through the foreign `{Agg}Read`.
 
 #### 2.3 Value lists
 
