@@ -4,6 +4,17 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.43.0] - 2026-10-29
+
+### Changed
+- Skills on the process picture (Prozess-Bild) of the Builder: a process answers what its model names. Every node declares `gives` (aggregate, identifier, value, nothing), the process declares `end` (identifier or fields); the generated process is one door class `{Name}Handler` (the graph is its private `definition()` ending in `answerFrom`), the typed run view `{Name}Context` (one getter per node) and one `final readonly` class per object value. Texts follow in `generated-code-workflow-api` (§1, §3, §4, §6, §7), `generated-code-extend` (process rows, §10 table, example node body), `generated-code-recipes` (Recipe 6 "The success answer", node reads, troubleshooting), `design-headless-mcp`, `design-model-capabilities` (rows `gives`, `end`), `generated-code-wire-transport`, `foundation-testing`.
+
+### Breaking Changes
+1. **`response` / `successOutput` / `answer` fail the load (CUT1).** Before: a node `response: [...]`, a process `successOutput: {fields}` and `answer: merged` shaped the answer. After: the node names what it hands out with `gives: {kind, name, …}`, the process names its answer with `end: {kind: identifier}` or `end: {kind: fields, fields: [...]}`; a process without `end` is a blocker, MCP `save_process` refuses the old keys with the CUT1 envelope (`update_process_metadata` refuses `answer`). Migration: `response` fields → `gives: {kind: value, fields}` of the node; `successOutput.fields` → `end.fields` with the members as object value of the ending node; `answer` → drop, there is one end.
+2. **`RunProcess.php`, `{Name}Definition.php` and `Response/{Node}Response.php` are no longer generated.** Before: three more classes per process (door, run step, definition) and one typed response per node. After: `{Name}Handler` holds the run and the graph, objects of `gives: value` are `Command/Handler/{Name}{Value}.php`. Migration: nothing to do; the next build removes the old files when they still carry the generator's marker and are unchanged (files changed by hand stay and yield one warning).
+3. **Node bodies that read arrays must be switched.** Before: `$ctx->latest(Node::class)?->data()['key']`, `NodeResult::ok([...])` as the answer, `(new MapResponse())($response)` in call and sub-process nodes. After: the typed getter `$ctx-><node>()?->property`, `NodeResult::ok(<object value>)` (`$this->handle(<Name><Value>::class, field: …)`), `(new MapResponseInto())($response, <Class>::class)`. Migration: replace the array reads by the getter of the node (`{Name}Context`), hand the object value to `ok()`, and give call nodes the class of the callee's `{Command}Response`.
+4. **OpenAPI `x-jardis-response: open` is gone.** Before: a process with an undeclared end carried `open`. After: `reference` (end identifier) or `fields` (end fields, typed 200 member). Migration: declare `end` on the process; clients that matched on `open` read `fields` / `reference`.
+
 ## [1.42.4] - 2026-10-26
 
 ### Fixed
