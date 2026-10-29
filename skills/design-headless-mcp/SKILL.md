@@ -147,17 +147,20 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (`validate_process`, finding source `process`). A node whose `consumedCalls` resolve into a
    foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (ONE shared Service per target,
    named from the target, derived).
-   **Success answer (`successOutput`).** A process answers by default what it derives from the node it
-   ends on. To name the 200 `data` yourself, put the key `successOutput` on the process wire of
-   `save_process` (top level of `process`, next to `input` / `nodes`); no Designer editor, a save is a
-   full replace, so carry the value you loaded — omitting the key means "derived" again. Optional
-   `{fields: [...]}` (blocker `V-PROC-SUCCESSOUT` for an empty block, a duplicate field name, the name `@type`, an unknown type; `validate_process` reports it):
-   - `"successOutput": {"fields": [{"name": "total", "type": "int"}, {"name": "region", "type": "varchar"}, {"name": "note", "type": "varchar", "nullable": true}]}` —
-     `type` from the column-type vocabulary of `Schema.json`; the process answers `@type` (the
-     lcfirst process name) plus exactly these fields from the `data` of its end node, a missing or
-     mistyped non-nullable field is a 500 with rollback.
-   Needs a success exit that carries a payload: an event or Rule node at the end with a non-nullable
-   field is the blocker. Details and OpenAPI effect: `generated-code-recipes` Recipe 6.
+   **Success answer (`gives` per node, `end` per process).** A process names its 200 `data` itself; nothing is derived
+   from the node it ends on. Every node carries `gives: {kind: aggregate|identifier|value|nothing, name, …}` (what
+   it hands out; a `value` is a scalar `type` or an object with `fields: [{name, type, nullable?}]`, `type` from the
+   column-type vocabulary of `Schema.json`), the process carries `end` next to `input` / `nodes` on the process wire of
+   `save_process` (a save is a full replace, so carry the values you loaded):
+   - `"end": {"kind": "identifier"}` — the process answers `@type` plus the reference value of the command of its
+     identifier node (blocker `V-PROC-END-2` when a success path has no identifier node).
+   - `"end": {"kind": "fields", "fields": ["total", "region"]}` — `@type` plus exactly the members of the named
+     object values (or the named scalars), flat; `"fields": []` is the empty answer (`@type` only). Blockers
+     `V-PROC-END-1…5`, `V-PROC-GIVES-1…4` (`validate_process` reports them).
+   The retired keys are refused by `save_process` with the structured error envelope (CUT1, hint names the
+   replacement) and nothing is written: node `response` → `gives`; process `successOutput` and `answer` → `end`
+   (`update_process_metadata` refuses `answer`). Details and OpenAPI effect (`x-jardis-response`: `reference` / `fields`):
+   `generated-code-recipes` Recipe 6.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a
@@ -314,7 +317,7 @@ data.
 
 **Aggregate delete takes its queries along:** `delete_aggregate` removes the queries the aggregate owns from `Queries.json` (the delete preview lists them as `affectedQueries`; duplicated-root queries are `unassignableQueries` and stay); declared readers (`reads:`) of such a query block with 409 `details.queryReaders`, one `force` overrides every block, the answer carries `removedQueries`. `validate_definitions_all` also checks, once per BC, its Queries (rows with `aggregate ""`, handler `queries`), the door files and door list (handlers `doors`, `door-list`) and the artefact sections Closures (handler `closures`), ValueLists (`valuelists`) and every process (`process`) - the same findings the Board shows, from the same check functions; the buffer checks `validate_queries`/`validate_closures`/`validate_value_lists`/`validate_process` read the same door list with the buffer in place of its stored file, so the door-list rules (V-DOOR-1/3, V-RULE-5, V-QDEF-23) apply there too. And the process validator rejects colliding PHP class names derived from one process (Blocker `V-PROC-CLASS-UNIQUE`).
 
-**Rule node in a process (`save_process`).** A node with `rule: <Closure>` binds the closure's inputs in one of two forms, never both (`V-PROC-RULE-ARGS-XOR`): the short form `ruleSubject.payloadField` (closure with exactly one `command`/`aggregate` input; a process input field) or the long form `ruleArgs: [{"param": "<input name>", "source": …}]` that binds EVERY input of the closure exactly once. `source` is a bare string = a process input field, or `{"kind": "latest", "node": "<earlier node id>", "field": "<f>"}` = a field of the latest result of an earlier station (a command node adds `facade` + `method` and offers the fields of its identity chain; a hand-written node offers the fields of its `response:`; no `all`). A `command` input only comes from a command field of the process input; an `aggregate` input from a scalar key value (loaded, 404 as before). Any closure with a `verdict` output and at least one input may back a Rule node; `V-PROC-RULE-ARGS` blocks missing/duplicate/unknown params, unfitting types and a source node that is not a mandatory station before the rule.
+**Rule node in a process (`save_process`).** A node with `rule: <Closure>` binds the closure's inputs in one of two forms, never both (`V-PROC-RULE-ARGS-XOR`): the short form `ruleSubject.payloadField` (closure with exactly one `command`/`aggregate` input; a process input field) or the long form `ruleArgs: [{"param": "<input name>", "source": …}]` that binds EVERY input of the closure exactly once. `source` is a bare string = a process input field, or `{"kind": "latest", "node": "<earlier node id>", "field": "<f>"}` = a field of the latest result of an earlier station (a command node adds `facade` + `method` and offers the fields of its identity chain; a hand-written node offers the members of the object value it `gives`; no `all`). A `command` input only comes from a command field of the process input; an `aggregate` input from a scalar key value (loaded, 404 as before). Any closure with a `verdict` output and at least one input may back a Rule node; `V-PROC-RULE-ARGS` blocks missing/duplicate/unknown params, unfitting types and a source node that is not a mandatory station before the rule.
 
 **Queries-Layer — full MCP parity:** a BC's
 `Queries.json` (declarative read queries — `root:` entity, no stance key (the stance of a query is its row in `Doors.json`, default `closed`; a `visibility` key is refused with `V-DOOR-0`),
