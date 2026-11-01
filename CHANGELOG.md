@@ -4,6 +4,14 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.44.0] - 2026-11-01
+
+### Changed
+- Skills on "Antwort je Ausgang" (answer per exit) of the Builder: the answer of a process is the `gives` of the end node that ran, one form per exit. An end node is every node with a terminal edge on a non-failure status; a field of a `gives: value` carries optional `ref` (reference to an aggregate root the process wrote, own `<Agg>` or foreign `<Subdomain>.<BC>.<Agg>`) and `list`; the door builds the answer with ONE `answerFrom([...])` entry listing all end nodes. Rules `V-PROC-ANSWER-1…6` (reference duty, "writes" from the call target, valid `ref`, unambiguous forms, object form, at least one end node) and `V-PROC-GIVES-1…4` replace `V-PROC-END-*`. Outside the owner a `ref` field is left out when its aggregate has no read door in the reader's world (neighbour BC: stance `domain` or wider, HTTP: `outside` or wider). The door list carries `answers` at process doors and `key` at read doors; the OpenAPI states several distinct forms as `anyOf`. Texts follow in `design-headless-mcp` (success answer), `generated-code-recipes` (description, events, Process row of Recipe 6, "The success answer", custom field, Rule inputs, troubleshooting), `design-model-capabilities` (rows `gives`, end node), `generated-code-workflow-api` (§3, §5, §7), `generated-code-extend`, `generated-code-wire-transport`, `foundation-testing`.
+
+### Breaking Changes
+1. **`end` on the process fails the load (CUT1).** Before: the process declared its answer with `end: {kind: identifier}` or `end: {kind: fields, fields: [...]}` (Process Designer: Ende-Panel; blockers `V-PROC-END-1…5`). After: the answer stands at the end node as its `gives` (`gives: {kind: identifier}`, `gives: {kind: value, fields: [...]}`, `gives: {kind: nothing}`); MCP `save_process` refuses `end` with the CUT1 envelope and a hint naming the replacement. Migration: move the declared answer to the `gives` of the node that ends the run; every aggregate a writer on the success path writes needs a `ref` field at the end node (`V-PROC-ANSWER-1`).
+
 ## [1.43.0] - 2026-10-29
 
 ### Changed
