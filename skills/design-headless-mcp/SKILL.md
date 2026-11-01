@@ -147,20 +147,32 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    (`validate_process`, finding source `process`). A node whose `consumedCalls` resolve into a
    foreign BC needs no `crossBcCall`: it is a Cross-BC-Call node by itself (ONE shared Service per target,
    named from the target, derived).
-   **Success answer (`gives` per node, `end` per process).** A process names its 200 `data` itself; nothing is derived
-   from the node it ends on. Every node carries `gives: {kind: aggregate|identifier|value|nothing, name, …}` (what
-   it hands out; a `value` is a scalar `type` or an object with `fields: [{name, type, nullable?}]`, `type` from the
-   column-type vocabulary of `Schema.json`), the process carries `end` next to `input` / `nodes` on the process wire of
-   `save_process` (a save is a full replace, so carry the values you loaded):
-   - `"end": {"kind": "identifier"}` — the process answers `@type` plus the reference value of the command of its
-     identifier node (blocker `V-PROC-END-2` when a success path has no identifier node).
-   - `"end": {"kind": "fields", "fields": ["total", "region"]}` — `@type` plus exactly the members of the named
-     object values (or the named scalars), flat; `"fields": []` is the empty answer (`@type` only). Blockers
-     `V-PROC-END-1…5`, `V-PROC-GIVES-1…4` (`validate_process` reports them).
-   The retired keys are refused by `save_process` with the structured error envelope (CUT1, hint names the
-   replacement) and nothing is written: node `response` → `gives`; process `successOutput` and `answer` → `end`
-   (`update_process_metadata` refuses `answer`). Details and OpenAPI effect (`x-jardis-response`: `reference` / `fields`):
-   `generated-code-recipes` Recipe 6.
+   **Success answer (`gives` per node, the answer is the `gives` of the end node).** A process names its 200 `data`
+   itself; nothing is derived from the node it ends on, and the process carries no `end`. Every node carries
+   `gives: {kind: aggregate|identifier|value|nothing, name, …}` (what it hands out; a `value` is a scalar `type` or an
+   object with `fields: [{name, type, nullable?, list?, ref?}]`, `type` from the column-type vocabulary of `Schema.json`).
+   The answer of the process is the `gives` of the **end node that ran** — an end node is every node with a terminal
+   edge `{from, on, terminal: true}` on a non-failure status, and a process may have one per exit, each with its own
+   form (the caller tells the forms apart by the fields; `@type` stays the process name):
+   - `gives: {kind: identifier, …}` — `@type` plus the reference value of the command of that node.
+   - `gives: {kind: value, name, fields: [{name, type, list?, ref?}]}` — `@type` plus exactly these fields. `ref` marks a
+     reference to an aggregate root the process wrote (own `"<Agg>"`, foreign `"<Subdomain>.<BC>.<Agg>"`), `list: true` a
+     list of the type (with `ref` a list of references).
+   - `gives: {kind: nothing}` — `@type` only.
+   Reference duty: for every aggregate a writer on a success path writes, the end node carries a field with `ref` on it
+   (blockers `V-PROC-ANSWER-1…6`: reference duty, "writes" from the call target, valid `ref`, unambiguous forms, object
+   form, at least one end node; `V-PROC-GIVES-1…4` for the node `gives`; `validate_process` reports them).
+   **Filter per world:** a `ref` field is left out of the outer answer when its aggregate has no read door in the
+   reader's world — neighbour BC (`{BC}Process::{name}()`, cross-BC call, `answers` of the door list) needs stance
+   `domain` or wider, HTTP (`routes.php`, OpenAPI) `outside` or wider; inside (handler, process nodes) every field stays.
+   A field that must stay outside needs a read door on the aggregate (`save_doors`). The resource
+   `jardis://doors/{domain}/{subdomain}/{bc}` shows the owner's side: `answers` at a process door (one form per end
+   node, the outside view) and `key` at a read door (public unique key, else `id`).
+   The `save_process` schema has no `end` (a save is a full replace, so carry the values you loaded). The retired keys
+   are refused by `save_process` with the structured error envelope (CUT1, hint names the replacement) and nothing is
+   written: `end` → the `gives` of the end node; node `response` → `gives`; process `successOutput` and `answer` → the
+   `gives` of the end node (`update_process_metadata` refuses `answer`). Details and OpenAPI effect (`x-jardis-response`:
+   `reference` / `fields`, several forms as `anyOf`): `generated-code-recipes` Recipe 6.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a
