@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.44.1] - 2026-11-01
+
+### Changed
+- Skills `design-model-capabilities` and `design-headless-mcp`: the warning `V-DOOR-2` is gone. A `ref` field of a process answer is left out of the outer form where its aggregate has no read door in the reader's world (neighbour BC: stance `domain` or wider, HTTP: `outside` or wider); inside it stays. No blocker, no warning.
+
 ## [1.44.0] - 2026-11-01
 
 ### Changed
