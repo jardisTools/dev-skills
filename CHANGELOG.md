@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.3] - 2026-11-03
+
+### Changed
+- Skills `generated-code-workflow-api` and `generated-code-extend` (V12): the outer projection of the process facade `{BC}Process::{name}()` is `ProjectOutcome` with one `OutcomeForm` per outcome (built on `ReshapeAnswer` / `ProjectAnswerRows`), not `ProjectAnswer`. The command doors (`{BC}::{command}()`, `routes.php`, OpenAPI, cross-BC) keep `ProjectAnswer` onto `{Command}Response`; the process door is named on its own.
+
 ## [1.45.2] - 2026-11-03
 
 ### Changed
