@@ -1,12 +1,16 @@
 ---
 name: design-headless-mcp
-description: Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), blueprint import (`import_blueprint`, resource `jardis://blueprints`, its 404/412/409 refusals), the door stances of a bounded context (`save_doors`, resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}`, `V-DOOR-0`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+description: Driving a Jardis workspace headless through `jardis mcp` - tools vs resources, Schema to Aggregate to Process to Build workflow, strategic design, doors. Use when an AI must design, build, or inspect a Jardis domain without a browser (MCP, save_doors, import_blueprint).
 zone: post-active
 persona: C
 profile: jardis
 prerequisites: []
 next: [generated-code-extend]
 ---
+
+## Triggers
+
+Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), blueprint import (`import_blueprint`, resource `jardis://blueprints`, its 404/412/409 refusals), the door stances of a bounded context (`save_doors`, resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}`, `V-DOOR-0`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 
 ## Scope
 

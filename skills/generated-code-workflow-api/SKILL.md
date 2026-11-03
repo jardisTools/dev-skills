@@ -1,12 +1,16 @@
 ---
 name: generated-code-workflow-api
-description: Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.2 engine, `response` 4.2 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom([Node::class => 'outcome', …])`, `AnswerOutcome`, the answer field `@outcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
+description: Process door and engine API behind Process-Designer-generated use-case orchestrators (workflow 5.2, response 4.2, repository transaction bracket). Use when working with generated process handlers, node classes, NodeResult routes, answerFrom/@outcome, or failure forms.
 zone: post-active
 persona: C
 profile: jardis
 prerequisites: [generated-code-extend]
 next: []
 ---
+
+## Triggers
+
+Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.2 engine, `response` 4.2 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom([Node::class => 'outcome', …])`, `AnswerOutcome`, the answer field `@outcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
 
 > Applies to `workflow` 5.2 (engine only, no session knowledge in its API) and `response` 4.2, and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
