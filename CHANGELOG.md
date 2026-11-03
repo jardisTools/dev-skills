@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.2] - 2026-11-03
+
+### Changed
+- Skills `generated-code-recipes`, `design-headless-mcp` and `foundation-testing`: texts on the process answer follow the outcome contract. The process facade `{BC}Process::{name}()` projects the answer with `ProjectOutcome` and one `OutcomeForm` per outcome (not one form per end node: the same `gives.name` is one form); the `answers` of a process door in the door list are one form per outcome, `outcome` = `gives.name`. A `nothing` end node is written `{"kind": "nothing", "name": "..."}` (`name` is mandatory at every end node, `V-PROC-GIVES-1`). The OpenAPI states one outcome as `$ref` on its component `{BC}{Process}{Outcome}` and several as `oneOf` plus `discriminator` on `@outcome` (the sentence "one distinct form is an object schema" is gone). The envelope mapper is `TransformResponse` of `jardissupport/response` (no generated `DomainResponseTransformer`). The test example of a process answer asserts `@type` = process name and `@outcome` = the `gives.name` of the end node that ran.
+
 ## [1.45.1] - 2026-11-03
 
 ### Changed

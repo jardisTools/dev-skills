@@ -140,7 +140,8 @@ final class CreateCounterTest extends MeterDeviceTestCase   // generated base
         $response = $this->createDomain()->counter()->process()->createCounter(new CreateCounter(/* … */));
 
         self::assertSame(200, $response->getStatus());   // a Process answers 200, never 201
-        self::assertSame('counter', $response->getData()['@type']);
+        self::assertSame('createCounter', $response->getData()['@type']);   // a Process answers @type = its name
+        self::assertSame('counterCreated', $response->getData()['@outcome']);   // the gives.name of the end node that ran
         self::assertArrayHasKey('counterIdentifier', $response->getData());
     }
 }

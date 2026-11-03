@@ -173,8 +173,8 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    reader's world — neighbour BC (`{BC}Process::{name}()`, cross-BC call, `answers` of the door list) needs stance
    `domain` or wider, HTTP (`routes.php`, OpenAPI) `outside` or wider; inside (handler, process nodes) every field stays.
    A field that must stay outside needs a read door on the aggregate (`save_doors`). The resource
-   `jardis://doors/{domain}/{subdomain}/{bc}` shows the owner's side: `answers` at a process door (one form per end
-   node, the outside view) and `key` at a read door (public unique key, else `id`).
+   `jardis://doors/{domain}/{subdomain}/{bc}` shows the owner's side: `answers` at a process door (one form per outcome — `outcome` = `gives.name`,
+   the same name is one form — the outside view) and `key` at a read door (public unique key, else `id`).
    The `save_process` schema has no `end` (a save is a full replace, so carry the values you loaded). The retired keys
    are refused by `save_process` with the structured error envelope (CUT1, hint names the replacement) and nothing is
    written: `end` → the `gives` of the end node; node `response` → `gives`; process `successOutput` and `answer` → the
