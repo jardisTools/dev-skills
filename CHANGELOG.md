@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.1] - 2026-11-03
+
+### Changed
+- Skills `generated-code-workflow-api`, `generated-code-recipes`, `generated-code-wire-transport` and `foundation-testing`: the process answer names `@outcome` everywhere, also at an end node that gives `nothing` — `data` then carries `@type` and `@outcome` only (`{"@type":"<processName>","@outcome":"<gives.name>"}`), and the `@type` of a process answer is always the process name. The wire example of a process answer carries `@outcome`.
+
 ## [1.45.0] - 2026-11-03
 
 ### Changed
