@@ -1,12 +1,16 @@
 ---
 name: generated-code-extend
-description: Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Generator-owned and hermetic (ForceOverwrite, never edit). The BC facade's public surface exposes `{agg}(): {Agg}Read` (read-only queries + lists), `process()`, and a direct method per command door at `domain` or wider (stance rows of `Doors.json`); the write facade `{Agg}` (Commands + `event()`) is family-internal via the protected kernel seam (`$this->handle()`). Hand code stands only at the places of the one table in §10: process node bodies under `{BC}/Process/{Name}/Command/Handler/Action/`, Closure/Rule bodies under `{BC}/Closure/` (own-BC-read-only, M9), Domain Services under `{BC}/Service/`, and `App/**` delivery code without business logic. Covers computed fields (`Set{Entity}Computed`, family-internal), the aggregate entity with child getters at the Rule `aggregate` input, cross-BC reads as a derived Cross-BC-Call Service, V1–V13 prohibitions, decision tree, generated-file modes, DomainResponse construction incl. `RuleViolation` 422. ClassVersion → `generated-code-versioning`. Workflow API → `generated-code-workflow-api`. Recipes → `generated-code-recipes`.
+description: "Extending Designer-generated code: hermetic `{BC}/Model/{Agg}/` tree, facade surface, the one table of hand-code places (node bodies, Closures, Domain Services, App/**), V1-V13 prohibitions. Use when adding hand code, a Closure, a Domain Service, or computed fields to generated code."
 zone: post-active
 persona: C
 profile: jardis
 prerequisites: []
 next: [generated-code-versioning, generated-code-workflow-api, generated-code-recipes, generated-code-wire-transport]
 ---
+
+## Triggers
+
+Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Generator-owned and hermetic (ForceOverwrite, never edit). The BC facade's public surface exposes `{agg}(): {Agg}Read` (read-only queries + lists), `process()`, and a direct method per command door at `domain` or wider (stance rows of `Doors.json`); the write facade `{Agg}` (Commands + `event()`) is family-internal via the protected kernel seam (`$this->handle()`). Hand code stands only at the places of the one table in §10: process node bodies under `{BC}/Process/{Name}/Command/Handler/Action/`, Closure/Rule bodies under `{BC}/Closure/` (own-BC-read-only, M9), Domain Services under `{BC}/Service/`, and `App/**` delivery code without business logic. Covers computed fields (`Set{Entity}Computed`, family-internal), the aggregate entity with child getters at the Rule `aggregate` input, cross-BC reads as a derived Cross-BC-Call Service, V1–V13 prohibitions, decision tree, generated-file modes, DomainResponse construction incl. `RuleViolation` 422. ClassVersion → `generated-code-versioning`. Workflow API → `generated-code-workflow-api`. Recipes → `generated-code-recipes`.
 
 ### 0. DDD positioning
 

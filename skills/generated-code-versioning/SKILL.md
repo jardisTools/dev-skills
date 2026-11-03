@@ -1,12 +1,16 @@
 ---
 name: generated-code-versioning
-description: ClassVersion resolution and versioning model for Designer-generated code — the generated `classVersion()` override in the `<Domain>Context` base class wires `LoadClassFromSubDirectory` (injects `v{N}` before the last namespace segment, per class; baseline = the generated class itself), optional `ClassVersionConfig` fallback chains, per-call `$version` argument (no domain-wide default), the HTTP front door (`X-Jardis-Version` header → `jardisVersion` request attribute → `$version` on every facade door → `meta.version`; baseline fallback; 400 `request.versionUnknown`; known versions declared as `versions` in the domain manifest, `knownVersions`, `versions.php`, V-VERSION-DRIFT) with a step-by-step recipe, five guiding principles (additive before version, version changes behaviour never the API, data break = new aggregate, code rescue via service layer, one API surface per aggregate).
+description: "ClassVersion resolution and versioning model for Designer-generated code: per-class v{N} lookup, HTTP front door via X-Jardis-Version, five guiding principles. Use when versioning a class, declaring versions in the domain manifest, or debugging a version miss (V-VERSION-DRIFT)."
 zone: post-active
 persona: C
 profile: jardis
 prerequisites: [generated-code-extend]
 next: []
 ---
+
+## Triggers
+
+ClassVersion resolution and versioning model for Designer-generated code — the generated `classVersion()` override in the `<Domain>Context` base class wires `LoadClassFromSubDirectory` (injects `v{N}` before the last namespace segment, per class; baseline = the generated class itself), optional `ClassVersionConfig` fallback chains, per-call `$version` argument (no domain-wide default), the HTTP front door (`X-Jardis-Version` header → `jardisVersion` request attribute → `$version` on every facade door → `meta.version`; baseline fallback; 400 `request.versionUnknown`; known versions declared as `versions` in the domain manifest, `knownVersions`, `versions.php`, V-VERSION-DRIFT) with a step-by-step recipe, five guiding principles (additive before version, version changes behaviour never the API, data break = new aggregate, code rescue via service layer, one API surface per aggregate).
 
 ### 1. ClassVersion resolution — Platform-free, per-class `v{N}`
 
