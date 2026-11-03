@@ -4,6 +4,17 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.0] - 2026-11-03
+
+### Changed
+- Skills on the "Ergebnis-Feld" (outcome field) of the Builder: every process answer carries `@outcome` behind `@type` (`@type` stays the process name) — the `gives.name` of the end node that ran, word for word, always, also with exactly one end node, also with `gives: nothing` (`{"@type":"<processName>","@outcome":"<gives.name>"}`). `gives.name` is mandatory at every end node (`V-PROC-GIVES-1`) and is the free outcome name (`V-PROC-OUTCOME-2`: `^[a-z][A-Za-z0-9]*$`, at most 64 characters); two end nodes may carry the same name only with an identical inner form (`V-PROC-OUTCOME-1`, replaces `V-PROC-ANSWER-4`; the answer rules are now `V-PROC-ANSWER-1…3, 5, 6`). The OpenAPI states several outcomes as `oneOf` plus `discriminator` (`propertyName: '@outcome'`, `mapping`), one named component per outcome, one outcome as `$ref` (formerly `anyOf`, forms told apart by the presence of fields). The door declares `answerFrom([Node::class => 'outcome', …])` (`workflow` 5.2, `MarkOutcome`), the facade `{BC}Process::{name}()` cuts the answer per outcome with `ProjectOutcome` and one `OutcomeForm` each (`response` 4.2); a missing `@outcome`, or one the facade has no form for, is a 500. The union is open: a new outcome is additive, an unknown `@outcome` is the error branch of the client, renaming or removing an outcome is a contract break like a field rename. Texts follow in `design-headless-mcp`, `design-model-capabilities`, `generated-code-recipes` (Recipe 6, troubleshooting), `generated-code-workflow-api` (§3, §7, with a two-outcome example on the wire), `generated-code-extend`, `generated-code-wire-transport`.
+
+### Breaking Changes
+1. **An end node without `gives.name` is a blocker (`V-PROC-GIVES-1`, `V-PROC-OUTCOME-2`).** Before: the name of an end node was optional (`nothing`) or the key of the command answer (`identifier`). After: every end node names its outcome. Migration: give each end node a `gives.name` of the form `^[a-z][A-Za-z0-9]*$`; two end nodes with the same name need an identical inner form (`V-PROC-OUTCOME-1`).
+2. **The process answer carries `@outcome`.** Before: `data` held `@type` plus the fields of the end node. After: `data` holds `@type`, `@outcome`, then the fields. Migration: a client that read the `data` of a process answer strictly (closed object, exact key set) accepts `@outcome`; a client that told the exits apart by the presence of fields switches on `@outcome` instead.
+3. **`anyOf` becomes `oneOf` + `discriminator`.** Before: several distinct forms of a process were `anyOf` in the OpenAPI. After: `oneOf` with `discriminator` on `@outcome` and a `mapping`, one named component `{BC}{Process}{Outcome}` per outcome; one outcome is a `$ref`. Migration: regenerate the client from the new `openapi.yaml`; an unknown `@outcome` is the error branch of the client.
+4. **Minimum package versions: `workflow` ^5.2, `response` ^4.2.** Before: `workflow` 5.1, `response` 4.1 (`answerFrom([Node::class, …])`, `ProjectAnswer` at the process facade). After: `answerFrom([Node::class => 'outcome', …])` and `ProjectOutcome`/`OutcomeForm`; the list form without names is the 5.1 form and mixing both throws `ConstructionException`. Migration: raise both constraints, rebuild the domain with the Builder of this release.
+
 ## [1.44.1] - 2026-11-01
 
 ### Changed

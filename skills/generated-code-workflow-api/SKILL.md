@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.1 engine, `response` 4.1 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom`, `AnswerOutcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
+description: Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.2 engine, `response` 4.2 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom([Node::class => 'outcome', …])`, `AnswerOutcome`, the answer field `@outcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
 zone: post-active
 persona: C
 profile: jardis
@@ -8,7 +8,7 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
-> Applies to `workflow` 5.1 (engine only, no session knowledge in its API) and `response` 4.1, and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
+> Applies to `workflow` 5.2 (engine only, no session knowledge in its API) and `response` 4.2, and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
 The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`, only where the input carries a rule), checks the required kernel resources (`RequireResource`, one line per `requires` name), opens the transaction bracket `RunOwnedTransaction` around `ProcessRunner::run($definition, $input, $nodeFactory, $depth)` and answers through the `response` closures (`AnswerFindings`, `AnswerOutcome`, `AnswerThrowable`, `LogFailure`). It is ONE class: the graph is its private method `definition()`, there is no run-step class and no definition class next to it. The door itself computes nothing: it chains these calls and branches on what they hand back. The runner is the engine only: it walks the `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction, answers no 5xx and knows no session: who calls is decided in front of the door by the route middleware (`RequireSession`, `RequireRight` of `core/app` 3.2, set in the generated `routes.php`); the door fills the fields `tenant` and `user` of the process input from the request attributes, a node reads them as `$ctx->input()->tenant` / `->user`. Handler and facades check no right themselves. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
 
@@ -68,11 +68,11 @@ return ProcessDefinition::for(LendBook::class, 'LendBook')
     ->node(CreateLoan::class)->onTrue(NotifyMember::class)
     ->node(NotifyMember::class)->onTrue(LoanCreatedNode::class)
     ->node(LoanCreatedNode::class)->terminal(Route::OnTrue)
-    ->answerFrom([CreateLoan::class])
+    ->answerFrom([LoanCreatedNode::class => 'loanCreated'])
     ->build();
 ```
 
-`transactional` is a declaration for the door: the engine ignores it, the generated handler reads it (`isTransactional()`); the input gate and the `requires` lines are written into the door itself, not into the definition. `answerFrom([...])` names where the success answer comes from — ONE entry listing all end nodes of the model as candidates; the package takes the one that ran last (§7). The first `node()` is the entry node. Every route a node can take must be declared — an undeclared route throws `UnroutedStatusException` (500) — and an end is declared with `terminal(...)` / `onX(null)`. `rejects(status, key)` declares the message key of a node's reject for that status. `build()` rejects an unknown target and freezes the definition. `loopLimit(n)` caps the node steps of one run (default 100).
+`transactional` is a declaration for the door: the engine ignores it, the generated handler reads it (`isTransactional()`); the input gate and the `requires` lines are written into the door itself, not into the definition. `answerFrom([...])` names where the success answer comes from — ONE entry listing all end nodes of the model as named candidates (`Node::class => 'outcome'`, the name is the `gives.name` of that end node; the list form without names is the 5.1 form, mixing both throws `ConstructionException`); the package takes the one that ran last and marks its name as `@outcome` (`MarkOutcome`, §7). The first `node()` is the entry node. Every route a node can take must be declared — an undeclared route throws `UnroutedStatusException` (500) — and an end is declared with `terminal(...)` / `onX(null)`. `rejects(status, key)` declares the message key of a node's reject for that status. `build()` rejects an unknown target and freezes the definition. `loopLimit(n)` caps the node steps of one run (default 100).
 
 ### 4. Node classes
 
@@ -164,7 +164,7 @@ The complete door with every line is the Quick Start of the `response` README. `
 
 | Outcome | Status | Response |
 |---|---|---|
-| run ends on a routed node | 200 | `@type` plus the fields of the `gives` of the end node that ran, taken from the candidates of the one `answerFrom` entry (identifier: the `{Command}Response` of the end node; value: the members of its object value, a field with `ref` is a reference to a written aggregate, `list` a list; every exit has its own form); `gives: nothing` = `@type` only. Outside the owner (`{BC}Process::{name}()`, cross-BC, HTTP) a `ref` field whose aggregate has no read door in the reader's world is left out (neighbour BC: door at `domain` or wider, HTTP: `outside` or wider) |
+| run ends on a routed node | 200 | `@type` plus `@outcome` (the name of the end node that ran, from the candidates of the one `answerFrom` entry, always, also with a single end node) plus the fields of the `gives` of that end node (identifier: the `{Command}Response` of the end node; value: the members of its object value, a field with `ref` is a reference to a written aggregate, `list` a list; every exit has its own form); `gives: nothing` = `@type` and `@outcome` only. Outside the owner (`{BC}Process::{name}()`, cross-BC, HTTP) a `ref` field whose aggregate has no read door in the reader's world is left out (neighbour BC: door at `domain` or wider, HTTP: `outside` or wider) |
 | input invalid (door, before the first node) | 400 | the validation form with `fields[]` (`field`, `reason`, `message`, `messageKey` `validation.missing` / `validation.invalid`), form key `validation` |
 | no session (app with a login; `RequireSession` of `core/app` answers it before the domain code) | 401 | empty data |
 | right missing / required request attribute missing (route middleware `RequireRight` / `RequireRequestAttribute`, fail closed, before the door) | 403 | middleware envelope with empty data; `errors.messageKey` `access.rightMissing` (`context.right`) or `request.attributeMissing` (`context.attribute`) |
@@ -173,9 +173,18 @@ The complete door with every line is the Quick Start of the `response` README. `
 | thrown exception, unrouted route, loop limit (door: `MapThrowable`) | 500 | empty object; the cause is logged once by the owner |
 | `TransientConflictException` in the owning run | 409 | key `process.transientConflict`, reason `stale_write` |
 
+**Example: a process with two outcomes.** `LendBook` ends on two nodes, `CreateLoan` (`gives: {kind: value, name: loanCreated, fields: [loanNumber]}`) and `AddToWaitlist` (`gives: {kind: value, name: waitlisted, fields: [position]}`). The door declares `->answerFrom([CreateLoan::class => 'loanCreated', AddToWaitlist::class => 'waitlisted'])`. The 200 `data` on the wire, one per outcome (`@type` stays the process name, `@outcome` is the `gives.name` of the end node that ran):
+
+```json
+{"status":200,"data":{"@type":"lendBook","@outcome":"loanCreated","loanNumber":"L-1001"},"errors":{},"meta":{ … }}
+{"status":200,"data":{"@type":"lendBook","@outcome":"waitlisted","position":3},"errors":{},"meta":{ … }}
+```
+
+The OpenAPI states the two as `oneOf` with a `discriminator` on `@outcome`; a client switches on `@outcome`, never on which fields are present. The facade `{BC}Process::lendBook()` cuts the answer per outcome with `ProjectOutcome` and one `OutcomeForm` per outcome; an answer without `@outcome`, or an outcome the facade has no form for, is a technical failure (500, `ConfigurationException`).
+
 A reject is never routed by the engine; only a Dev decision inside a node (for example a sub-process node with a `Route`) may map a 4xx to a route.
 
-**Envelope data.** `BuildResponseData` (package `response`) is the one place an answer becomes the envelope's `data`: 2xx `@type` (process name, first letter lower case) plus the public fields of the response; 400 `{@type: validation, fields}`; 404 `{@type: notFound, context}`; 409 `{@type: concurrencyConflict, reason, aggregate, context, violated}`; 422 `{@type: ruleViolation, rule, messageKey, context}`; other 4xx the data as given without `@type`; 5xx empty. Every `DateTimeInterface` in `data` goes out as an ATOM string.
+**Envelope data.** `BuildResponseData` (package `response`) is the one place an answer becomes the envelope's `data`: 2xx `@type` (process name, first letter lower case) plus the public fields of the response (a process answer carries `@outcome` as its first property, set by `MarkOutcome` of `workflow` 5.2); 400 `{@type: validation, fields}`; 404 `{@type: notFound, context}`; 409 `{@type: concurrencyConflict, reason, aggregate, context, violated}`; 422 `{@type: ruleViolation, rule, messageKey, context}`; other 4xx the data as given without `@type`; 5xx empty. Every `DateTimeInterface` in `data` goes out as an ATOM string.
 
 **Message keys.** The key a node declares with `rejects(status, key)` (else the one it names in `reject(...)`) is `ProcessOutcome::messageKey()`, the door hands it to `BuildResponseData`, and it joins `data['messageKey']` of every status >= 400. The door's own keys (`process.inputInvalid`, `process.transientConflict`) stay out of `data`. `->input('customer')` on a node prefixes the `fields[].field` of that node's 400 reject with `customer.`; the start validation already answers paths below the input root (`items[1].qty`).
 

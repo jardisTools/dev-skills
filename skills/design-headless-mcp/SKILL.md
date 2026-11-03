@@ -153,15 +153,22 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    object with `fields: [{name, type, nullable?, list?, ref?}]`, `type` from the column-type vocabulary of `Schema.json`).
    The answer of the process is the `gives` of the **end node that ran** — an end node is every node with a terminal
    edge `{from, on, terminal: true}` on a non-failure status, and a process may have one per exit, each with its own
-   form (the caller tells the forms apart by the fields; `@type` stays the process name):
-   - `gives: {kind: identifier, …}` — `@type` plus the reference value of the command of that node.
-   - `gives: {kind: value, name, fields: [{name, type, list?, ref?}]}` — `@type` plus exactly these fields. `ref` marks a
+   form. Every answer carries `@outcome` behind `@type` (`@type` stays the process name): the `gives.name` of the end
+   node that ran, word for word, always, also with exactly one end node. `gives.name` is mandatory at every end node,
+   also with `nothing` (`V-PROC-GIVES-1`), and is the free outcome name (`V-PROC-OUTCOME-2`: `^[a-z][A-Za-z0-9]*$`,
+   at most 64 characters); the caller tells the exits apart by `@outcome`, never by which fields are present:
+   - `gives: {kind: identifier, name, …}` — `@type`, `@outcome` plus the reference value of the command of that node.
+   - `gives: {kind: value, name, fields: [{name, type, list?, ref?}]}` — `@type`, `@outcome` plus exactly these fields. `ref` marks a
      reference to an aggregate root the process wrote (own `"<Agg>"`, foreign `"<Subdomain>.<BC>.<Agg>"`), `list: true` a
      list of the type (with `ref` a list of references).
-   - `gives: {kind: nothing}` — `@type` only.
+   - `gives: {kind: nothing, name}` — `@type` and `@outcome` only.
+   Two end nodes may carry the same `gives.name` only with an identical inner form (`V-PROC-OUTCOME-1`, replaces
+   `V-PROC-ANSWER-4`). The union of outcomes is open: a new outcome is additive, an unknown `@outcome` is the error
+   branch of the client, and renaming or removing an outcome is a contract break like a field rename.
    Reference duty: for every aggregate a writer on a success path writes, the end node carries a field with `ref` on it
-   (blockers `V-PROC-ANSWER-1…6`: reference duty, "writes" from the call target, valid `ref`, unambiguous forms, object
-   form, at least one end node; `V-PROC-GIVES-1…4` for the node `gives`; `validate_process` reports them).
+   (blockers `V-PROC-ANSWER-1…3, 5, 6`: reference duty, "writes" from the call target, valid `ref`, object
+   form, at least one end node; `V-PROC-GIVES-1…4` for the node `gives`, `V-PROC-OUTCOME-1/2` for the outcome name;
+   `validate_process` reports them).
    **Filter per world:** a `ref` field is left out of the outer answer when its aggregate has no read door in the
    reader's world — neighbour BC (`{BC}Process::{name}()`, cross-BC call, `answers` of the door list) needs stance
    `domain` or wider, HTTP (`routes.php`, OpenAPI) `outside` or wider; inside (handler, process nodes) every field stays.
@@ -172,7 +179,7 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    are refused by `save_process` with the structured error envelope (CUT1, hint names the replacement) and nothing is
    written: `end` → the `gives` of the end node; node `response` → `gives`; process `successOutput` and `answer` → the
    `gives` of the end node (`update_process_metadata` refuses `answer`). Details and OpenAPI effect (`x-jardis-response`:
-   `reference` / `fields`, several forms as `anyOf`): `generated-code-recipes` Recipe 6.
+   `reference` / `fields`, several outcomes as `oneOf` plus `discriminator` on `@outcome`): `generated-code-recipes` Recipe 6.
 6. **`build`** — a long-running Tool: generates the aggregate (and/or process) code tree onto
    disk. Reports progress notifications; a concurrent build on the same scope refuses with
    `BUILD_RUNNING`, an unsaved designer draft with `DRAFT_EXISTS` (§6). `build_domain` builds a
