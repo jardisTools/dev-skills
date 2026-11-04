@@ -1,0 +1,165 @@
+#### Continuation §2 — strategic design, Context Map, Rules-Layer, Queries-Layer, doors, confirm gates, SQL export
+
+Any step can be re-run idempotently against its own Resource first (e.g. read `jardis://tree`
+or the aggregate Resource before `save_aggregate`) to confirm the current state before writing.
+
+**Strategic-design tools (optional, additive to the workflow above):** `save_glossary` (a BC's
+Ubiquitous-Language glossary), `save_steckbrief` (a BC's canvas — purpose, classification
+read-through, collaborators), `create_planned_bc` / `update_planned_bc` / `delete_planned_bc`
+(a not-yet-built BC's canvas, at Domain/Subdomain level) and `promote_bc` (turn a planned BC
+into a real one). None of these are required to generate code — they capture organisational
+metadata (subdomain classification, terminology, context boundaries) a human or AI can set
+independently of the Schema→Aggregate→Process→Build chain. Full field shapes: the tools' JSON input schemas (`tools/list`).
+All save tools answer lean: `save_closures`, `save_queries`, `save_glossary`, `save_steckbrief`,
+`save_value_lists` and `create_planned_bc` / `update_planned_bc` return findings/status and the new
+`newMtime` — the saved content (terms, Canvas fields, catalog entry, planned-BC fields) comes back
+only with `echo: true`; otherwise read it through the matching Resource (`glossary`, `steckbrief` —
+also for a planned BC —, `valuelists`, `queries`, `closures`). The HTTP/UI answer stays full.
+
+**BC-declared ENV keys (`save_bc_env`).** A BC whose body reads its own setting declares the key in `BC.json` `env[]` with `save_bc_env` (`env` = the complete list, full replace, `[]` clears): `key` (UPPER_SNAKE), optional closed `values`, optional `default` (one of `values`), `description`. The value lives in the ONE project `.env`, dynamic block `domain`: write it with `save_runtime_env` (block `domain`, key-addressed: line `-1` + `key`); read the block with `jardis://runtime/env` (a declared key without a value is `present: false`). The body reads `$this->resource()->env('<KEY>')`. Blockers, nothing written: `V-RT-10` key form, declared once, no platform key (runtime catalogue, `DB_READER{n}_*`, `APP_SECRET_KEY`, any `*_FILE`) and no key another BC declares; `V-RT-11` no `values`/`default` entry that dotenv would load as non-string (number, bool word incl. empty, `[...]`, `{...}`), interpolate (`${X}`), expand (leading `~`) or trim — use words like `net`/`gross`; `V-RT-12` the same for the written value, plus membership in a closed `values` set; `V-RT-13` a value is ONE line (no CR/LF/VT/FF/NUL), for every block and tool. An undeclared key of the block stays `V-RT-7`. A blueprint import bringing an already-declared key is reported afterwards (`V-RT-10` on both BCs), not refused at the import.
+
+**Context Map (per Domain, full MCP parity with the UI board):** declared BC-to-BC
+relationships are edges carrying one of the eight canonical DDD patterns (Partnership, Shared
+Kernel, Customer/Supplier, Conformist, ACL, Open Host Service, Published Language, Separate
+Ways) — authored via `create_context_map_edge` / `update_context_map_edge` /
+`delete_context_map_edge` and `rewire_context_map_edge`; freely named external systems (the
+only deletable node kind — real and planned BC nodes are derived from the workspace, never
+created here) via `create_context_map_external_node` / `update_context_map_external_node` /
+`delete_context_map_external_node`; node positions via `save_context_map_node_position`
+(presentation-only, an MCP client may skip positions entirely). Read side: the
+`context-map-patterns` Resource is the closed pattern catalogue (fetch it instead of hardcoding
+the eight names), plus the `context-map` and `context-map-declared-targets` Resource templates.
+
+**Drift check is a read-only Resource, not a tool:** `jardis://context-map/{domain}/drift`
+compares the declared edges against the real, synchronous `consumedCalls` the domain's
+processes actually make (Ist) — six finding categories (undeclared, unused, direction
+contradiction, pattern contradiction, both-ways-vs-directed, and the quiet in-agreement state);
+each real edge additionally carries its call evidence (`Calls` — `processName`/`nodeID`/`facade`/`processFile`),
+computed on demand, never persisted. Resolving a finding goes through the ordinary edge CRUD
+tools above — there is deliberately no bulk "align everything" tool; each link/delete is a
+human- or agent-confirmed single step.
+
+**Rules-Layer — full MCP parity:** a BC's `Closures.json`
+(the Rule catalog + per-Command bindings that guard writes between the aggregate and its process,
+`generated-code-extend`) is fully MCP-reachable, same as everything above — no browser-only
+capability here. Child commands included: every `erm: many` child's `Add{Singular}` / `Update{Singular}` /
+`Remove{Singular}` appears in the `catalog` Resource (with `httpMethod` and `target`) and is opened through
+its stance row in `Doors.json` (`save_doors`) exactly like a root command — no browser-only step. `save_closures` answers lean: findings and `newMtime`, not the saved catalog/bindings — pass `echo: true` to get
+them echoed back, or read the stored content through the closures Resource. `save_closures` persists the catalog+bindings document (LockedSave — a
+`CONFLICT` means the on-disk file moved under you, same mtime/force pattern as `save_aggregate`).
+The `catalog` is merged **by entry name**: a sent entry is added or replaced as a whole (no field
+merge inside the entry), entries you did not send stay, `catalog: {}` without `replace` is a no-op.
+To make the sent catalog the whole catalog send `replace: true` — the dropped names come back sorted
+in `removed`; `replace: true` without a `catalog` is a 400. `delete_closure` removes a single entry.
+`bindings` and `validationOverrides` are **not** merged by entry: a sent map replaces the stored one
+(unbinding by omission), an omitted one stays. `validate_closures` composes the same way (incl.
+`replace`) and predicts the following Save;
+Catalog entries: `reads: []` / `examples: []` clear the stored list, an omitted key keeps it;
+a declared `messageKey` is binding (the 422 carries exactly this catalog key; the `reject()` argument in the body is not taken over) and is never cleared — omitted or `""` keeps the stored key, and an empty one on a
+verdict closure without `compose` is derived as `{lcfirst(bc)}.{lcfirst(name)}`. Bindings: omit a
+command's entry to leave it unbound; `chain: []` is a deliberately empty guard (the guard class is
+still generated, the drift report lists it as an empty chain).
+`validate_closures` checks a not-yet-saved catalog/bindings set against the V-RULE-* rules
+(read-only, no write). Read side: the `closures` Resource template returns the catalog+bindings
+as-is, plus `dockable` (per closure: `guard` — commands whose chain it may still join; `ruleNode` —
+whether it may back a Process Rule-node; `sets` — Rule-Sets it may join as a member), `usedAt`
+(per closure: guard chains, Rule-nodes, other Closures' `uses`), `usedAtUnknown` (true when the
+process-usage scan itself failed, so an empty `usedAt` must NOT be read as "genuinely unused"),
+`scalarTypes` (the closed column-type vocabulary a scalar input/output may declare) and
+`policyCoverage` (Steckbrief (BC canvas) policy id → `{level, closures, wirkorte}`, `level` one of `covered` /
+`no-effect` / `no-anchor` / `unknown-usage` — `no-anchor` also stands for a policy with no
+anchoring closure at all when the usage scan failed, since that fact is Usage-independent);
+`closures-drift` is a read-only finding set — `policy_without_rule` / `rule_without_policy` /
+`empty_chain` — mirroring the Context-Map drift-check pattern (computed on demand, never
+persisted, no bulk-align tool here either). Lifecycle tools mirror `rename_query`/`delete_query`/
+`duplicate_query`'s pattern: `rename_closure` (`confirm=true` required, or `dryRun=true` for a
+no-write preview that needs no `confirm`; cascades the rename into every binding chain naming it, every Closure's `uses`
+list — Set member or free sub-closure reference alike — and every process Rule-node's `rule`
+field — a materialised stub or `Closure/v{N}/` override is never moved, only reported in
+`warnings`; the closure's `messageKey` follows the rename when it was the derived key of the old
+name, a hand-set key stays), `delete_closure` (blocked with a `409 IN_USE` by >=1 bound chain, >=1 Closure's `uses`
+(Set membership or a free sub-closure reference), or >=1 process Rule-node — `force=true` overrides it, stripping the name
+from every binding chain and `uses` list and dropping a chain row it empties; deleting a Rule-Set
+itself leaves its members untouched in the catalog), `duplicate_closure` (`newName` optional — a
+blank value auto-suggests the first free `{name}Copy`/`{name}CopyN`; the copy starts unbound and
+carries no dev-body, and duplicating a Rule-Set's member never enters the copy into that Set).
+Inspect `jardis://closures/{domain}/{subdomain}/{bc}/usage` before a real rename/delete — the same
+bindings/processes lists travel back in the response's `consequences` field either way.
+
+**Writing a Closure body — start from the `…/work` work package.** A Closure catalog entry
+declares **0..n** typed `input[]` parameters (`command`/`aggregate`/`scalar`/`valuelist`) and one
+`output` that is either `verdict` or a plain scalar — not just a single guard-bound
+`command`/`aggregate` input with a `verdict` output. Before writing (or asking an AI to write) a
+Closure's `__invoke` body, read the per-Closure Resource template
+`jardis://closures/{domain}/{subdomain}/{bc}/{name}/work` — it composes everything needed for that
+one Closure on a single call, assembled purely from already-saved catalogs (Closures.json,
+Queries.json, the aggregate/command catalog, ValueLists.json, usage), no second source of truth:
+`task` (a plain-language brief), `contract` (description, the exact `__invoke` signature, each
+input's PHP type, the output's type plus its pass/reject or return shape, `output.rejectNote` when the entry declares a `messageKey` (the 422 carries that catalog key, not the one passed to `reject()`), `policyRef`, `examples`),
+`files` (the stub path plus `stubExists`, the path of the test you write from `examples[]` plus `testExists` — both
+Go-derived facts, true only when that file was actually found on disk —, and how to run the
+test), `uses`/`reads` (every composed Closure / readable query, each with its own signature and
+call recipe), `types` (the PHP field shape of every `command`/`aggregate`/`valuelist` input),
+`context` (helper text and guardrails for the `handle()`/`context()` corridor), `usedAt` (guard
+chains — a guard entry carries `viaSet` when a Rule-Set is the only path binding the Closure to
+that chain — process Rule-nodes, and other Closures' `uses`), `body` (`offen`/`geschrieben` —
+whether the generated stub still throws its Not-implemented marker; absent for a Rule-Set, which
+has no body of its own), and `missing` (concrete next steps). Flow: read the resource → write the
+`__invoke` body at `files.stub` → `build` (reconciles the stub's leftover `@throws` tags and markers — run it before PHPStan, otherwise `throws.unusedType` shows up) → write the test at `files.test` from `examples[]` (one case per example, against the generated `ClosureTestCase`), run it (`files.runTest`) until it is
+green. Also reachable over HTTP — `GET /api/closures/{domain}/{subdomain}/{bc}/{name}/work` calls
+the SAME service method and returns the SAME JSON shape; the contract itself is written via
+`save_closures` — Resource and HTTP route only compose a read-friendly, AI-facing view of the same
+data.
+
+**Aggregate delete takes its queries along:** `delete_aggregate` removes the queries the aggregate owns from `Queries.json` (the delete preview lists them as `affectedQueries`; duplicated-root queries are `unassignableQueries` and stay); declared readers (`reads:`) of such a query block with 409 `details.queryReaders`, one `force` overrides every block, the answer carries `removedQueries`. `validate_definitions_all` also checks, once per BC, its Queries (rows with `aggregate ""`, handler `queries`), the door files and door list (handlers `doors`, `door-list`) and the artefact sections Closures (handler `closures`), ValueLists (`valuelists`) and every process (`process`) - the same findings the Board shows, from the same check functions; the buffer checks `validate_queries`/`validate_closures`/`validate_value_lists`/`validate_process` read the same door list with the buffer in place of its stored file, so the door-list rules (V-DOOR-1/3, V-RULE-5, V-QDEF-23) apply there too. And the process validator rejects colliding PHP class names derived from one process (Blocker `V-PROC-CLASS-UNIQUE`).
+
+**Rule node in a process (`save_process`).** A node with `rule: <Closure>` binds the closure's inputs in one of two forms, never both (`V-PROC-RULE-ARGS-XOR`): the short form `ruleSubject.payloadField` (closure with exactly one `command`/`aggregate` input; a process input field) or the long form `ruleArgs: [{"param": "<input name>", "source": …}]` that binds EVERY input of the closure exactly once. `source` is a bare string = a process input field, or `{"kind": "latest", "node": "<earlier node id>", "field": "<f>"}` = a field of the latest result of an earlier station (a command node adds `facade` + `method` and offers the fields of its identity chain; a hand-written node offers the members of the object value it `gives`; no `all`). A `command` input only comes from a command field of the process input; an `aggregate` input from a scalar key value (loaded, 404 as before). Any closure with a `verdict` output and at least one input may back a Rule node; `V-PROC-RULE-ARGS` blocks missing/duplicate/unknown params, unfitting types and a source node that is not a mandatory station before the rule.
+
+**Queries-Layer — full MCP parity:** a BC's
+`Queries.json` (declarative read queries — `root:` entity, no stance key (the stance of a query is its row in `Doors.json`, default `closed`; a `visibility` key is refused with `V-DOOR-0`),
+condition tree, parameters, joins; every query is a paginated list answering
+`{items,total,limit,offset}`, so there is no output-form key — a document still carrying `form:`
+is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
+pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
+like `save_aggregate`/`save_closures`; a draft with findings still writes, `valid`/`errors`/
+`warnings`/`suggestions` travel in the response; the saved query set is echoed only with `echo: true`, otherwise read it through the queries Resource); `validate_queries` checks a not-yet-saved query
+set against V-QDEF-1..16, 18..26 (25 = `limit` above 500, warning; 26 = the query's class stem equals a derived read way `{Agg}ById`/`ByIds`/`By<Key>` of its aggregate, blocker) plus RB1 (name collision with the read base, Blocker) —
+read-only, no write. `preview_queries` is read-only and
+returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
+never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
+consequences preview (`consequences`) of confirming this draft — a query appearing or disappearing, a
+stance change of a query (its `Doors.json` row), the BC facade's public surface base path `GET …/{agg}` moving with the query
+named `{agg}List` (fileAdded/fileRemoved/fileChanged, facadeMethodAdded/facadeMethodRemoved,
+basePathAdded/basePathRemoved) — before committing to `save_queries`. The comparison state is
+always what lies on disk, never a set the caller supplies, and `consequences` stays empty for a
+draft the rules reject (the rule id then travels alone, in `errors`). Lifecycle tools mirror `rename_process`/
+`delete_process`'s pattern: `rename_query` (cascades into every BC-local reference — a Closures.json
+catalog entry's `reads:[]` and process nodes — `confirm=true` required), `delete_query`
+(`force=true` overrides an `IN_USE` 409 from >=1 declared reader), `duplicate_query` (auto-suggests
+a free `{name}Copy`/`{name}CopyN` name, the copy has no `Doors.json` row and so stands at the default `closed`). Read side: the
+`queries` Resource template returns the artefact as-is (a BC without one reads as an empty set,
+never an error); `queries-usage` lists which Rules/process nodes reference a given query — the
+same computation `rename_query`/`delete_query` use for their `consequences`, not a second one.
+
+**Doors and the middleware pipeline (app-wide HTTP pipeline, `jardiscore/app` >= 3.2).** The door stances (`Doors.json`) and the project settings steer who may call a generated route:
+- **Project setting `middleware`** — `update_project_settings` takes `middleware`: an ordered list of names; an entry without a backslash is a standard name (today only `session`), an entry with a backslash is a project class (FQCN, constructor `__construct(DomainKernelInterface $kernel)` or none). Never set = `["session"]` (the default, session guard on; it needs the env key `AUTH_TOKEN_KEY` - base64 of 32 random bytes - in the project `.env`, the access token is signed by `jardissupport/auth` >= 1.5); `[]` = deliberately no pipeline; omit the field = stored value untouched. Names are not checked at save time, a wrong one fails at app start. Read back the EFFECTIVE list: Resource `jardis://root` (field `middleware`) and `jardis://project` (field `middlewareEffective`; `manifest.middleware` is the stored value, absent when never set). The next `build` writes `src/App/middleware.php`; an older `src/App/bootstrap.php` without the `'middleware'` entry is never overwritten (the build warns).
+  `update_project_settings` `{"middleware": ["session", "App\\Middleware\\AuditTrail"]}` (session first: it must run before any middleware that reads session attributes) · `{"middleware": []}` · `{"middleware": ["session"]}` (explicit default).
+- **Door stances — `Doors.json` and the tool `save_doors`.** Who may reach a door is ONE switch per door, the **stance**, stored as a row in the per-bounded-context file `Doors.json` (next to `Queries.json`, `Closures.json`, `ValueLists.json`): `closed` (only the own BC) · `domain` (the facades of the other BCs of the domain; no route, no right) · `outside` (route, OpenAPI path and right; session + right) · `open` (no login, no right; **process rows only**). Rows are the aggregate blocks (read ways `{agg}ById`/`{agg}ByIds`, or with a public unique key only `{agg}By{Key}`/`{agg}By{Key}s`; base list `{agg}List`; declared queries of the root entity; commands by class name `Create{Agg}`, `Update{Agg}`, …) and the block `process`. The row is named like the facade method. Defaults without a row: read ways and base list `outside`, declared query `closed`, command `closed`, process `outside`; the build adds missing rows, never removes one. Query on a child entity: no row, always `closed`. A command at `domain` or wider is the facade door `{BC}::{command}()`; `Create{Agg}` at `outside` also gets `POST /{bc}/{agg-plural}`. Guards (`bindings.{cmd}.chain`) apply in every stance.
+  - **Read first:** Resource `jardis://doors/{domain}/{subdomain}/{bc}` = every door of the model with block, kind, name, stored stance, default, effective stance, route and right, plus the orphan rows (`V-DOOR-1`) and the `mtime` of the file; Resource `jardis://doors/{domain}` = the domain-wide view per BC (kind, stance, effective stance, door name).
+  - **Write:** `save_doors` {domain, subdomain, bc} with EXACTLY ONE of three forms: `rows` [{block, row, stance}] (+ `remove` [{block, row}] only for an orphan row) · `blocks` (the whole file as [{name, rows:[{key, value}]}], also the repair of a file that cannot be parsed) · `gesture` `closeReads` | `defaults` (+ `aggregate`, `dryRun`). Pass the last-seen `mtime` (`force: true` overrides). Refusals: a value outside the vocabulary, or `open` on a non-process row = 422 `V-DOOR-0` (never stored); a row that names no door = 404; removing a row that belongs to a door = 422 `V-DOOR-1`; `Doors.json` changed since `mtime` = 409 `CONFLICT`. A gesture that finds the state already reached writes nothing and answers `note: "alreadyDone"`. Rebuild the BC afterwards: the stances become facades, routes, OpenAPI and rights.
+  - **Retired switches:** `visibility` (aggregate graph, query, process), `subprocessOnly` (process), `expose` (a `bindings` entry) and the project setting `openRoutes` are no longer read; a call that carries one (`save_aggregate`, `rename_aggregate`, `save_queries`, `save_closures`, `save_process`, `update_process_metadata`, `update_project_settings`, also the validate/preview/probe variants) is refused with `V-DOOR-0` and a hint naming `save_doors`, a file that still carries one is a blocker `V-DOOR-0`. Mapping: aggregate `internal` → every read row `closed`; query `internal`/`public` → `closed`/`outside`; `expose: true` → the command row `outside`; `subprocessOnly` → process row `closed`; process `visibility: internal` → `domain`; `openRoutes` → process row `open`. A process route is open (registered `$routes->anonymous()->{verb}(…)`, no session, no right, no `security` in the OpenAPI) exactly when its row is `open`; an open process reaches no tenant-marked aggregate (`V-ROUTE-OPEN-TENANT`). In an app without login `open` and `outside` coincide; a stored `open` row reads as `outside` with the hint `V-DOOR-3`.
+- **Project setting `sessionProcesses`** — `update_project_settings` takes `sessionProcesses`: the processes of the session life cycle by role, `{signIn, signOut, switchTenant}`, each `{bc, process}` (BC and process must exist and sit in the `loginIdentity` BC, 422 otherwise; the Access blueprint pre-fills it). The `signOut` / `switchTenant` route additionally revokes the session (`RevokeSessionOnSuccess`); an open route marked this way is a build error. From `signIn` + `switchTenant` the build writes `Api/{Domain}/system.php` (the system run over `SignedInRun`; env `SYSTEM_SIGN_IN_SECRET`).
+- **Rights list** — every route at `outside` in a login world is one right per door (`{bc}.{aggregate}:{row}`, the row name of the door, e.g. `sales.order:orderList`, `sales.order:createOrder`; `{bc}.process:{name}` for a process); a process at `open` has no right; the list is `Api/{Domain}/rights.json` and the Resource `jardis://domain/{domain}/rights` byte for byte (a model with `V-RIGHT-1..3` blockers answers 422). The Resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}` list every door with its stance and effective stance — read them and the rights to verify what is reachable from where, and which right opens what, before building.
+
+**Other confirm gates:** `rename_value_list` (like `rename_closure`) needs `confirm=true` for a real
+rename, while `dryRun=true` runs without `confirm`. `set_stack_selection` needs `confirm=true` when
+the selection switches the project's database (read the current one from the `runtime-stack`
+resource); every other change, and re-sending the same database, needs none.
+
+**Schema→SQL export:** `export_schema_sql` returns one dialect's DDL as
+text (read-only preview, four dialects available — the same `appsvc.SchemaExportService.ExportSQL`
+the UI's preview-sql route calls); `export_schema_sql_files` writes all four `Schema.{dialect}.sql`
+files into the BC directory (mutating). Neither tool exists to author a `Schema.json` from —
+that direction is `design-draft-schema` / `import_schema`; these are the reverse, DB-migration-facing
+export.
+
