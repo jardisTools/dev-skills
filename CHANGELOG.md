@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.5] - 2026-11-04
+
+### Changed
+- Skills `generated-code-extend`, `generated-code-recipes` and `design-headless-mcp` are knowledge trees: `SKILL.md` is a short index (frontmatter, Triggers, mandatory rules, a navigation table with one question per leaf, citation targets `§N`), the full text lives unchanged in `reference/*.md` (≤ 40 KB per leaf). No sentence was rewritten; `### N.` section titles stay as leaf headings, so `<skill> §N` citations keep resolving. The hand-code table (`generated-code-extend` §10) is `reference/ablage.md`.
+
 ## [1.45.3] - 2026-11-03
 
 ### Changed
