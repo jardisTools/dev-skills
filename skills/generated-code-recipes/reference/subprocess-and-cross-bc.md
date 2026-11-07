@@ -59,11 +59,11 @@ final class CheckStockInCatalog extends EcommerceContext
         }
         $current = $read->getData();   // root fields flat: ['@type' => 'product', 'identifier' => …, …]; children are {Child}Response objects (->); [] when not found
 
-        // 2) translate the own input into the foreign PROCESS input DTO (ACL) —
-        //    only the changed field is overridden, the rest mirrors the current state
-        $update = new UpdateProductInCatalog(new UpdateProduct(
+        // 2) translate the own input into the foreign PROCESS input DTO (ACL) — an Update
+        //    door takes the PATCH (UpdateProductPatch, `Absent` = not delivered = unchanged):
+        //    name the address and the changed field only, never copy the rest of the current state
+        $update = new UpdateProductInCatalog(new UpdateProductPatch(
             productIdentifier: $current['identifier'],
-            /* … remaining root fields copied from $current[...]; child objects read with -> … */
             price: $cmd->newPrice,
         ));
 

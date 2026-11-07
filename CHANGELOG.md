@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.6] - 2026-11-07
+
+### Changed
+- Skills `design-model-capabilities`, `generated-code-extend` (`reference/ablage.md`, `reference/ddd-positioning-and-layout.md`), `generated-code-recipes` (`reference/subprocess-and-cross-bc.md`) and `generated-code-wire-transport`: the Update doors follow the patch contract (Builder K15). `Update{Root}` and `Update{Kind}` take `{Cmd}Patch` (`JardisSupport\Contract\Data\Absent`, `contracts` ≥ 2.18): only the address fields are required, a field not delivered stays unchanged and is skipped by the validator, an explicit `null` clears a nullable field and is 400 on a non-nullable one; the UPDATE carries only delivered fields. `Set{…}` stays a full command. The hermetic tree lists `Command/{Cmd}Patch.php`, `Command/Handler/Action/Resolve{Cmd}.php` and `Find{Cmd}Target.php` as generated classes without a dev body. The cross-BC recipe names the address and the changed field only, it no longer copies the current state into the command.
+
 ## [1.45.5] - 2026-11-04
 
 ### Changed
