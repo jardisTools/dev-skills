@@ -20,7 +20,7 @@ Facade chain: Domain → BC → **Aggregate Read facade** (`{Agg}Read`, reached 
 
 | Command / entry | Route |
 |---|---|
-| `Update{Agg}` | `PUT /{bc}/{aggs}/{identifier}` *(full replacement of the root scalars; `PATCH` stays free for a future partial-update concept)* |
+| `Update{Agg}` | `PUT /{bc}/{aggs}/{identifier}` *(patch semantics on the PUT door: only the address is required, a root scalar not delivered stays unchanged, an explicit `null` clears a nullable one; the body maps to `Update{Agg}Patch`, `Set{Something}` stays a full command; the verb `PATCH` is not used)* |
 | `Remove{Agg}` | `DELETE /{bc}/{aggs}/{identifier}` |
 | `Add{Agg}{Child}` | `POST /{bc}/{aggs}/{identifier}/{children}` |
 | `Remove{Agg}{Child}` | `DELETE /{bc}/{aggs}/{identifier}/{children}/{childKey}` |
