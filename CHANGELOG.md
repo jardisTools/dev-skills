@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.7] - 2026-11-07
+
+### Changed
+- Skill `generated-code-recipes` (`reference/response-shapes-and-bulk-read.md`, rule `V-PROC-ANSWER-1`): a reference field of an end node is also a single field when all writers provably write the same record (every writer loads a record of the aggregate, the root key of every writer comes from the same input place of the process: the flat input field or the property of the one `accepts` field, also into a sub-process; at least one writer works on an existing record; one writer lies on every success path). What is not provable stays `list: true`. Builder Klasse C (2026-11-06, V2 2026-11-07).
+
 ## [1.45.6] - 2026-11-07
 
 ### Changed
