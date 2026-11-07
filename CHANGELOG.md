@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.45.8] - 2026-11-07
+
+### Changed
+- Skill `generated-code-recipes` (`reference/response-shapes-and-bulk-read.md`, rule `V-PROC-ANSWER-1`): the proof "same record" knows a dominating root create (Builder L4-K9). At most one writer may create the root; it lies on every success path and before every other writer, and its root key comes from the process input at the same place as the key of every loader (a key the server generates or the model manages, a create inside a sub-process, two creates, or a create with only child adds stay `list: true`). The answer reads the reference from the create.
+
 ## [1.45.7] - 2026-11-07
 
 ### Changed
