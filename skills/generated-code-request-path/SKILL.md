@@ -59,11 +59,22 @@ Ask both before every node, before saving the process.
 
 ## Signs of a superfluous node
 
-1. It checks what station 2, 3 or 4 checks — a 400 on a field of the input or of the target command.
+1. It checks what station 2, 3 or 4 checks — a 400 on a field of the input or of the target command. The validator reports a hand node with `rejects` 400 as `V-PROC-DUPCHECK`.
 2. It filters, sorts or cuts what a query can: parameter, `in`, optional parameter, join.
 3. It computes what a Rule or a Closure would be (a judgement on data, a derived value).
 4. It copies the body of another node; the answer is a Closure, a Domain Service or a sub-process.
-5. It reads without declaration: a body calls `read()` but the node lists no matching `reads` — declare the read in the model or drop it.
+5. It reads without declaration: a body calls `read()` (or `context()` on a read handler) but the model lists no matching `reads` — declare the read in the model or drop it. The build reports it as `V-PROC-READ-UNDECLARED`.
+
+## Findings that point here
+
+A hint that names this skill and one of these sections answers a finding of the model check or of the build. Both rules are warnings; the hint says the severity becomes a blocker in a later Builder release.
+
+| Finding (`ruleId`) | Where it fires | What it means | What to do |
+|---|---|---|---|
+| `V-PROC-DUPCHECK` | validate, save, build of a process; one finding per hand node with `rejects` 400 | The node checks the content of an input field itself. `subject.fields` names the fields Jardis already checks (the check is a duplicate); empty means the check has the wrong form (presence is 400 `missing` at the door, a condition is a Rule answering 422). | Drop the check; declare the field as a command field (`accepts:`) or state the condition as a Rule. Section "Signs of a superfluous node", sign 1. |
+| `V-PROC-READ-UNDECLARED` | build, after the bodies are merged; node, Closure and Service bodies | A body reads a query of its own bounded context that the model does not declare (`subject.query`), or reads a handler of another bounded context. A read held in a variable and a declared `reads` entry the body never reads are suggestions. | Declare the read (`reads: [{query}]` at the node or at the `Closures.json` entry; the read base `{agg}ById`, `{agg}ByIds`, `{agg}By{Key}`, `{agg}By{Key}s` is declarable too) or drop it. A foreign bounded context is reached through a sub-process, a cross-BC call or the doors of that context. Section "Signs of a superfluous node", sign 5. |
+
+Every finding carries `ruleId`, `severity` (`blocker`, `warning`, `suggestion`), `process`, `nodeId`, `file`, `subject` and a `hint`; the doors return the complete list of a run, see `design-headless-mcp`.
 
 ## Reference
 
