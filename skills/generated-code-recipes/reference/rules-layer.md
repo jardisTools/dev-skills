@@ -15,7 +15,7 @@ final class CounterMustBeActive extends MeterDeviceContext
         /** @var Counter $counter */
         $counter = $this->handle(Counter::class);   // own BC only (M9: never a foreign BC) — here via the read facade; context() works too
         $read = $counter->counter()->getCounterByIdentifier(
-            new QueryCounterByIdentifier(identifier: $cmd->identifier)
+            $this->handle(CounterByIdentifier::class, identifier: $cmd->identifier)
         );
 
         $record = $read->getData();   // root fields flat (children would be {Child}Response objects, read with ->); [] when the counter does not exist

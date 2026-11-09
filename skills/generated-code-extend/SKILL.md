@@ -4,7 +4,7 @@ description: "Extending Designer-generated code: hermetic `{BC}/Model/{Agg}/` tr
 zone: post-active
 persona: C
 profile: jardis
-prerequisites: []
+prerequisites: [generated-code-request-path]
 next: [generated-code-versioning, generated-code-workflow-api, generated-code-recipes, generated-code-wire-transport]
 ---
 

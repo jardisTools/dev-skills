@@ -52,7 +52,7 @@ final class CheckStockInCatalog extends EcommerceContext
 
         // 1) read the foreign current state via the foreign READ facade
         $read = $catalog->product()->getProductByIdentifier(
-            new QueryProductByIdentifier(identifier: $cmd->productIdentifier)
+            $this->handle(ProductByIdentifier::class, identifier: $cmd->productIdentifier)
         );
         if (!$read->isSuccess() || $read->getData() === []) {
             return NodeResult::reject(ResponseStatus::NotFound, 'catalog.productNotFound', ['productIdentifier' => $cmd->productIdentifier]);   // 404, the run ends

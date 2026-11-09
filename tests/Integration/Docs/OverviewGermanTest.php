@@ -14,7 +14,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class OverviewGermanTest extends TestCase
 {
-    private const BUNDLED_SKILLS = 34;
+    private const BUNDLED_SKILLS = 35;
     private const AREAS = 5;
     private const BUILDING_BLOCKS = 10;
     private const MIN_CONCEPT_HITS = 200;

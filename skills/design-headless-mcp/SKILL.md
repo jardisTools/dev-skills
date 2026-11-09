@@ -4,7 +4,7 @@ description: Driving a Jardis workspace headless through `jardis mcp` - tools vs
 zone: post-active
 persona: C
 profile: jardis
-prerequisites: []
+prerequisites: [generated-code-request-path]
 next: [generated-code-extend]
 ---
 

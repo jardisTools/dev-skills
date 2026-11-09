@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class OverviewTest extends TestCase
 {
-    private const BUNDLED_SKILLS = 34;
+    private const BUNDLED_SKILLS = 35;
     private const AREAS = 5;
 
     private string $root;

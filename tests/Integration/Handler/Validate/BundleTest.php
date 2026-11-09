@@ -23,6 +23,7 @@ final class BundleTest extends TestCase
     private const FOUNDATION_SKILLS = ['foundation-php', 'foundation-working-principles'];
     private const KNOWLEDGE_SKILLS = ['knowledge-maintain-pool', 'knowledge-record-decision'];
     private const DESIGN_SKILLS = ['design-model-capabilities'];
+    private const GENERATED_CODE_SKILLS = ['generated-code-request-path'];
     private const PROCESS_SKILLS = ['process-choose-tier', 'process-check-existing', 'process-concept', 'process-resume', 'process-write-prd', 'process-write-plan', 'process-review-board', 'process-run-stage', 'process-verify', 'process-close', 'code-review-change'];
 
     public function testFoundationSkillsAreBundled(): void
@@ -55,14 +56,14 @@ final class BundleTest extends TestCase
         self::assertLessThanOrEqual(45, count($words), sprintf('Description of %s has %d words.', $name, count($words)));
     }
 
-    public function testTheSixteenNewSkillsAreExactlyTheOnesTheDescriptionTestsCover(): void
+    public function testTheSeventeenNewSkillsAreExactlyTheOnesTheDescriptionTestsCover(): void
     {
-        $covered = [...self::FOUNDATION_SKILLS, ...self::KNOWLEDGE_SKILLS, ...self::PROCESS_SKILLS, ...self::DESIGN_SKILLS];
+        $covered = [...self::FOUNDATION_SKILLS, ...self::KNOWLEDGE_SKILLS, ...self::PROCESS_SKILLS, ...self::DESIGN_SKILLS, ...self::GENERATED_CODE_SKILLS];
 
         $new = $this->newSkillNames();
         sort($covered);
 
-        self::assertCount(16, $new);
+        self::assertCount(17, $new);
         self::assertSame($covered, $new);
     }
 
@@ -90,7 +91,7 @@ final class BundleTest extends TestCase
         // Evidence for the listing budget: every skill description is part of the session listing.
         fwrite(STDERR, sprintf("\ndescriptions: %d skills, %d characters\n", $skills, $characters));
 
-        self::assertSame(34, $skills);
+        self::assertSame(35, $skills);
     }
 
     public function testSetupSkillKeepsInstallHooksPhaseAndAddsCommitMsgPhase(): void
@@ -1179,7 +1180,7 @@ final class BundleTest extends TestCase
         sort($names);
 
         self::assertSame($folders, $names);
-        self::assertCount(34, $names);
+        self::assertCount(35, $names);
         self::assertSame($names, array_values(array_unique($names)));
     }
 
@@ -1295,10 +1296,10 @@ final class BundleTest extends TestCase
         return dirname(__DIR__, 4) . '/skills/' . $name . '/SKILL.md';
     }
 
-    public function testProfilesAreDistributedAsNineJardisAndTwentyFiveCore(): void
+    public function testProfilesAreDistributedAsTenJardisAndTwentyFiveCore(): void
     {
         $jardis = [
-            'design-draft-schema', 'design-headless-mcp', 'design-model-capabilities', 'generated-code-extend', 'generated-code-recipes',
+            'design-draft-schema', 'design-headless-mcp', 'design-model-capabilities', 'generated-code-extend', 'generated-code-recipes', 'generated-code-request-path',
             'generated-code-versioning', 'generated-code-wire-transport', 'generated-code-workflow-api',
             'start-orientation',
         ];
@@ -1312,7 +1313,7 @@ final class BundleTest extends TestCase
         }
 
         self::assertSame($jardis, $actual['jardis']);
-        self::assertCount(34, $this->skillFolderNames());
+        self::assertCount(35, $this->skillFolderNames());
         self::assertCount(25, $actual['core']);
         self::assertContains('packages-find-existing', $actual['core']);
     }
