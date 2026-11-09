@@ -27,6 +27,7 @@ final class BundleSkills
         'foundation-working-principles',
         'generated-code-extend',
         'generated-code-recipes',
+        'generated-code-request-path',
         'generated-code-versioning',
         'generated-code-wire-transport',
         'generated-code-workflow-api',
