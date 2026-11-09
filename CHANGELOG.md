@@ -12,6 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the
 ### Changed
 - Skills `design-headless-mcp` and `generated-code-extend` list `generated-code-request-path` as a prerequisite; `start-orientation` carries a lookup row for it.
 - Skill `generated-code-recipes` (`reference/response-shapes-and-bulk-read.md`, rule `V-PROC-ANSWER-1`): the proof "same record" knows a dominating root create (Builder L4-K9). At most one writer may create the root; it lies on every success path and before every other writer, and its root key comes from the process input at the same place as the key of every loader (a key the server generates or the model manages, a create inside a sub-process, two creates, or a create with only child adds stay `list: true`). The answer reads the reference from the create.
+- Skill texts aligned with the generated code (list read as `ReadResult`, filter and query DTOs built through `$this->handle(...)` or by their real class name, input gate, double-bind warning, node and rule fields that reach a stub):
+  - `design-model-capabilities`: query parameter type `decimal`, the process input type vocabulary, V-RULE-NODE-DOUBLE-BIND as a warning, `purpose`/`acceptanceCriteria` reach no stub, Rule read pattern.
+  - `generated-code-extend`: `<agg>List` answers a `ReadResult`, bulk-read and unique-key examples name the real query class, the input gate checks by field type and `accepts:`, Rule stub read pattern, a node does not repeat validator and FieldMap.
+  - `generated-code-recipes`: list shape and bulk-read recipe on `ReadResult`, Rule and cross-BC read examples through `$this->handle(...)`, double-bind and input-gate troubleshooting rows, numeric bounds are no model setting.
+  - `generated-code-workflow-api`: node read example builds its filter through `$this->handle(...)`.
+  - `generated-code-wire-transport`: list read answers a `ReadResult` that the route wraps, query DTO by its real class name.
 
 ## [1.45.7] - 2026-11-07
 

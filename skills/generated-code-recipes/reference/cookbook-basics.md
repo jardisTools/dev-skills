@@ -4,7 +4,7 @@ Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives
 
 **Recipe 1 — Validating a domain concept (in a Process)**
 
-The aggregate's generated Hydrate/Build pipeline is hermetic. A value is checked by the model first: column type, value list and length in the Schema, the process input type. A pattern the model has no setting for (an OBIS code, an IBAN) is a **Closure**: declare a catalog entry with a scalar input and the verdict output (Closure editor or MCP `save_closures`), drop it into the Process as a Rule node, and write the check into the stub body. No free value-object class exists (`generated-code-extend` §10).
+The aggregate's generated Hydrate/Build pipeline is hermetic. A value is checked by the model first: column type, value list and length in the Schema, the process input type. A numeric bound beyond `unsigned` and `precision` (a minimum, a maximum, a range) is not a model setting either. A pattern the model has no setting for (an OBIS code, an IBAN) is a **Closure**: declare a catalog entry with a scalar input and the verdict output (Closure editor or MCP `save_closures`), drop it into the Process as a Rule node, and write the check into the stub body. No free value-object class exists (`generated-code-extend` §10).
 
 Rule stub `{BC}/Closure/ObisCodeIsValid.php` (frame generated, body yours):
 
