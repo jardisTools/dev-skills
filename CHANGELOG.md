@@ -4,6 +4,15 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.47.0] - 2026-11-09
+
+### Changed
+- Skill `generated-code-request-path`: new section "Findings that point here" for the two model warnings `V-PROC-DUPCHECK` (a hand node with `rejects` 400 checks an input field itself) and `V-PROC-READ-UNDECLARED` (a hand body reads a query the model does not declare); signs 1 and 5 of "Signs of a superfluous node" name them; the input gate of a process is a `{Domain}Context` that resolves command validators through `$this->handle(...)` (`reference/station-3-handler.md`).
+- Skill `design-headless-mcp`: one finding form at every door (`{ruleId, severity, process, nodeId, file, line?, subject, message, hint}`, severity word `warning`), the complete list of a run in `details.findings[]`, `findings` on `build` / `build_process` / `build_domain` / `validate_process` / `save_process`, the V1 fields on the rows of `validate_definitions_all`; subdomain classification is a closed set (`create_subdomain` / `update_subdomain_manifest` refuse another value, `null` clears it); a model with `V-RIGHT-1..2` blockers answers 422, `V-RIGHT-3` (a catalog right no role literal covers) is a build warning.
+- Skill `design-model-capabilities`: subdomain classification as a closed set; `reads[]` takes the read base of an own-BC aggregate (`{agg}ById`, `{agg}By{Key}`, ...) besides a declared query and is held against the body by `V-PROC-READ-UNDECLARED`; `V-PROC-DUPCHECK` at `rejects`; a Rule node whose subject cannot be loaded answers 404 in guard and decision mode.
+- Skill `generated-code-extend`: places table row "Read data from a hand body" (`reads`, `V-PROC-READ-UNDECLARED`) in `reference/customization-and-places.md`; a Rule node answers 404 (not 422) when its subject is not found (`reference/ddd-positioning-and-layout.md`).
+- Skill `generated-code-recipes`: troubleshooting rows for `V-PROC-DUPCHECK` and `V-PROC-READ-UNDECLARED` (`reference/troubleshooting.md`).
+
 ## [1.46.0] - 2026-11-09
 
 ### Added

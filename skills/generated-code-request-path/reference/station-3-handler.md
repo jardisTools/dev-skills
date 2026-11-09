@@ -34,7 +34,7 @@ The process door `{Name}Handler`: second check up front, resources, transaction,
 |---|---|
 | Door with input gate | `{BC}/Process/{Name}/Command/Handler/{Name}Handler.php` with `{Name}Validator.php` beside it |
 | Door without input gate (the input carries no rule): step 1 absent | `{BC}/Process/{Name}/Command/Handler/{Name}Handler.php` only |
-| Gate with command registration (`accepts:`) | `{Name}Validator.php` registers the validator of the command in `{BC}/Model/{Agg}/Command/Validation/` |
+| Gate with command registration (`accepts:`) | `{Name}Validator.php` registers the validator of the command in `{BC}/Model/{Agg}/Command/Validation/`; the gate is a `{Domain}Context` like the aggregate door and resolves each command validator through `$this->handle(...)` |
 | Door with `requires` | `RequireResource` step in `{Name}Handler.php`, before the transaction |
 | Door without transaction (`transactional(false)`, warning `V-PROC-TX-OPTOUT`) | `{Name}Handler.php`: `->transactional(false)` in `definition()` |
 | Query door: no step 1, no transaction | `{BC}/Model/{Agg}/Query/Handler/Get{Query}Handler.php` |
