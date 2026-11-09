@@ -67,6 +67,15 @@ Ask both before every node, before saving the process.
 
 ## Reference
 
-- Leaves: `reference/station-1-request.md` · `reference/station-2-dto.md` · `reference/station-3-handler.md` · `reference/station-4-execution.md` · `reference/station-5-return.md`
+Navigation: one leaf per station. Pick the row whose question fits the node you are about to write.
+
+| Question the leaf answers | Leaf |
+|---|---|
+| I need to know what transport, the fixed frame, the session, the right per route and the claims `tenant` / `user` already do before my code runs | reference/station-1-request.md |
+| I need to know what the DTO carries, how the route guard checks form and type (400), or what `Absent` and `null` mean in a patch | reference/station-2-dto.md |
+| I need to know what the process door does: input check, transaction, wiring, error mapping, the fixed order of the handler | reference/station-3-handler.md |
+| I need to know what a process node, a query or the command capsule does for every request: limits, Rule chain, persist, status staircase | reference/station-4-execution.md |
+| I need to know how the answer is built: projection, failure form, envelope, events, `@outcome` of the end node | reference/station-5-return.md |
+
 - Where hand code may stand, V1-V13, the one place table: `generated-code-extend`.
 - Process and node declaration, tools and ordering of a headless build: `design-headless-mcp`.

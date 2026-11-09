@@ -1,5 +1,7 @@
 ### Station 2 — DTO
 
+Navigation: back to the index [`SKILL.md`](../SKILL.md) · the other stations are listed there.
+
 The input of a command, a process or a query filter. First check: form and type. Your code receives well-formed, typed values only.
 
 ## Guarantees

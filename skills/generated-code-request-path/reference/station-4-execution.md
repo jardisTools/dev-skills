@@ -1,5 +1,7 @@
 # Station 4 — Execution: process node, query, command capsule
 
+Navigation: back to the index [`SKILL.md`](../SKILL.md) · the other stations are listed there.
+
 The request has passed the route, the DTO and the process door; now a node runs, a query reads or a command capsule writes. Three kinds of work happen here, each with its own fixed behaviour. What follows is what the generated code does for every request, so that your hand code is only the remainder.
 
 ## Guarantees

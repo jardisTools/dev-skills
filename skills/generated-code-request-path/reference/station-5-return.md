@@ -1,5 +1,7 @@
 # Station 5 — Return to the handler: projection, failure form, envelope, events
 
+Navigation: back to the index [`SKILL.md`](../SKILL.md) · the other stations are listed there.
+
 The node, query or capsule has produced its result. Station 5 turns it into the answer of the request. Everything that shapes or formats the answer is done by the packages `workflow` and `response` and by the generated door and facade; your code hands over a result and nothing else.
 
 ## Guarantees

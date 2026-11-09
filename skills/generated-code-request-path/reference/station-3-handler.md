@@ -1,5 +1,7 @@
 ### Station 3 — Handler (orchestrator)
 
+Navigation: back to the index [`SKILL.md`](../SKILL.md) · the other stations are listed there.
+
 The process door `{Name}Handler`: second check up front, resources, transaction, error mapping, answer. It calls and routes; it never computes.
 
 ## Guarantees

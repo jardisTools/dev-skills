@@ -1,5 +1,7 @@
 ### Station 1 — Request
 
+Navigation: back to the index [`SKILL.md`](../SKILL.md) · the other stations are listed there.
+
 Transport, frame, middleware, session claims `tenant` / `user`. Everything here has happened before any generated handler or hand-written body runs.
 
 ## Guarantees
