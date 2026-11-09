@@ -9,7 +9,7 @@ The Generator emits a fixed, minimal `setData(...)` payload per use-case kind �
 |---|---|
 | **Query ById (aggregate without a unique key) / By{UniqueKey}** (and hand-modelled single variants) | `['@type' => 'counter'] + get_object_vars(<CounterResponse>)` — the **root fields lie flat** in the array (`getData()['counterNumber']`), but **children stay typed `{Child}Response` objects** (a list of them for `many`, one object for `one`): read them with `->`, e.g. `getData()['registerRelation'][0]->register->obis`; `getData()['registerRelation'][0]['register']` throws at runtime (see Query projection below); nothing found → `[]` (empty payload, no `@type`) |
 | **Query ByIds** (aggregate without a unique key) / **By{PluralKey}** (aggregate with a public unique key) | `['@type' => 'counterList', 'items' => <list<CounterResponse>>]` — every item is a typed `{Agg}Response` **object** (`$item->counterNumber`, children via `->` as well; `$item['counterNumber']` throws), **no `[0]` collapse**, no `total`/`limit`/`offset`; missing ids/keys → partial result, empty input → empty `items` |
-| **List** (`{agg}List`, via the read facade) | a plain array `['items' => …, 'total' => …, 'limit' => …, 'offset' => …]` (not a `DomainResponse`); the generated route wraps it as `['@type' => 'counterList'] + $result` |
+| **List** (`{agg}List`, via the read facade) | a `ReadResult` (`->items()` plain-array rows, `->total()`, `->first()`, `->isEmpty()`; not a `DomainResponse`); the generated route wraps it as `['@type' => 'counterList', 'items' => $result->items(), 'total' => $result->total(), 'limit' => $filter->limit, 'offset' => $filter->offset]` |
 | **Create** | `['@type' => 'counter', 'counterIdentifier' => …]` — root business key only |
 | **Set{Child}** / **Add{Child}** | `['@type' => 'counter', 'counterIdentifier' => …, '<childIdentifier>' => …]` — root key from the cmd-DTO + affected child key resolved via the aggregate walk |
 | **Update** / **Remove** / **Remove{Child}** | `['@type' => 'counter', 'counterIdentifier' => …]` — root identity only (Remove{Child} skips the child key) |
@@ -55,17 +55,17 @@ Every aggregate has a uniform read base (catalog: `generated-code-extend` §1), 
 An aggregate **WITH** a unique key — list → keys → `get{Agg}By{PluralKey}`:
 
 ```php
-$list  = $bc->order()->orderList($filter);                                             // filtered flat list: plain array {items, total, limit, offset}
-$keys  = array_values(array_unique(array_column($list['items'], 'orderNumber')));
-$records = $bc->order()->getOrderByOrderNumbers(new QueryOrderByOrderNumbers(orderNumbers: $keys))->getData()['items']; // list<OrderResponse> — objects: $records[0]->orderNumber, children ->; data = {@type: orderList, items}
+$list  = $bc->order()->orderList($filter);                                             // filtered flat list: ReadResult (items(), total())
+$keys  = array_values(array_unique(array_column($list->items(), 'orderNumber')));
+$records = $bc->order()->getOrderByOrderNumbers(new OrderByOrderNumbers(orderNumbers: $keys))->getData()['items']; // list<OrderResponse> — objects: $records[0]->orderNumber, children ->; data = {@type: orderList, items}
 ```
 
 An aggregate **WITHOUT** a unique key — list → ids → `get{Agg}ByIds`:
 
 ```php
 $list  = $bc->heartbeatSignal()->heartbeatSignalList($filter);                               // filtered flat list
-$ids   = array_values(array_unique(array_column($list['items'], 'id')));
-$records = $bc->heartbeatSignal()->getHeartbeatSignalByIds(new QueryHeartbeatSignalByIds(ids: $ids))->getData()['items'];  // list<HeartbeatSignalResponse> — objects: $records[0]->serviceName, children ->; data = {@type: heartbeatSignalList, items}
+$ids   = array_values(array_unique(array_column($list->items(), 'id')));
+$records = $bc->heartbeatSignal()->getHeartbeatSignalByIds(new HeartbeatSignalByIds(ids: $ids))->getData()['items'];  // list<HeartbeatSignalResponse> — objects: $records[0]->serviceName, children ->; data = {@type: heartbeatSignalList, items}
 ```
 
 Edge behaviour is plain IN semantics either way: empty input → `[]` · duplicates → one aggregate record · missing keys/ids → partial result without error · no order guarantee — match per key (or `id`), which every aggregate record carries. `get{Agg}ByIds` keeps being emitted family-internally regardless of a unique key — only the outward (public surface/OpenAPI) bulk-read surface and the list-item handle switch to the key when one exists.

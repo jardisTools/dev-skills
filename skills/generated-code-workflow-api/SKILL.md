@@ -97,7 +97,7 @@ public function __invoke(LendBookContext $ctx): NodeResult
 | `$this->handle(Class::class)` | any class through the kernel seam (aggregate write facade, closure, `Identity`, `SystemClock`); this is also how the factory builds nodes |
 
 ```php
-$onLoan = $this->read(GetLoanListHandler::class, new LoanListFilter(isbn: $isbn, limit: 1))->first();
+$onLoan = $this->read(GetLoanListHandler::class, $this->handle(LoanListFilter::class, isbn: $isbn, limit: 1))->first();
 
 return $onLoan === null
     ? NodeResult::route(Route::OnTrue)
