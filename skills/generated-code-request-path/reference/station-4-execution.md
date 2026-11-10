@@ -19,6 +19,7 @@ The request has passed the route, the DTO and the process door; now a node runs,
 **Query**
 
 - Every declared query is a paginated list. Its filter is a DTO with `limit = 100` and `offset = 0`; the SQL is built from the model on `dbquery`: parameters, tenant marker, count, ordering with stable keys, and the declared upper bound of `limit` (an internal caller is clamped with `min()`). It reads over the reader connection. The outer column names come from the FieldMap as SQL alias; the spelling is always the FieldMap's.
+- The read base of an aggregate (`Get{Agg}ById`, `ByIds`, `By{Key}`, `By{Key}s` handlers) is the one way an aggregate is filled: root, children, transform, hydration. It answers a `DomainResponseInterface` with the whole aggregate and empty data when nothing matches. A declared query never fills an aggregate.
 - Every query that reads a tenant-marked entity (root, child derived with `adopt`, join partner) filters on the tenant automatically through the DTO field `tenant`; a left or full join partner is matched as `= {tenant} OR IS NULL`. In a world with login every root carries a `tenant` marker (`V-TENANT-1`, exception: the BC with `loginIdentity`). A condition with a parameter on a marker column is a blocker (`V-TENANT-5`).
 
 **Command capsule**
@@ -36,6 +37,7 @@ You write only what is left after the description, the model and these guarantee
 - put a check of a command field into a node: empty, length, format, decimal pattern, existence of the root, stale write or duplicate. The capsule does it; a field-content 400 from a node does not exist in any form.
 - write a rule twice: no node body that re-judges what a bound Rule chain or a Rule node already judges.
 - filter, sort, page or count by hand, post-filter a query result, copy a query's SQL into a body, or write own SQL. A need for another selection is a query in the model (parameter, `where`, `orderBy`, `in`, join), read through `read(Handler, Filter)` in the own BC.
+- take the first row of a list query for an aggregate whose key you hold. The read base answers the aggregate (`generated-code-workflow-api` §5, read node); the 404 for a key without a record is the node's own rejection.
 - add the tenant condition yourself, pass tenant as an ordinary query parameter on the marker column, or let a validator or an output carry a marker column.
 - map the column names or call `toColumns`, `persist` or the repository yourself; a write is an aggregate command or a `process()` call.
 - translate the answer of a Call node by hand into a route or a status.
@@ -56,6 +58,7 @@ All paths are relative to the generated tree of the BC; `{P}` is a process, `{Ag
 | Call node on a command of the own BC | `Action/{Node}.php` | answer mapped with `MapResponse` |
 | Call node `call:read` | `Action/{Node}.php` | a reading call, writes nothing |
 | Read through the kernel seam | `Action/{Node}.php` calling `read(Handler, Filter)` | own BC only |
+| Read of one aggregate by its key | `Action/{Node}.php` calling `context(Get{Agg}By{Key}Handler, {Agg}By{Key})()` | read base: the whole aggregate, empty data means no record |
 | Cross-BC call | `Action/{Node}.php` → `{BC}/Service/{Name}.php` → foreign `process()` | foreign BC only through its door |
 | Service reading a foreign BC | `{BC}/Service/{Name}.php` | reads through `{agg}()` of the foreign door |
 | Sub-process node | `Action/{Node}.php` | opens the other process through the kernel seam, depth plus one |

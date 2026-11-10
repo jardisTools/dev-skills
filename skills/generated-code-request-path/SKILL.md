@@ -45,7 +45,7 @@ Each line is a thing you never do in a body, because a station does it.
 Reach for the means in this order and stop at the first that carries the need:
 
 1. **Process** — flow and branching are the graph, not code.
-2. **Query** — every read, filter, order and cut is a declared query.
+2. **Query** — every filter, order and cut is a declared query; one aggregate whose key you hold is read through its read base (`{agg}By{Key}`), never as the first row of a list (`generated-code-workflow-api` §5, read node).
 3. **Aggregate** — field rules and behaviour come from columns, value lists and relations.
 4. **Closure** — a Rule body is the judgement, a Value body the computation; a Set has no body.
 5. **Node body** — only the business logic of the description of that one node.
