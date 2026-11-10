@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.48.0] - 2026-11-10
+
+### Changed
+- Skill `generated-code-workflow-api`: new node kind "Read node, one aggregate by its key" (§5) with the body form (read base through `context(Get{Agg}By{Key}Handler, ...)`, a key without a record is the node's own 404, `MapResponseInto` into `{Agg}Response`), its model side (`reads` on the read base, `gives: aggregate`) and the reason a declared query is the wrong means there; a row for the read base in the node body table (§4); the markers `tenant` / `user` are handed on unchanged.
+- Skill `generated-code-request-path`: the order of means names the read base for one aggregate whose key is at hand; `reference/station-4-execution.md` states that the read base is the one way an aggregate is filled, lists the read of one aggregate among the node forms and rules out the first row of a list query in its place.
+
 ## [1.47.0] - 2026-11-09
 
 ### Changed

@@ -91,9 +91,10 @@ public function __invoke(LendBookContext $ctx): NodeResult
 | In a node body | Use |
 |---|---|
 | `$ctx->input()` | the typed process input |
-| `$ctx->input()->tenant` / `->user` | tenant and bare user id of the signed-in user, filled by the door from the request attributes (fields of the process input, only in a world with login; `tenant` required (403) only when the process reaches a tenant-marked aggregate, `user` never); sub-process and call nodes hand them on; read them, never take them from a client field |
+| `$ctx->input()->tenant` / `->user` | tenant and bare user id of the signed-in user, filled by the door from the request attributes (fields of the process input, only in a world with login; `tenant` required (403) only when the process reaches a tenant-marked aggregate, `user` never); sub-process and call nodes hand them on unchanged (a column the model fills from `user` holds that bare id, whatever its name; another value there is a finding on the model, not a task of the node); read them, never take them from a client field |
 | `$ctx-><node>()` | typed getter per node, generated in `{Name}Context` over `latest()`: the type is what the node `gives` (a read aggregate: `{Agg}Response`; an identifier: the `{Command}Response` of the call; a scalar value: `bool`/`int`/`string`…; an object value: its `{Name}{Value}` class; always nullable, `null` until the node ran); the raw access stays (`latest($node)`, `all($node)`, `previous()`, `iteration($node)`, `chain()`, `depth()`) |
 | `$this->read(Handler::class, $filter): ReadResult` | read through an own-BC query handler: `->first()`, `->items()`, `->total()`, `->isEmpty()`; a handler of another BC throws `LogicException` (M9) |
+| `$this->context(Get{Agg}By{Key}Handler::class, $query)(): DomainResponseInterface` | the read base of an own-BC aggregate (`ById`, `ByIds`, `By{Key}`, `By{Key}s`): the whole aggregate with its children; a key without a record answers a success with empty data (`getData() === []`), never a 404 (§5, read node) |
 | `$this->handle(Class::class)` | any class through the kernel seam (aggregate write facade, closure, `Identity`, `SystemClock`); this is also how the factory builds nodes |
 
 ```php
@@ -120,6 +121,23 @@ There are no free slots; results sit in the chain and nothing is handed on from 
 ### 5. Node kinds
 
 **Call node, aggregate command.** `$this->handle(Loan::class)->createLoan(new CommandLoan(...))` returns a `DomainResponseInterface`; `(new MapResponseInto())($response, CreateLoanResponse::class)` maps it: 2xx becomes `ok(<typed object>)` (the `{Command}Response` the getter of this node returns), 4xx a `reject` with the callee's plain context, every other status throws. `MapResponse` is the same mapping without the typed object (`ok(array)`).
+
+**Read node, one aggregate by its key.** A node whose task is to fetch an aggregate of the own BC, with the key at hand (process input or an earlier answer), reads the read base and not a declared query: the point read answers the whole aggregate with its children, and `MapResponseInto` hands it on as the `{Agg}Response` the getter of this node returns. A key without a record is a success with empty data; the 404 is the node's own (declared in `rejects`). Model: `reads: [{query: loanByLoanNumber}]`, `gives: {kind: aggregate, aggregate: Loan}`. A tenant-marked aggregate takes `tenant: $ctx->input()->tenant` as the first argument of the query class.
+
+```php
+$loanNumber = $ctx->input()->loanNumber;
+$response = $this->context(
+    GetLoanByLoanNumberHandler::class,
+    $this->handle(LoanByLoanNumber::class, loanNumber: $loanNumber)
+)();
+if ($response->isSuccess() && $response->getData() === []) {
+    return NodeResult::reject(ResponseStatus::NotFound, 'lending.loan.notFound', ['loanNumber' => $loanNumber]);
+}
+
+return (new MapResponseInto())($response, LoanResponse::class);
+```
+
+A declared query is the wrong means here. It is a paginated list of flat rows of its declared columns and never fills an aggregate, so `->first()` of it is a row: no children, not the type the getter returns. A query leads to an aggregate only when the key is not known: query, key of the row, read base.
 
 **Sub-process node.** The stub carries the whole call; only the input mapping is yours (the node body). The node runs the inner process through the inner door (`$this->context(<Inner>Handler::class, <input>, depth: $ctx->depth() + 1)()`; the sub-input carries `tenant`/`user` from the outer input, filled by the generator) and hands the `DomainResponseInterface` it answers to `MapResponseInto` (the class is the object value the node `gives`, derived from the `gives` of the end nodes of the inner process) or, for an inner process without own fields, to `MapResponse`:
 
