@@ -4,6 +4,15 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.49.0] - 2026-11-11
+
+### Changed
+- Skill `generated-code-request-path`: `V-PROC-DUPCHECK` and `V-PROC-READ-UNDECLARED` are warnings; no text says anything about a later version, and a warning of these rules does not stop the build; the paging range, the tenant and user claims, the filter limit and the double run of a Rule are stated as the generated code behaves; a gap the model cannot express may be covered once by hand at a place of the table, the same kind a second time is parked; the heading "Reliance list" is the one every generated stub with a hand body names in its header.
+- Skill `design-headless-mcp`: which refusals carry every blocker of a run and which one blocker plus the names of the first failing gate; status and `location` and `hint` of the envelope; `build_domain` builds every element whose gates pass and lists each blocked one in `failed[]`; `validate_definitions_all` keeps its own rows next to the finding form.
+- Skill `generated-code-recipes`: the troubleshooting rows for `V-PROC-DUPCHECK` and `V-PROC-READ-UNDECLARED` state the checked fields and the declarable read ways as built.
+- Skill `generated-code-extend`: a gap covered by hand at a place of the table is counted once by its kind, the same kind a second time is parked; a substitute outside the table stays a violation.
+- Skill `design-model-capabilities`: the `tenant` / `user` markers answer 400 `unknown` in a body except where the key is tolerated and dropped.
+
 ## [1.48.0] - 2026-11-10
 
 ### Changed

@@ -36,7 +36,7 @@ Hand code is written only into the stubs a build produces and into `App/**` deli
 
 A level line is `<Level>: <Name>` at the start of a docblock line and carries the name only; description lines are indented, an empty description leaves the level line without text (the registry warns `V-DESC-EMPTY` for an empty Domain, BC or process description). The node, Closure or Service's own description is the prose above the chain. The Gesetz-Gate (invariant D, `StubChainRule`) checks the level lines — a node stub needs Domain, BC, Prozess, Knoten; a Closure stub Domain, BC, Closure; a Domain Service stub Domain, BC, Service — never the text.
 
-**If the model cannot express it,** no hand-code place opens up: a missing capability is a gap in Jardis. When you work on Jardis itself, build it in the package or the generator first and use it afterwards; when you work on an app, report it as an issue and wait. A substitute in the project — an interim, a workaround, a class in a place that is not in the table — is a violation, not progress.
+**If the model cannot express it,** no new hand-code place opens up: a missing capability is a gap in Jardis. When you work on Jardis itself, build it in the package or the generator first and use it afterwards; when you work on an app, report it as an issue. A substitute in the project — an interim, a workaround, a class in a place that is not in the table — is a violation, not progress. Hand code at a place of the table that covers such a gap once is counted by its kind; the same kind a second time is no single case: park the affected place, report the missing capability and keep building everything that does not depend on it.
 
 **Removed hand-code places** (a file there is a violation; the generator emits no new ones):
 
