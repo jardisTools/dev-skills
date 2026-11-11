@@ -18,7 +18,7 @@ The request has passed the route, the DTO and the process door; now a node runs,
 
 **Query**
 
-- Every declared query is a paginated list. Its filter is a DTO with `limit = 100` and `offset = 0`; the SQL is built from the model on `dbquery`: parameters, tenant marker, count, ordering with stable keys, and the declared upper bound of `limit` (an internal caller is clamped with `min()`). It reads over the reader connection. The outer column names come from the FieldMap as SQL alias; the spelling is always the FieldMap's.
+- Every declared query is a paginated list. Its filter is a DTO whose `limit` defaults to the `limit:` the query declares (mandatory, `V-QDEF-12`; a new query starts at 20) and whose `offset` defaults to 0; the SQL is built from the model on `dbquery`: parameters, tenant marker, count, ordering with stable keys, and the declared upper bound of `limit` (an internal caller is clamped with `min()`). It reads over the reader connection. The outer column names come from the FieldMap as SQL alias; the spelling is always the FieldMap's.
 - The read base of an aggregate (`Get{Agg}ById`, `ByIds`, `By{Key}`, `By{Key}s` handlers) is the one way an aggregate is filled: root, children, transform, hydration. It answers a `DomainResponseInterface` with the whole aggregate and empty data when nothing matches. A declared query never fills an aggregate.
 - Every query that reads a tenant-marked entity (root, child derived with `adopt`, join partner) filters on the tenant automatically through the DTO field `tenant`; a left or full join partner is matched as `= {tenant} OR IS NULL`. In a world with login every root carries a `tenant` marker (`V-TENANT-1`, exception: the BC with `loginIdentity`). A condition with a parameter on a marker column is a blocker (`V-TENANT-5`).
 
@@ -27,7 +27,7 @@ The request has passed the route, the DTO and the process door; now a node runs,
 - The capsule validates by itself, whoever calls it. It has its own `ValidateInput` with its own registry; the rules come from the schema: `NotEmpty::trimmed` for NOT-NULL strings, `Length::max`, a pattern for `decimal(p,s)`. No validator takes a marker column.
 - The status staircase is fixed: 400 (fields) → load → 404 (root missing; never under Create) → 422 (bound Rule chain) → 404 (child or apply miss) → 409 (persist) → 500. A form error comes before a miss. An Update loads the root and, with `$expected`, checks it by compare-and-set against the values the caller read.
 - The FieldMap translates with `toColumns`, then `persist` runs. A unique violation becomes 409 `duplicate`, a stale write basis 409 `stale_write` (or `stale_delete`). The lifecycle event is collected with `EventScope::Internal` and not sent.
-- Rules act in two places: in the guard chain of the command and as a Rule node in a process. The same rule never runs twice in one flow. A command door at `domain` or wider that has no bound rule gets the warning `V-RULE-5`, because process rules apply only on the process path.
+- Rules act in two places: in the guard chain of the command and as a Rule node in a process. A Rule may run twice in one flow — in the guard chain of a command and as a Rule node of the process that calls it; the build only warns (`V-RULE-NODE-DOUBLE-BIND`), nothing at run time prevents the second run. A command door at `domain` or wider that has no bound rule gets the warning `V-RULE-5`, because process rules apply only on the process path.
 
 ## Never
 
