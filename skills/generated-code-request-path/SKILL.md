@@ -22,14 +22,14 @@ Fact line: requires Jardis Builder ≥ 0.3.0.
 
 ## Check layers
 
-- **Layer 1, route guard (station 2):** presence, type, unknown keys, paging range — 400 with a closed vocabulary of reasons.
+- **Layer 1, route guard (station 2):** presence, type, unknown keys and, at a declared-query door, the paging range (`limit` 1 up to the declared cap, `offset` from 0; a value outside is 400 `invalid`, never clamped) — 400 with a closed vocabulary of reasons; the paging range of a read process is checked by its process door (layer 2).
 - **Layer 2, process door (station 3):** type and value list of each input field, command fields declared with `accepts:` — before the first node, at every door (route, `process()`, sub-process).
 - **Layer 3, command capsule (station 4):** limits from the schema columns (`NotEmpty::trimmed`, length, decimal pattern), then the Rule chain (422), then persist (409).
 - **Form layer (station 5):** the answer is cut by the packages (`ProjectOutcome`, one form per outcome); the failure form comes from status, `messageKey` and context. A body never shapes either.
 
 ## Reliance list
 
-Each line is a thing you never do in a body, because a station does it.
+Each line is a thing you never do in a body, because a station does it. Every generated stub with a hand body names this section in its header (`Before writing this body: dev-skill generated-code-request-path, section "Reliance list".`); the heading keeps its name.
 
 1. **Rights** — never check a right, role or session; the HTTP outer door does it once; a node never answers 403, and a node rejection status outside 400, 401, 404, 405, 409, 422 is `V-NODE-REJECT-STATUS`.
 2. **Required / empty / type** — never re-check what the route guard, the process door or the command capsule check; a mandatory field is an input or column declaration, a minimum length is a Rule (422).
@@ -55,7 +55,7 @@ Reach for the means in this order and stop at the first that carries the need:
 Ask both before every node, before saving the process.
 
 1. **Does a station already do it?** If the route guard, the process door, a query or the command capsule covers it, there is no node (compare the reliance list).
-2. **Can the model say it?** If a means higher in the order carries it, use that; if none does, report a missing capability and build no node around the gap.
+2. **Can the model say it?** If a means higher in the order carries it, use that; if none does, report a missing capability and build no node around the gap outside the hand-code places of the table (`generated-code-extend`, section 10). When you work on Jardis itself, the gap is closed in the package or the generator. Hand code at a place of the table that covers such a gap once is counted by its kind; the same kind a second time is no single case: park the affected place, report the missing capability and keep building everything that does not depend on it.
 
 ## Signs of a superfluous node
 
@@ -67,14 +67,14 @@ Ask both before every node, before saving the process.
 
 ## Findings that point here
 
-A hint that names this skill and one of these sections answers a finding of the model check or of the build. Both rules are warnings; the hint says the severity becomes a blocker in a later Builder release.
+A hint that names this skill answers a finding of the model check or of the build; the table names the section. Both rules are warnings. A warning of these rules does not stop the build: the code is written, and the warning says nothing about a later Builder version. Read its `hint` and act on it; the goal after a build is 0 warnings and suggestions.
 
 | Finding (`ruleId`) | Where it fires | What it means | What to do |
 |---|---|---|---|
 | `V-PROC-DUPCHECK` | validate, save, build of a process; one finding per hand node with `rejects` 400 | The node checks the content of an input field itself. `subject.fields` names the fields Jardis already checks (the check is a duplicate); empty means the check has the wrong form (presence is 400 `missing` at the door, a condition is a Rule answering 422). | Drop the check; declare the field as a command field (`accepts:`) or state the condition as a Rule. Section "Signs of a superfluous node", sign 1. |
 | `V-PROC-READ-UNDECLARED` | build, after the bodies are merged; node, Closure and Service bodies | A body reads a query of its own bounded context that the model does not declare (`subject.query`), or reads a handler of another bounded context. A read held in a variable and a declared `reads` entry the body never reads are suggestions. | Declare the read (`reads: [{query}]` at the node or at the `Closures.json` entry; the read base `{agg}ById`, `{agg}ByIds`, `{agg}By{Key}`, `{agg}By{Key}s` is declarable too) or drop it. A foreign bounded context is reached through a sub-process, a cross-BC call or the doors of that context. Section "Signs of a superfluous node", sign 5. |
 
-Every finding carries `ruleId`, `severity` (`blocker`, `warning`, `suggestion`), `process`, `nodeId`, `file`, `subject` and a `hint`; the doors return the complete list of a run, see `design-headless-mcp`.
+Every finding has the keys `ruleId`, `severity`, `process`, `nodeId`, `file`, `subject`, `message` and `hint`; a finding of the definition check or of a generator self-check leaves `process`, `nodeId` or `file` empty because it is not bound to a node. `severity` is `blocker`, `warning` or `suggestion`. Which refusal carries every blocker of a run: `design-headless-mcp`.
 
 ## Reference
 
