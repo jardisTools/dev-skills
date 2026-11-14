@@ -4,6 +4,14 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.50.0] - 2026-11-14
+
+### Changed
+- Skill `generated-code-recipes`: Recipe 2 covers a call to another system, read or write, also another Jardis domain, through an External-Call node (kernel `http()`, `DecodeAnswer`, `MapExternalResponse`, the refusals listed in `rejects[]`, two ways of failure, what the call does not give you); new Recipe 2a, mail from a hand body through the kernel `mail()`; the navigation rows name another domain as Recipe 2 and the own domain for the Cross-BC-Call node.
+- Skill `generated-code-extend`: V6 and V9 and the Service row of the places table name the boundary: a foreign BC of the own domain is reached through its doors, another domain only over HTTP through an External-Call node; the External-Call stub lands under `{BC}/Service/` and has no `level` field.
+- Skill `generated-code-request-path`: the reliance list and station 4 speak of a foreign BC of the own domain; the External-Call row names the Service, the kernel `http()`, `DecodeAnswer` and `MapExternalResponse`.
+- Skill `generated-code-workflow-api`: now describes `workflow` 5.3 and `response` 4.3; new paragraph on the External-Call node, where `ExternalFailureException` ends in a 500 at the door.
+
 ## [1.49.0] - 2026-11-11
 
 ### Changed
