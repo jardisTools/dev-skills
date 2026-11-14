@@ -13,7 +13,7 @@ The request has passed the route, the DTO and the process door; now a node runs,
 - A Rule node is generated completely (hermetic), the body is never yours. As a guard it rejects with 422 `RuleViolation`; in decision mode the package turns that 422 into the route `onFalse`. A subject that cannot be loaded is 404 in both modes and never `onFalse`.
 - A Call node translates the answer of its target: 2xx becomes `ok`, 4xx becomes a rejection with the same status, 5xx becomes an exception (rollback, 500). A body may choose `route(onFalse)` for a 4xx on purpose; a blanket "success or onFalse" mapping cannot tell a 4xx from a 5xx.
 - The failure form is built by the package from status, `messageKey` and context. Events travel on the result of the node; a rejection discards them. Around every node the engine applies `GuardLoop` (step limit, `LoopLimitExceededException`), `CollectEvents`, `HydrateResponse` and `ApplyRuleMode`.
-- `read(Handler, Filter)` reads only the own BC; a handler of a foreign BC is refused with `LogicException`. `context()` and `handle()` stay unrestricted. A foreign BC is used only through its doors at stance `domain` or wider, from a Domain Service under `{BC}/Service/`: it reads through `{Agg}Read`, writes through `process()` or a command door, never through a foreign aggregate, repository or SQL.
+- `read(Handler, Filter)` reads only the own BC; a handler of a foreign BC is refused with `LogicException`. `context()` and `handle()` stay unrestricted. A foreign BC of the own domain is used only through its doors at stance `domain` or wider, from a Domain Service under `{BC}/Service/`: it reads through `{Agg}Read`, writes through `process()` or a command door, never through a foreign aggregate, repository or SQL.
 - The stub brings its context: the declared `Reads`, `Gives` and `rejects`, plus the chain Domain → BC → Process → Node as PHPDoc.
 
 **Query**
@@ -59,11 +59,11 @@ All paths are relative to the generated tree of the BC; `{P}` is a process, `{Ag
 | Call node `call:read` | `Action/{Node}.php` | a reading call, writes nothing |
 | Read through the kernel seam | `Action/{Node}.php` calling `read(Handler, Filter)` | own BC only |
 | Read of one aggregate by its key | `Action/{Node}.php` calling `context(Get{Agg}By{Key}Handler, {Agg}By{Key})()` | read base: the whole aggregate, empty data means no record |
-| Cross-BC call | `Action/{Node}.php` → `{BC}/Service/{Name}.php` → foreign `process()` | foreign BC only through its door |
+| Cross-BC call | `Action/{Node}.php` → `{BC}/Service/{Name}.php` → foreign `process()` | foreign BC of the own domain, only through its door |
 | Service reading a foreign BC | `{BC}/Service/{Name}.php` | reads through `{agg}()` of the foreign door |
 | Sub-process node | `Action/{Node}.php` | opens the other process through the kernel seam, depth plus one |
 | Event node | `Action/{Node}.php`, hermetic | events travel on the result (`withEvents`) |
-| External call | `Action/{Node}.php` | body calls the external target |
+| External call | `Action/{Node}.php` → `{BC}/Service/{Name}.php` | the Service sends through the kernel `http()`, reads with `DecodeAnswer`, maps with `MapExternalResponse`; the target is another system or another domain |
 
 **Queries** (`{BC}/Model/{Agg}/Repository/Query{Name}.php`)
 

@@ -22,9 +22,61 @@ final class ObisCodeIsValid extends MeterDeviceContext
 
 In the Process the Rule node binds the input with the long form `ruleArgs: [{"param": "obis", "source": "obis"}]` (Recipe 10): a violation is `reject(ResponseStatus::RuleViolation, …)` — 422 with the catalog `messageKey` `counter.obisInvalid`, the run ends and rolls back (`reject` is not a route); a passed check takes `Route::OnTrue`. Without a catalog `messageKey` the body's key passes through. For a tenant-specific variant of the Rule see `Closure/v{N}/` (`generated-code-versioning` §1).
 
-**Recipe 2 — External lookup (External-Call node, Domain Service)**
+**Recipe 2 — Call to another system, read or write (External-Call node, Domain Service)**
 
-Model an **External-Call** node in the Process Designer. The generator emits the Service stub `{BC}/Service/ResolveMeterLocationName.php` (extends the Domain Context, header-aware merge, `generated-code-extend` §1) with the PSR-18 scaffold via `$this->resource()->httpClient()` (null-guarded) and a docblock with the transport-error convention (`Route::OnFalse` / `Route::OnTimeout`); the node body delegates to it (`return $this->handle(ResolveMeterLocationName::class)->__invoke($context);`). Your part is the body of the Service's `__invoke()`: build the request, call the client, translate the answer into your own vocabulary (ACL), return a `NodeResult`. V9: the Service reads only — it writes nothing in its own BC. The routes the body takes (`onFalse`, `onTimeout`) are drawn in the Process Designer; an undeclared route is a 500. The HTTP client is described in `adapter-http`.
+Model an **External-Call** node in the Process Designer. The target is a system outside your domain — a service, or **another Jardis domain**. A Cross-BC-Call node reaches only BCs of your own domain; a node that names a target of another domain is the blocker `V-XDOMAIN-TARGET`, because a process never calls another domain in-process. The generator emits the Service stub `{BC}/Service/SendInvoiceToLedger.php` (extends the Domain Context, header-aware merge, `generated-code-extend` §1) with a null-guarded `$this->resource()->httpClient()` scaffold and a docblock that names the answer path and the failure contract; the node body delegates to it (`return $this->handle(SendInvoiceToLedger::class)->__invoke($context);`). Your part is the body of the Service's `__invoke()`: send the request, read the answer, return a `NodeResult`. V9: the Service writes nothing in its own BC — the write goes to the other system.
+
+1. **Model the refusals.** List every status of the other system that is a refusal of your node — 400, 404, 409, 422 — in the node's `rejects[]`, each with its message key — `V-NODE-REJECT-UNDECLARED` does not see a status that is only mapped by `MapExternalResponse`, so keep the list complete yourself — and draw the `onFalse` edge (and `onTimeout` when the body routes there); an undeclared route is a 500.
+2. **Send through the kernel.** `$this->resource()->http()` is the `HttpServiceInterface` of the kernel (`get`/`delete`/`head` take `uri, headers`; `post`/`put`/`patch` take `uri, data, headers`, `data` goes out as JSON). It returns a PSR-7 response: a 4xx or 5xx is a response, only a failed transport throws `ClientExceptionInterface`. `null` means no service is configured — throw. No `JardisAdapter\…` import, no `new` client (V2 / V3).
+3. **Read the answer** with `DecodeAnswer` (`jardissupport/response`): body text and status code in, a `DomainResponseInterface` out. A body that is no Jardis answer throws `NoJardisAnswerException`.
+4. **Map it** with `MapExternalResponse` (`jardissupport/workflow`), not with `MapResponse`: `MapResponse` would hand a 401 or 403 of the other system to your caller as a refusal.
+5. **Two ways of failure, never mixed.** 2xx, 400, 404, 409 and 422 of the other system are the answer of your node (2xx `ok`, the four refusals `reject` with the same status and the context of the other system). 401, 403, 405, every 5xx and every status outside the response form throw `ExternalFailureException`: a technical failure, the door logs it and answers 500; no route takes it. A transport failure and an answer that is no Jardis answer are the no-way: `Route::OnFalse`; a timeout is `Route::OnTimeout`. The body translates both, the mapping does not.
+
+```php
+final class SendInvoiceToLedger extends ShopContext
+{
+    private const URL = 'https://ledger.example.test/entries';
+
+    public function __invoke(ProcessContext $context): NodeResult
+    {
+        /** @var SettleInvoice $cmd */
+        $cmd = $context->input();
+        $http = $this->resource()->http()
+            ?? throw new \RuntimeException('The kernel has no http() service: ' . self::class);
+
+        try {
+            $reply = $http->post(self::URL, ['invoiceNumber' => $cmd->invoiceNumber, 'amount' => $cmd->amount]);
+            $answer = (new DecodeAnswer())((string) $reply->getBody(), $reply->getStatusCode());
+        } catch (ClientExceptionInterface | NoJardisAnswerException) {
+            return NodeResult::route(Route::OnFalse);
+        }
+
+        return (new MapExternalResponse())($answer);
+    }
+}
+```
+
+The imports are `JardisSupport\Response\Handler\Response\DecodeAnswer`, `JardisSupport\Response\Exception\NoJardisAnswerException`, `JardisSupport\Workflow\Handler\Node\MapExternalResponse`, `JardisSupport\Workflow\Data\{NodeResult, ProcessContext, Route}` and `Psr\Http\Client\ClientExceptionInterface`. To carry on after a refusal instead of ending the run, pass the route as second argument: `(new MapExternalResponse())($answer, Route::OnFalse)` — it acts on the four refusals only, never on `ExternalFailureException`.
+
+**What the call does not give you.** The other system is not part of your transaction bracket: it writes on its own connection, so a refusal that rolls your run back leaves what it wrote. Retry is the `HttpClient`'s, not the body's: it repeats on 5xx and network errors up to `maxRetries` (`HTTP_MAX_RETRIES`, default 0 = none), and the body holds no retry loop. This recipe states no idempotency guarantee — neither the stub nor the `HttpClient` documents one; a retry sends the request again, and whether that is safe is the contract of the other system. The client is described in `adapter-http`, the answer reading in `support-response`, the mapping in `support-workflow`.
+
+**Recipe 2a — Mail from a hand body**
+
+A node body or a Domain Service sends mail through the kernel service `mail()` (`MailServiceInterface`), the same way it sends HTTP — no `JardisAdapter\…` import:
+
+```php
+$mail = $this->resource()->mail()
+    ?? throw new \RuntimeException('The kernel has no mail() service: ' . self::class);
+$mail->sendMail(
+    to: $cmd->recipientEmail,                        // string | list<string>
+    subject: 'Invoice ' . $cmd->invoiceNumber,
+    text: 'Your invoice is ready.',                  // text and/or html
+    html: null,
+    options: ['from' => 'billing@example.test'],     // from, fromName, cc, bcc, replyTo, headers
+);
+```
+
+`mail()` is `null` when the project has no mailer adapter or no `MAIL_HOST`: a missing service is a configuration error, so the body throws (a technical failure, the door answers 500) and does not skip the mail silently. Neither text nor HTML, an unknown option key, or `fromName` without `from` throws `\InvalidArgumentException`; an absent `from` falls back to the configured sender; a failed transfer throws `MailerExceptionInterface` — let it pass (500), or catch it and return `NodeResult::route(Route::OnFalse)` with an `onFalse` edge on the node. Messages with attachments or inline images use `mailer()` instead (`adapter-mailer`).
 
 **Recipe 3 — A new operation: aggregate command/query vs. BC-level Process**
 
