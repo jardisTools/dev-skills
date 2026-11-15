@@ -4,6 +4,11 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Skill `design-headless-mcp`: the answer of `build_domain` is a head of fixed size (counts, `failedTotal`, the first ten blocked elements, `findingsByRule`, `logResourceUri`, `findingsResourceUri`) plus a findings file next to the log with the complete lists, read through `jardis://mcp-log/{name}`; `build` and `build_process` keep their lists. A standing note without need to act (`V-XBC-404-BOUNDARY`, `V-SUBPROC-400-BOUNDARY`) is one line per process with the number of its nodes, one line per domain list over several processes, and a domain run reports it only as a finding.
+
 ## [1.50.0] - 2026-11-14
 
 ### Changed

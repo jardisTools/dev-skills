@@ -70,7 +70,8 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 - Build control of the board: Tools `run_qa`, `run_make_target`, `stop_make_target`,
   `post_studio_card`; Resources `jardis://project/make-targets`, `jardis://studios`,
   `jardis://studios/{name}`, `jardis://closed-studios`, `jardis://mcp-log/{name}` (full log
-  of a prior `build`/`build_process`/`run_qa` call) — see §2 "Studio build control".
+  of a prior `build`/`build_process`/`build_domain`/`run_qa` call, and the findings file of a
+  `build_domain` run) — see §2 "Studio build control".
 - Once generated code exists and you are implementing behaviour inside it: `generated-code-extend`.
 - Designing a schema's content from a domain idea instead of introspecting a live database, then
   feeding it through `import_schema`: `design-draft-schema`.

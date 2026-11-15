@@ -146,6 +146,17 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    `build_domain` does not stop at a blocked element: it builds every element whose gates pass
    and lists each blocked one in `failed[]` with `status`, `code`, `message` and, for a rule
    refusal, `details`; `ok` is `false` when `failed[]` is not empty.
+   **The answer of `build_domain` is a head of fixed size plus a findings file.** The head holds
+   numbers (`elementsCount`, `failedTotal`, `filesBackedUpCount`, `warningsCount`,
+   `suggestionsCount`, `findingsCount`, `findingsByRule` per rule ID, `overriddenCount`,
+   `contextMapDeviationsCount`), the file counters, `logPath` / `logResourceUri` and
+   `findingsPath` / `findingsResourceUri`, and `failed` as the first ten blocked elements only
+   (`kind`, `bc`, `element`, `blockers`, `rule`, `hint` cut to 200 characters). The complete lists
+   (`elements`, `failed` with `details`, `filesBackedUp`, `warnings`, `suggestions`, `findings`,
+   `overridden`, `contextMapDeviations`) stand in the findings file next to the log; read it
+   through `findingsResourceUri` (`jardis://mcp-log/{name}`). A `findingsFileError` in the head
+   means the build is valid but the file could not be written. `build` and `build_process` keep
+   their lists in the answer.
    **Findings of a run (one form at every door).** `build`, `build_process`, `build_domain`,
    `validate_process` and `save_process` report a finding as
    `{ruleId, severity, process, nodeId, file, line?, subject, message, hint}`;
@@ -164,9 +175,14 @@ One walk from an empty workspace to readable generated code. Each step is a Tool
    the gates on the final bodies (undeclared reject, call, construct) each collect every blocker
    of all requests (a request with a model blocker is not checked for handle consistency and
    answer reference), and a blocker writes nothing. A run that goes through
-   returns the warnings and suggestions whose rule is known as `findings` (always an array;
-   `build_domain` adds the `scope` of the element); the text lists `warnings` / `suggestions` and
-   the progress events stay as they were. `validate_process` and `save_process` return `findings`
+   returns the warnings and suggestions whose rule is known as `findings` (always an array; the
+   array of `build_domain` stands in its findings file and adds the `scope` of the element); the
+   text lists `warnings` / `suggestions` and the progress events stay as they were. A standing note
+   without need to act (`V-XBC-404-BOUNDARY`, `V-SUBPROC-400-BOUNDARY`: what a foreign BC or a
+   sub-process answers reaches the caller only as far as the hand body passes it on) is ONE line
+   per process with the number of its nodes, one line per domain list over several processes;
+   the full wording stands in the paragraph "Grenze (kein Defekt)" of the PHPDoc of the generated
+   class. A domain run reports it only as a finding, never in the `suggestions` text. `validate_process` and `save_process` return `findings`
    next to the old buckets `errors` / `warnings` / `suggestions`. The hints of `V-PROC-DUPCHECK`
    and `V-PROC-READ-UNDECLARED` name the skill `generated-code-request-path`.
 7. **Read the generated code** — via the `code-tree` and `code-file` Resource templates
