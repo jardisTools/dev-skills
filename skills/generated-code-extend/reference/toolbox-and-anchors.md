@@ -16,7 +16,7 @@ When a Process node needs a Jardis runtime tool (cache, mail, queue …), consul
 | Repository (generic CRUD on top of dbquery) — generated code and packages only, never hand code | `support-repository` |
 | Validation (composite, fluent, object graph) | `support-validation` |
 | Workflow engine (multi-step orchestration) | `support-workflow` (and `generated-code-workflow-api` for the Process Designer-Orchestrator API) |
-| Auth (session, password hash, RBAC) | `support-auth` |
+| Auth (session, password hash, rights check) | `support-auth` |
 | Scheduling / cron parsing | `support-scheduling` |
 | Secret resolution (encrypted `.env` values) | `support-secret` |
 | Dotenv loader (cascade, type casting) | `support-dotenv` |
