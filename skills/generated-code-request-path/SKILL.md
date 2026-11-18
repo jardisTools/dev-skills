@@ -36,7 +36,7 @@ Each line is a thing you never do in a body, because a station does it. Every ge
 3. **Filter / sort / paginate** — never in a body; a query parameter, `orderBy` or `fields` in the model does it, and every query is a paginated list.
 4. **Shape the answer** — never build an envelope, projection or failure form; the end node's `gives` with `@outcome` is the answer, the packages cut it.
 5. **Transaction** — never open, commit or roll back; the runner owns it and an end status of 400 or above rolls back; a body ends a run with `reject(4xx)` using a declared status.
-6. **Tenant / user** — never read the token or resolve them; the door fills the typed input fields and the query filters on the tenant marker itself; a query parameter on a marker column is `V-TENANT-5`.
+6. **Tenant / user** — never read the token or resolve them; the door fills the typed input fields and the query filters on the tenant marker itself; a query parameter on a marker column is `V-TENANT-5`. With per-record access the groups of the session come from middleware behind `session` (only then), never from the token in hand code.
 7. **Read a foreign BC** (of the own domain) — never directly; `read()` reaches the own BC only (`LogicException` otherwise), a foreign BC is used through its doors at `domain` or wider from a Domain Service.
 8. **Publish events** — never dispatch; the handler collects them and the caller publishes after the commit.
 

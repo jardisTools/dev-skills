@@ -15,7 +15,7 @@ The node, query or capsule has produced its result. Station 5 turns it into the 
 
 **Query answer**
 
-- A list passes its rows through `ProjectWire` into `ReadResult::ofList`; time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`. A tenant-marker column stands in no read output.
+- A list passes its rows through `ProjectWire` into `ReadResult::ofList`; time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`; a list filtered by the groups of the session adds `capped: true` when `total` reaches the cap (read `total` then as "at least"). A tenant-marker column stands in no read output.
 - The kernel read path of a list returns a `ReadResult` object, not an array.
 
 **Command answer**
@@ -51,7 +51,7 @@ All paths are relative to the generated tree; `{P}` is a process, `{Agg}` an agg
 | Process with one outcome | `{BC}/Process/{BC}Process.php` | one `OutcomeForm` |
 | Process with several outcomes | `{BC}/Process/{BC}Process.php` | one `OutcomeForm` per outcome; OpenAPI `oneOf` with `discriminator` on `@outcome` |
 | Second cut at the route | `Api/{Domain}/routes.php` | the outer world has fewer fields than the facade, `ref` fields without a read door are dropped |
-| Query list | `{BC}/Model/{Agg}/Query/Handler/Get{Name}Handler.php`, route in `Api/{Domain}/routes.php` | `ReadResult` inside, envelope with `items`, `total`, `limit`, `offset` outside |
+| Query list | `{BC}/Model/{Agg}/Query/Handler/Get{Name}Handler.php`, route in `Api/{Domain}/routes.php` | `ReadResult` inside, envelope with `items`, `total`, `limit`, `offset` outside (plus `capped` only on a group-filtered list at the cap) |
 | Point read | `{BC}/Model/{Agg}/Query/Handler/Get{Agg}By{Key}Handler.php` | maps through `fromAggregate` |
 | Command reference | `{BC}/Model/{Agg}/Command/Handler/{Cmd}.php` | reference values, root `id` only inside |
 | Failure form from a node | the node body `Action/{Node}.php` returns `reject(status, messageKey, context)` | the package forms it through the failure table |
