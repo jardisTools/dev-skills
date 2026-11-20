@@ -27,6 +27,8 @@ public function __invoke(CounterChangeContext $ctx): NodeResult
 }
 ```
 
+**Session fields are never an open place.** `tenant` and `user` of the sub-process input (login world) come from the session field of the calling process, one source, even if the command the caller accepts carries a field of the same name; only business fields can be open places.
+
 **What the developer does:** replace each open place (`Sub-DTO-Feld <field> <Node>`) with the real value from the surrounding run — `$ctx->input()->…`, or explicitly from an earlier node through its typed getter, `$ctx-><node>()?->…`. The inner call (`$this->context(<Inner>Handler::class, …, depth: $ctx->depth() + 1)()`) and the `MapResponseInto` mapping are generated — do not touch them, and never map a response by hand.
 
 **What `MapResponse` does with the inner answer** (`JardisSupport\Workflow\Handler\Node\MapResponse`): success → `ok((array) data)` **carrying the Domain events of the inner run**, so they travel up to the outer answer (an inner run that was rolled back reports none; `Internal` events stay behind); a 4xx → a `reject` with the **same** status and the callee's plain context (so the outer wire form equals the inner one); a 5xx → throws a `CalleeFailureException` (the inner door has reported the cause). Events are part of the result, not of the data — there is no channel to fill.
