@@ -31,7 +31,7 @@ Fact line: requires Jardis Builder ≥ 0.3.0.
 
 Each line is a thing you never do in a body, because a station does it. Every generated stub with a hand body names this section in its header (`Before writing this body: dev-skill generated-code-request-path, section "Reliance list".`); the heading keeps its name.
 
-1. **Rights** — never check a right, role or session; the HTTP outer door does it once (and, on a protected record, the generated door asks the access level once: 404 without sight, 403 `forbidden` when the level is too low, before any node); a node never answers 403, and a node rejection status outside 400, 401, 404, 405, 409, 422 is `V-NODE-REJECT-STATUS`.
+1. **Rights** — never check a right, role or session; the HTTP outer door does it once (and, on a protected record, the generated door asks the access level before any node, one question at the owner and a second at the new owner when a dependent record is moved: 404 without sight, 403 `forbidden` when the level is too low, before any node); a node never answers 403, and a node rejection status outside 400, 401, 404, 405, 409, 422 is `V-NODE-REJECT-STATUS`.
 2. **Required / empty / type** — never re-check what the route guard, the process door or the command capsule check; a mandatory field is an input or column declaration, a minimum length is a Rule (422).
 3. **Filter / sort / paginate** — never in a body; a query parameter, `orderBy` or `fields` in the model does it, and every query is a paginated list.
 4. **Shape the answer** — never build an envelope, projection or failure form; the end node's `gives` with `@outcome` is the answer, the packages cut it.
