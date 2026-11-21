@@ -124,7 +124,7 @@ is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
 pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_closures`; a draft with findings still writes, `valid`/`errors`/
 `warnings`/`suggestions` travel in the response; the saved query set is echoed only with `echo: true`, otherwise read it through the queries Resource); `validate_queries` checks a not-yet-saved query
-set against V-QDEF-1..16, 18..26 (25 = `limit` above 500, warning; 26 = the query's class stem equals a derived read way `{Agg}ById`/`ByIds`/`By<Key>` of its aggregate, blocker) plus RB1 (name collision with the read base, Blocker) —
+set against V-QDEF-1..34 (without the retired 17, 22, 28, 29; 25 = `limit` above 500, warning; 26 = the query's class stem equals a derived read way `{Agg}ById`/`ByIds`/`By<Key>` of its aggregate, blocker) plus RB1 (name collision with the read base, Blocker) —
 read-only, no write. `preview_queries` is read-only and
 returns the **generated PHP code** a build would write for the query set (never SQL — the Builder
 never emits SQL, only PHP) plus artefact-wide findings; pass `compareWithStored: true` for a
@@ -141,6 +141,23 @@ a free `{name}Copy`/`{name}CopyN` name, the copy has no `Doors.json` row and so 
 `queries` Resource template returns the artefact as-is (a BC without one reads as an empty set,
 never an error); `queries-usage` lists which Rules/process nodes reference a given query — the
 same computation `rename_query`/`delete_query` use for their `consequences`, not a second one.
+
+**Chain and join pairs in `Queries.json` (E4-K, builder-side; no new tool, both travel in the `QueryDef` of
+`save_queries`/`validate_queries`/`preview_queries`/`probe_query`).** `chain` makes a query answer only the root rows a
+bounded recursive walk reaches (a tree inside one table through a parent reference, or an edge table): keys `via`,
+`from`, `to`, `start` (condition tree on the root) and `maxDepth` (1..999) are mandatory, `where` (condition tree on
+the `via` entity), `key` (default: the root's single-column primary key) and `depthParam` (a declared `int`
+parameter that narrows the depth at run time) are optional. It is a pure filter: the answer stays the normal paginated
+list of the root (no depth column, no ordering by depth), `joins`, `fields`, sorting and the count stay as they are.
+A cycle in the data ends (`union`, not `unionAll`); `maxDepth` measures the shortest path; the tenant marker filters
+start and step, the sight only the outer root. A malformed chain is `V-QDEF-33` (form, e.g. a missing mandatory key,
+`maxDepth` outside 1..999), a reference in the wrong tree or a type mismatch of `from`/`to`/`key` is `V-QDEF-34` — both
+are findings in the answer, never a transport error; `preview_queries` shows the generated recursive code,
+`probe_query` runs it. `joins[].on` is the first field pair (`left`, `right`, both `alias.field`); further pairs go
+into `on.and`, a list of `{left, right}` pairs that are AND-connected in the written order and each checked like the
+first (a finding names `joins[i].on.and[j].left`); an unknown key next to `and` or inside a pair is refused by the
+MCP schema (`additionalProperties:false`). `duplicate_query`, `rename_query`, `delete_query` and `save_query_layout`
+leave both untouched. Full format: the builder repository `.claude/spec/QUERIES-JSON.md` §3.3 and §3.8.
 
 **Doors and the middleware pipeline (app-wide HTTP pipeline, `jardiscore/app` >= 3.2).** The door stances (`Doors.json`) and the project settings steer who may call a generated route:
 - **Project setting `middleware`** — `update_project_settings` takes `middleware`: an ordered list of names; an entry without a backslash is a standard name (today only `session`), an entry with a backslash is a project class (FQCN, constructor `__construct(DomainKernelInterface $kernel)` or none). Never set = `["session"]` (the default, session guard on; it needs the env key `AUTH_TOKEN_KEY` - base64 of 32 random bytes - in the project `.env`, the access token is signed by `jardissupport/auth` >= 1.5); `[]` = deliberately no pipeline; omit the field = stored value untouched. Names are not checked at save time, a wrong one fails at app start. Read back the EFFECTIVE list: Resource `jardis://root` (field `middleware`) and `jardis://project` (field `middlewareEffective`; `manifest.middleware` is the stored value, absent when never set). The next `build` writes `src/App/middleware.php`; an older `src/App/bootstrap.php` without the `'middleware'` entry is never overwritten (the build warns).
