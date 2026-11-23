@@ -15,7 +15,7 @@ The node, query or capsule has produced its result. Station 5 turns it into the 
 
 **Query answer**
 
-- A list passes its rows through `ProjectWire` into `ReadResult::ofList`; time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`; a list filtered by the groups of the session adds `capped: true` when `total` reaches the cap (read `total` then as "at least"). A tenant-marker column stands in no read output.
+- A list passes its rows through `ProjectWire` into a `ReadResult` (the sum is lazy: the list counts only when `total()` is read, `ofCountedList` / `ofCappedCountedList` of `jardissupport/response` >= 4.5); time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`; a list filtered by the groups of the session adds `capped: true` when `total` reaches the cap (read `total` then as "at least"). A tenant-marker column stands in no read output.
 - The kernel read path of a list returns a `ReadResult` object, not an array.
 
 **Command answer**
