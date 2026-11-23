@@ -23,7 +23,7 @@ Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Gene
 | # | Rule |
 |---|---|
 | V1 | Never edit anything under `{BC}/Model/{Agg}/` — the whole aggregate tree is hermetic (ForceOverwrite). Hand code stands only at the places of §10 (node bodies, Closure/Rule bodies, `{BC}/Service/`, `App/**`). |
-| V2 | No `new` for Services / VOs / Entities — only `Exception`, `RuntimeException`, `DateTimeImmutable`, `DateTime` |
+| V2 | No `new` for Services / VOs / Entities — only `Exception`, `RuntimeException`, `DateTimeImmutable`, `DateTime`. No connection in a body (node, Closure, Domain Service) either: never `dbConnection()`, never a class whose constructor takes a connection — neither by `new` nor by `handle(X::class, …)`; the way is the Context's named function (`aclStore()`, `reference/ablage.md` row 5; Gesetz-Gate invariant G) |
 | V3 | Never bypass `handle()` |
 | V4 | No logic in Command / Query Handler Orchestrators — logic belongs in Actions |
 | V5 | Never access Aggregate internals from outside — only via AggregateHandler |
