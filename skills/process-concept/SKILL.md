@@ -27,7 +27,7 @@ If the project keeps its documents out of the commit (switch `process-docs` set 
 ### 2. Pool scaffold
 
 <!-- rule:pool-scaffold -->
-Create the knowledge pool scaffold only when `.claude/wissen/` is missing: copy only `INDEX.md` from `skills/knowledge-maintain-pool/templates/` into `.claude/wissen/`, without the example line. `themenseite.md` stays a template in the skill; copy it only when the first real topic page is written. An existing `.claude/wissen/` is never changed, reformatted or filled in; it belongs to the project. Layout and caps: `knowledge-maintain-pool`.
+Create the knowledge pool scaffold only when `.claude/wissen/` is missing: copy only `INDEX.md` from the folder `templates/` of the skill `knowledge-maintain-pool` (`../knowledge-maintain-pool/templates/INDEX.md`, relative to this skill folder) into `.claude/wissen/`, without the example line. `themenseite.md` stays a template in the skill; copy it only when the first real topic page is written. An existing `.claude/wissen/` is never changed, reformatted or filled in; it belongs to the project. Layout and caps: `knowledge-maintain-pool`.
 
 ### 3. Project profile
 

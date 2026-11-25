@@ -9,6 +9,8 @@ prerequisites: [git-commit-change]
 next: []
 ---
 
+Run this skill only when the human asked for it (for example by typing `/git-push-and-open-pr`); if you loaded it on your own, stop and ask the human. Input: none; it works on the current branch. If your tool does not execute the lines below that start with `!`, run those commands yourself first and read their output.
+
 ## Current state
 !`git branch --show-current 2>/dev/null`
 !`git log --oneline -3 2>/dev/null`

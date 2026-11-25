@@ -1,0 +1,4 @@
+### 8. Transaction and sub-process
+
+The door opens ONE transaction around the run through `RunOwnedTransaction` (package `repository`, built on `RunInTransaction`; `transactional(false)` opts out: the same call, the bracket runs the work bare); an answer >= 400 or an exception rolls it back, events are reported only for a successful run. Inside an open transaction a run works in a savepoint `sp_{depth}` — the connection must implement `SavepointInterface`; the owner of the transaction is decided at the door's entry (no transaction open) and only the owner answers a 5xx and logs it. A sub-process node passes `depth + 1`; a rejected inner run rolls back to its savepoint and the outer node decides — reject again (the default of `MapResponse`) or route. Use case + measured values for the invariant-as-state pattern: `generated-code-recipes` Recipe 11.
+

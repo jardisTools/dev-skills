@@ -1,5 +1,7 @@
 ### 2. Phase-3 cookbook
 
+Contents: Recipe 1 — validating a domain concept · Recipe 2 — call to another system (External-Call node) · Recipe 2a — mail from a hand body · Recipe 3 — new operation: aggregate command/query vs. Process · Recipe 4 — event to Kafka · Recipe 5 — a Process input is self-contained.
+
 Paths assume BC `MeterDevice\Counter`, aggregate `Counter`. Aggregate code lives under `{BC}/Model/{Agg}/` (hermetic, never edited); **hand code stands only at the places of the table in `generated-code-extend` §10** — node bodies in `{BC}/Process/<Name>/Command/Handler/Action/` (`@node-id` body-preserve), Closure/Rule bodies in `{BC}/Closure/`, Domain Services in `{BC}/Service/`, delivery code in `App/**`.
 
 **Recipe 1 — Validating a domain concept (in a Process)**
@@ -9,6 +11,11 @@ The aggregate's generated Hydrate/Build pipeline is hermetic. A value is checked
 Rule stub `{BC}/Closure/ObisCodeIsValid.php` (frame generated, body yours):
 
 ```php
+namespace MeterDevice\Counter\Closure;
+
+use JardisSupport\Response\Data\RuleResult;
+use MeterDevice\MeterDeviceContext;
+
 final class ObisCodeIsValid extends MeterDeviceContext
 {
     public function __invoke(string $obis): RuleResult
@@ -99,7 +106,7 @@ $bc->counter()->getCounterByIdentifier($dto);               // query — generat
 $this->handle(Counter::class)->deactivateCounter($dto);     // command — generated, family-internal via the kernel seam
 ```
 
-No method is hand-written and nothing under `{Agg}/` is edited — both facades are fully regenerated (no `@flow-id`, no body merge). A new command has **no** external caller by itself (G6, row `closed` by default): open its row in `Doors.json` (`domain` = facade door `{BC}::{command}()`, `outside` = route + right) for a single guarded command, or wrap it in a Process (Case B) to expose it via `$bc->process()`.
+No method is hand-written and nothing under `{Agg}/` is edited — both facades are fully regenerated (no `@flow-id`, no body merge). A new command has **no** external caller by itself (row `closed` by default): open its row in `Doors.json` (`domain` = facade door `{BC}::{command}()`, `outside` = route + right) for a single guarded command, or wrap it in a Process (Case B) to expose it via `$bc->process()`.
 
 **Case B — a BC-level operation or one that coordinates several aggregates.** Model a **Process** in the Process Designer. The Generator emits, under `{BC}/Process/<Name>/`:
 
@@ -151,6 +158,6 @@ readonly class CounterChange
 
 **Input types are the scalar vocabulary of the aggregate door**, not a poorer one: `string`/`int`/`float`/`bool`, `date`, `datetime`, `time`, `decimal`, `uuid`, … (the backend lists them: process load answer `inputTypes`, MCP resource `jardis://process/…`; `save_process` `input.fields[].type`) plus the legacy words `string|array|mixed`, plus a value list as `valueList: <Name>` (instead of `type`; becomes an `enum` in the OpenAPI request in the list's declared order). The DTO type, the route and the OpenAPI schema follow the type (`date` → `DateTimeImmutable`, `format: date|uuid|decimal`), and the process gate checks the value like the aggregate door does: `date` → calendar-strict `Y-m-d`, `datetime` → RFC 3339 normalised to UTC, `time` → `H:i:s`; a violation is `400` `fields[]` with `reason type` before the first node. A field typed `array` or `mixed` carries no scalar shape and warns (`V-INPUT-UNTYPED`); a `valueList` that does not exist in the BC is a blocker (`V-INPUT-VALUELIST`).
 
-**Lists and objects as process input (FIX3).** `list: true` turns a scalar field into a typed list (`{name: "codes", type: "varchar", list: true}` → `public array $codes` with `@param list<string>`); `fields: [...]` makes an object (`{name: "address", fields: [{name: "city", type: "varchar"}]}` → item class `{Process}AddressItem` under `Command/`), `fields` + `list: true` an object list; objects nest at most two levels. A list has no minimum length (`[]` is valid; a required minimum is a Rule answering 422); a missing list is a 400 `missing`, a nullable list may be absent (`null`). Every element is checked at the route and at the gate before the first node: a wrong element answers 400 with its index path (`lines[1].quantity`), never 500. In a node body you read the typed tree directly (`foreach ($cmd->lines as $line) { $line->discount?->percent; }`).
+**Lists and objects as process input.** `list: true` turns a scalar field into a typed list (`{name: "codes", type: "varchar", list: true}` → `public array $codes` with `@param list<string>`); `fields: [...]` makes an object (`{name: "address", fields: [{name: "city", type: "varchar"}]}` → item class `{Process}AddressItem` under `Command/`), `fields` + `list: true` an object list; objects nest at most two levels. A list has no minimum length (`[]` is valid; a required minimum is a Rule answering 422); a missing list is a 400 `missing`, a nullable list may be absent (`null`). Every element is checked at the route and at the gate before the first node: a wrong element answers 400 with its index path (`lines[1].quantity`), never 500. In a node body you read the typed tree directly (`foreach ($cmd->lines as $line) { $line->discount?->percent; }`).
 
 If a process needs data that lives on an aggregate, it does **not** inherit a DTO — it **runs the aggregate query/command** from a node (`$this->context(...)`) and reads the response. There is no merged-DTO / `platform:` parent concept; an unknown field in `input.fields` is a hard build error (no silent fallback).

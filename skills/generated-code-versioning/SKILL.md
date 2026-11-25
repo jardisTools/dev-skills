@@ -64,6 +64,10 @@ Versioned variant skeleton (the `v2/` subdir sits next to the baseline stub; the
 declare(strict_types=1);
 namespace MeterDevice\Counter\Process\CounterChange\Command\Handler\Action\v2;
 
+use JardisSupport\Workflow\Data\NodeResult;
+use MeterDevice\Counter\Process\CounterChange\Command\Handler\CounterChangeContext;
+use MeterDevice\MeterDeviceContext;
+
 final class ValidateNewValue extends MeterDeviceContext
 {
     public function __invoke(CounterChangeContext $ctx): NodeResult

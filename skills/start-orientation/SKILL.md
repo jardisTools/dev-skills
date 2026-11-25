@@ -1,6 +1,6 @@
 ---
 name: start-orientation
-description: Starting or orienting in a Jardis project — the master entry point that walks a developer or AI through the four lifecycle phases (package discovery, Schema.json authoring, strategic + Aggregate/Process/Queries design incl. Glossar/Steckbrief/Context Map, implementing generated code), names the concrete `jardis ui`/`jardis mcp` commands, and routes to every other skill in this bundle via a complete lookup table.
+description: Starting or orienting in a Jardis project — the entry point through the four phases (packages, Schema.json, strategic and Aggregate/Process/Query design with glossary, BC canvas and context map, generated code), the `jardis ui` and `jardis mcp` commands, and a table naming the skill for every question.
 zone: crosscut
 persona: X
 profile: jardis
@@ -21,7 +21,7 @@ that) would only fragment the routing table this skill exists to provide.
 
 **Platform boundary.**
 (a) The Jardis packages are the build platform; use them first, never rebuild what they provide.
-(b) Packages and the generator are immutable for an app developer: never patch `vendor/`, never edit generated trees.
+(b) Packages and the generator are immutable for an app developer: never patch `vendor/`; inside the generated tree write only the bodies of the stubs (every node except a Rule or Event node, whose body is generated whole; Closure/Rule; Domain Service) and `App/**` except the generated `App/middleware.php` — every other generated file is rebuilt on every build and never edited.
 (c) A gap in a package or the generator is reported, not rebuilt: open an issue in the affected Jardis repository (package: its GitHub repository; generator: `jardisTools/builder`; skills: `jardisTools/dev-skills`). There is no interim and no workaround: hand code stays in the hand-code places (`generated-code-extend` section 10) and uses Jardis artefacts only; the gap waits for its delivery. Building the capability in the package or generator first is the way of the Jardis developer.
 (d) Capability catalogs: `packages-find-existing` (packages), `design-model-capabilities` (model).
 
@@ -40,9 +40,9 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
    Domain/Subdomain structure with Core/Supporting/Generic
    classification, a per-BC Ubiquitous-Language glossary and canvas ("Steckbrief"), planned
    (not-yet-built) BCs, and a per-Domain Context Map with the eight canonical DDD relationship
-   patterns — including an on-demand Abgleich-Sicht (reconcile lens) that checks the declared
+   patterns — including an on-demand reconcile lens (UI label "Abgleich-Sicht") that checks the declared
    boundaries against the real coupling of the built system. This is click-work in the browser; there is deliberately no
-   dedicated AI skill for this step (`docs/SKILL-FORMAT.md` §3a). Drive the same step headless
+   dedicated AI skill for this step. Drive the same step headless
    instead via `jardis mcp` → `design-headless-mcp`.
 4. **Implement** — write the behaviour inside the generated Command/Handler/Action stubs.
    → `generated-code-extend` (plus its siblings, see the routing map below); the order of work from model to QA is its §11 "The way".
@@ -52,23 +52,11 @@ The lifecycle of a Jardis project runs **packages → schema → design → code
    ```
    {BC}/
    ├── Model/{Agg}/                                 generated, never edited
-   ├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand)
+   ├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand; a Rule or Event node is generated whole)
    ├── Closure/{Name}.php                           rule / closure body (hand)
    └── Service/{Name}.php                           Domain Service (hand)
-   App/                                             delivery only, no domain logic
+   App/                                             delivery only, no domain logic (App/middleware.php is regenerated)
    ```
-
-#### Importing Access — login, users and tenants without modelling them
-
-Who may enter the application is a generic subdomain, not something to model by hand: the Builder ships the blueprint `access` (read `jardis://blueprints`), imported with `import_blueprint` (`design-headless-mcp`; UI: tile "Blaupause" in the Context-Map library panel). The result is a normal BC with the processes Login, Refresh, Logout, Register, Invite, AcceptInvitation and ChangePassword, plus groups (teams with `CreateGroup`, `RenameGroup`, `DeleteGroup`; a personal group per membership, `OpenPersonalGroup`; members, `AddGroupMember`, `RemoveGroupMember`; the fallback group of an information kind, `SetFallbackGroup`), suspension of a membership (`SuspendMember`, `ReinstateMember`), roles as data (`SaveRole`, `AssignRole`, `UnassignRole`, `DeleteRole`) and the process `BackfillPersonalGroups` that opens the missing personal groups in batches. Read doors: the queries Me, MyTenants, ListMembers and ListOpenInvitations, called by GET (`/access/{users|memberships|invitations}/queries/{name}`) and answering `{items, total, limit, offset}` (at most 100 entries; the session user is the scope: Me and MyTenants the user's own rows, ListMembers and ListOpenInvitations the tenant of the session, owners only), plus the lists of groups, members, fallback groups, roles and their assignments (`ListGroups`, `ListGroupMembers`, `ListFallbackGroups`, `ListRoles`, `ListRoleMemberships`, `ListRoleGroups`). ReadInvitation is a process at the stance `open` (no login; it lets the invitee see the invitation before accepting, without redeeming it). The blueprint ships its own `Doors.json`: ten queries and 17 processes stand `outside`, five processes `open` (Login, Register, Refresh, AcceptInvitation, ReadInvitation), the four group questions (`GroupsOfSubject`, `PersonalGroupOfUser`, `GroupsByIds`, `FallbackGroupOfType`) and `BackfillPersonalGroups` stand `domain`, every other row is `closed`; an import into an existing BC only adds missing rows and never overwrites a stance. The import also pre-fills the project setting `groupDoors` with those four group doors, once, when no group form was ever set.
-
-1. **Know the variant.** The catalog ships exactly one variant, `tenant` (the `variants` list of the `access` entry in `jardis://blueprints`): users act in the name of a tenant - the entities User, Tenant, Membership (role per membership) and Invitation, plus the processes TenantSwitch and RemoveMembership and the query MyTenants; the session carries the tenant as a slug. There is no variant without tenants.
-2. **Set `AUTH_TOKEN_KEY`** (base64 of exactly 32 bytes) in the process environment or the project `.env`, with a configured database (`DB_*`) whose token table exists (DDL ships in the `jardissupport/auth` package). Without the key `$kernel->auth()` is `null`; a malformed key, or a key without a configured database, throws `InvalidEnvConfigurationException` when the kernel is built. The processes call `auth()` (sessions, token issuer and redeemer, password hasher) - never `new` an auth service. → `core-kernel` ("Auth from ENV"), `support-auth`.
-3. **First owner through Register.** Register is an open process (stance `open` in the `Doors.json` the blueprint ships; `sessionProcesses` is pre-filled by the blueprint too): it creates the user, the tenant and an owner membership. It answers 422 unless the project `.env` key `ACCESS_REGISTRATION` is `open` (a missing key means `invite-only`); the BC declares the key, write it with `save_runtime_env` block `domain`.
-4. **Invite hands over a token, it sends no mail.** Invite (behind the session, owners only) answers `{email, token}`; the one-time token is valid for 7 days. Deliver it yourself; the invitee calls AcceptInvitation (stance `open`) with token, password and display name. An invitee who already has an account confirms the existing password and joins.
-5. **Know the token model.** The access token is signed (15 minutes, no database access per request), the refresh token is opaque (7 days, stored). After a password change or a removed membership the refresh fails at once, an already issued access token still works until it expires. Other contexts read the session as request attributes (`jardisSubject`, `jardisTenant` as the tenant slug, the rights claim), set by the session middleware; their routes check the right of the endpoint (`RequireRight`, `jardiscore/app` >= 3.2) and their aggregates carry `tenant`/`user` markers, so the process input holds `tenant`/`user` (`generated-code-wire-transport`, `core-app`); they do not call Access.
-6. **Build and extend as any BC.** Bodies are readable and replaceable like other developer code (`generated-code-extend`); a missing capability is reported, not patched.
-7. **Owners stay in charge.** An action that touches an owner membership needs an owner as the actor: inviting an owner, removing, suspending or reinstating an owner answers 422 `access.ownerOnlyByOwner` to anyone else. The last ACTIVE owner of a tenant stays: removing or suspending that owner answers 422 `access.lastOwnerWouldLeave`; a suspended owner does not count as remaining and can be removed.
 
 ### 2. Running the Builder
 
@@ -77,11 +65,12 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 
 - **Browser UI:** `jardis ui` — opens the Schema-Import / Aggregate-Designer / Process-Designer /
   Query-Designer / Build modules described in phases 1–2 above, plus the strategic-design surface
-  (Glossar, Steckbrief, Context Map with Abgleich-Sicht).
+  (glossary "Glossar", BC canvas "Steckbrief", Context Map with the reconcile lens).
 - **Build:** triggered from the Build module inside `jardis ui` (or headless via the `jardis mcp`
   build tool) — generates the Aggregate/Process code tree from the saved design artefacts onto
-  disk (phase 3 handoff). There is no standalone `jardis build` command; the only CLI build entry
-  is the legacy Definition-based path `jardis build:code <set>`.
+  disk (phase 3 handoff). There is no standalone `jardis build` command; the CLI build entry
+  is `jardis build:domain <domain>` (with `--version vN` for a versioned build); `jardis build:code <set>`
+  is the legacy Definition-based path.
 - **Headless (no browser):** drive the same Workspace→Schema→Design→Build sequence
   programmatically → `design-headless-mcp`, which names the concrete calls and their ordering.
 
@@ -96,20 +85,20 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Wire generated Commands/Queries into an HTTP/CLI/queue/worker transport layer | `generated-code-wire-transport` |
 | Cross-cutting concern at the HTTP front door (session, CORS, request id, rate limit); sessions use signed access tokens (`AUTH_TOKEN_KEY`, `support-auth`) | `core-app`, section Middleware |
 | Understand ClassVersion resolution, or add a versioned variant of a generated class | `generated-code-versioning` |
-| Use the Workflow-Engine API inside a Process orchestrator (routing statuses, `WorkflowConfig`) | `generated-code-workflow-api` |
+| Write a process node body against the engine API (`NodeResult` routes and reject, `ProcessDefinition`, `answerFrom`/`@outcome`, the generated door) | `generated-code-workflow-api` |
 | Look up a Phase-3 recipe (event-to-Kafka, VO in a Process node, …) or troubleshoot a stuck build | `generated-code-recipes` |
 | Check the five architecture pillars / hexagonal dependency direction before writing a class | `foundation-architecture` |
 | Review a frontend plan or component against Jardis's stack-agnostic frontend rules | `foundation-frontend-review` |
 | Pick the right design pattern (Facade, Strategy, Repository, …) for a problem | `foundation-patterns` |
 | Write a test, or decide what to do about a failing one | `foundation-testing` |
 | Decide what to model: what a Jardis tool setting already generates (child commands, validators, business keys, value lists, query filters, process nodes), what Jardis lacks, and the capability table for a concept or PRD — before any interview | `design-model-capabilities` |
-| Get login, users, roles and (optionally) tenants without modelling them: import the Builder blueprint `access` (variant `tenant`, the only one), set `AUTH_TOKEN_KEY`, first owner, invitations | section 1 "Importing Access"; `design-headless-mcp` (`import_blueprint`), `support-auth`, `core-kernel` |
+| Get login, users, roles and tenants without modelling them: import the Builder blueprint `access` (variant `tenant`, the only one), set `AUTH_TOKEN_KEY`, first owner, invitations | section 4 "Importing Access"; `design-headless-mcp` (`import_blueprint`), `support-auth`, `core-kernel` |
 | Drive an entire Jardis workspace headless — no browser, an AI or script calls `jardis mcp` directly | `design-headless-mcp` |
 | Classify a subdomain (Core/Supporting/Generic), maintain a BC's glossary or canvas ("Steckbrief"), or plan a not-yet-built BC — headless, additive to the code-generation workflow | `design-headless-mcp` |
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `design-headless-mcp` |
 | Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `design-headless-mcp` |
 | Guard a Command with a business Rule, declare a BC's `Closures.json` catalog+bindings, or drive Closure rename/delete/duplicate — headless | `design-headless-mcp` |
-| Decide who may reach each door (read way, query, command, process) of a BC — the stances `closed · domain · outside · open` in `Doors.json` — headless | `design-headless-mcp` (`save_doors`, `jardis://doors/{domain}/{subdomain}/{bc}`), `design-model-capabilities` (§ 2.4a) |
+| Decide who may reach each door (read way, query, command, process) of a BC — the stances `closed · domain · outside · open` in `Doors.json` — headless | `design-headless-mcp` (`save_doors`, `jardis://doors/{domain}/{subdomain}/{bc}`), `design-model-capabilities` (`reference/queries-and-doors.md`, § 2.4a) |
 | Learn the working principles of every task: skill first, then source, then ask; verify instead of guessing | `foundation-working-principles` |
 | Write or review PHP 8.3 code: strict types, PSR-4, Closure-Orchestrator form, test naming | `foundation-php` |
 | Review a change for typing, security, error handling, API, performance before it is committed | `code-review-change` |
@@ -117,9 +106,26 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Keep decisions, pitfalls and current facts in a knowledge pool under `.claude/wissen/` | `knowledge-maintain-pool`, `knowledge-record-decision` |
 | Decide how much process a task needs, or what to offer at the end of a chat | `process-choose-tier` |
 | Learn what the environment already does before proposing something new | `process-check-existing` |
-| Run an undertaking: concept, PRD, plan, stage runs, verification, close, or continue one | see section 5 |
+| Run an undertaking: concept, PRD, plan, stage runs, verification, close, or continue one | see section 6 |
 
-### 4. Tiers — how much process a task needs
+### 4. Importing Access — login, users and tenants without modelling them
+
+Who may enter the application is a generic subdomain, not something to model by hand: the Builder ships the blueprint `access` (read `jardis://blueprints`), imported with `import_blueprint` (`design-headless-mcp`; UI: tile "Blaupause" (blueprint) in the Context-Map library panel).
+The result is a normal BC with the processes Login, Refresh, Logout, Register, Invite, AcceptInvitation and ChangePassword, plus groups (teams with `CreateGroup`, `RenameGroup`, `DeleteGroup`; a personal group per membership, `OpenPersonalGroup`; members, `AddGroupMember`, `RemoveGroupMember`; the fallback group of an information kind, `SetFallbackGroup`), suspension of a membership (`SuspendMember`, `ReinstateMember`), roles as data (`SaveRole`, `AssignRole`, `UnassignRole`, `DeleteRole`) and the process `BackfillPersonalGroups` that opens the missing personal groups in batches.
+Read doors: the queries Me, MyTenants, ListMembers and ListOpenInvitations, called by GET (`/access/{users|memberships|invitations}/queries/{name}`) and answering `{items, total, limit, offset}` (at most 100 entries; the session user is the scope: Me and MyTenants the user's own rows, ListMembers and ListOpenInvitations the tenant of the session, owners only), plus the lists of groups, members, fallback groups, roles and their assignments (`ListGroups`, `ListGroupMembers`, `ListFallbackGroups`, `ListRoles`, `ListRoleMemberships`, `ListRoleGroups`).
+ReadInvitation is a process at the stance `open` (no login; it lets the invitee see the invitation before accepting, without redeeming it).
+The blueprint ships its own `Doors.json`: ten queries and 17 processes stand `outside`, five processes `open` (Login, Register, Refresh, AcceptInvitation, ReadInvitation), the four group questions (`GroupsOfSubject`, `PersonalGroupOfUser`, `GroupsByIds`, `FallbackGroupOfType`) and `BackfillPersonalGroups` stand `domain`, every other row is `closed`; an import into an existing BC only adds missing rows and never overwrites a stance.
+The import also pre-fills the project setting `groupDoors` with those four group doors, once, when no group form was ever set.
+
+1. **Know the variant.** The catalog ships exactly one variant, `tenant` (the `variants` list of the `access` entry in `jardis://blueprints`): users act in the name of a tenant - the entities User, Tenant, Membership (role per membership) and Invitation, plus the processes TenantSwitch and RemoveMembership and the query MyTenants; the session carries the tenant as a slug. There is no variant without tenants.
+2. **Set `AUTH_TOKEN_KEY`** (base64 of exactly 32 bytes) in the process environment or the project `.env`, with a configured database (`DB_*`) whose token table exists (DDL ships in the `jardissupport/auth` package). Without the key `$kernel->auth()` is `null`; a malformed key, or a key without a configured database, throws `InvalidEnvConfigurationException` when the kernel is built. The processes call `auth()` (sessions, token issuer and redeemer, password hasher) - never `new` an auth service. → `core-kernel` ("Auth from ENV"), `support-auth`.
+3. **First owner through Register.** Register is an open process (stance `open` in the `Doors.json` the blueprint ships; `sessionProcesses` is pre-filled by the blueprint too): it creates the user, the tenant and an owner membership. It answers 422 unless the project `.env` key `ACCESS_REGISTRATION` is `open` (a missing key means `invite-only`); the BC declares the key, write it with `save_runtime_env` block `domain`.
+4. **Invite hands over a token, it sends no mail.** Invite (behind the session, owners only) answers `{email, token}`; the one-time token is valid for 7 days. Deliver it yourself; the invitee calls AcceptInvitation (stance `open`) with token, password and display name. An invitee who already has an account confirms the existing password and joins.
+5. **Know the token model.** The access token is signed (15 minutes, no database access per request), the refresh token is opaque (7 days, stored). After a password change or a removed membership the refresh fails at once, an already issued access token still works until it expires. Other contexts read the session as request attributes (`jardisSubject`, `jardisTenant` as the tenant slug, the rights claim), set by the session middleware; their routes check the right of the endpoint (`RequireRight`, `jardiscore/app` >= 3.0) and their aggregates carry `tenant`/`user` markers, so the process input holds `tenant`/`user` (`generated-code-wire-transport`, `core-app`); they do not call Access.
+6. **Build and extend as any BC.** Bodies are readable and replaceable like other developer code (`generated-code-extend`); a missing capability is reported, not patched.
+7. **Owners stay in charge.** An action that touches an owner membership needs an owner as the actor: inviting an owner, removing, suspending or reinstating an owner answers 422 `access.ownerOnlyByOwner` to anyone else. The last ACTIVE owner of a tenant stays: removing or suspending that owner answers 422 `access.lastOwnerWouldLeave`; a suspended owner does not count as remaining and can be removed.
+
+### 5. Tiers — how much process a task needs
 
 Pick the lowest tier that fits and name it in one line. Process is a means against size and risk, not a default. The rules and the escalation rule are in `process-choose-tier`.
 
@@ -128,11 +134,11 @@ Pick the lowest tier that fits and name it in one line. Process is a means again
 | **0 Answer** | A question, an explanation, a comment, a typo | Answer directly |
 | **1 Single action** | One thing in one place, no open decision | Do it yourself, without apparatus |
 | **2 Small assignment** | One big or isolated thing, or several subtasks | One sub-agent per subtask; you supervise and verify |
-| **3 Undertaking** | Open decision, dependent steps, new architecture, public API, data, security | The full process in stages 0 to 4 (section 5) |
+| **3 Undertaking** | Open decision, dependent steps, new architecture, public API, data, security | The full process in stages 0 to 4 (section 6) |
 
 Before proposing anything new at tier 2 or 3, run `process-check-existing`.
 
-### 5. The process phases and their skill
+### 6. The process phases and their skill
 
 An undertaking (tier 3) runs in five stages. Every stage has one skill; each names the next.
 
@@ -149,10 +155,9 @@ Supporting skills: `process-review-board` (the review roles and their sources), 
 
 The reviewer roles of the process — requirements, design, frontend, stage verifier, acceptance gate, open-question gate, failure diagnosis, existing-capability check — are sources in `process-review-board`; the role list is given there.
 
-### 6. Reference
+### 7. Reference
 
 - Capabilities per Jardis tool and the mandatory capability table: `design-model-capabilities`.
 - Full Tool/Resource surface for headless driving: `design-headless-mcp`.
-- Werkzeugkasten (which package skill answers "how do I cache / send mail / …"):
-  `generated-code-extend`.
-- Skill authoring rules and zone/persona model: `docs/SKILL-FORMAT.md`.
+- Toolbox (which package skill answers "how do I cache / send mail / …"):
+  `generated-code-extend` (`reference/toolbox-and-anchors.md`).

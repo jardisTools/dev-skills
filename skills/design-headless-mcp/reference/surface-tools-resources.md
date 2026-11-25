@@ -9,7 +9,7 @@
   see the effect, there is no push/subscribe.
 
 Build-control surface of the board (studios = the project's undertakings under
-`docs/vorhaben`), see §2 "Studio build control":
+`docs/vorhaben`), see §2 "Studio build control" (workflow-studio-build-control):
 
 - `run_qa` (Tool) — runs one allow-listed QA command (`make qa`, `make phpunit`, `make phpstan`,
   `make phpcs`, `make integration-test`) in the project root; returns exit code, a bounded tail

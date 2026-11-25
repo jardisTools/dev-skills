@@ -1,6 +1,6 @@
 ### 10. Where hand code may stand — the one table
 
-Hand code is written only into the stubs a build produces and into `App/**` delivery code; every other file is generated and hermetic. This is the single place-table of the skill set — every other skill points here and carries no list of its own. A PRD or plan that names a piece of work sorts it by this table; a place that is not in it does not exist. Hand code uses only Jardis artefacts (kernel seam, packages, Queries, Commands and Processes, value lists); no own SQL, no helper or base classes, no foreign-BC access except through its doors.
+Hand code is written only into the stubs a build produces and into `App/**` delivery code; every other file is generated and hermetic. This is the single place-table of the skill set — every other skill points here and carries no list of its own. A PRD or plan that names a piece of work sorts it by this table; a place that is not in it does not exist. Hand code uses only Jardis artefacts (kernel seam, packages, Queries, Commands and Processes, value lists); no own SQL, no helper or base classes, no foreign-BC access except through its doors. `M9` in the table is the rule that a Rule, Closure or Domain Service reads only its own BC.
 
 <!-- generat:begin ablage-tabelle (internal/docgen/ablage.go from genpath + stubmanifest; regenerate: make ablage-tabelle; do not edit by hand) -->
 | # | Ort | schreibt | Modus | erlaubte Abhängigkeiten | Manifest-Art |
@@ -21,7 +21,7 @@ Hand code is written only into the stubs a build produces and into `App/**` deli
 **The Stub-Manifest.** Every build writes `.jardis/stubs.json` at the project root (committed, one file per project): one entry per stub of the stub rows — `path`, `kind` (`node`, `closure`, `service`, `delivery`), `marker` (the open-body text of the fresh frame) and `v{N}` (empty = baseline; set for the `v{N}/` frames). It is the list of the places the AI writes into: a partial build merges, an entry never outlives its file, a filled stub stays listed. A hand file of the AI that is neither in the manifest nor at a place of this table does not exist.
 <!-- generat:end ablage-tabelle -->
 
-**Access entries from a body (`aclStore()`, row 5).** In a world with a login and groups the `{Domain}Context` carries `protected function aclStore(): AclStore` — the package `AclStore` (`jardissupport/acl`) on the write connection of the run, so a body reads and rewrites access entries inside the transaction of its door. A body calls `$this->aclStore()`; it never takes a connection (`dbConnection()`) and never builds the `AclStore` — or any other class whose constructor takes a connection — itself, neither by `new` nor by `handle(X::class, …)` (V2; Gesetz-Gate invariant G, `gesetz.g.*`).
+**Access entries from a body (`aclStore()`, row 5).** In a world with a login and groups the `{Domain}Context` carries `protected function aclStore(): AclStore` — the package `AclStore` (`jardissupport/acl`) on the write connection of the run, so a body reads and rewrites access entries inside the transaction of its door. A body calls `$this->aclStore()`; it never takes a connection (`dbConnection()`) and never builds the `AclStore` — or any other class whose constructor takes a connection — itself, neither by `new` nor by `handle(X::class, …)` (V2).
 
 **The context head of a stub (PHPDoc chain).** Business meaning is description (Domain → BC → Process → Node) and lands as PHPDoc, the context the AI reads where it implements. The Domain description stands at `<Domain>.php`, the BC description at `{BC}/{BC}.php`, the process description at `{P}Handler` (rows 1, 2, 4); every stub of rows 5, 6 and 8 carries the chain as the last block of its class docblock — generated frame, so every build refreshes it and the hand-written body is never touched:
 
@@ -36,7 +36,7 @@ Hand code is written only into the stubs a build produces and into `App/**` deli
  * Knoten: <Class>            (Closure: / Service: for a stub without a process)
 ```
 
-A level line is `<Level>: <Name>` at the start of a docblock line and carries the name only; description lines are indented, an empty description leaves the level line without text (the registry warns `V-DESC-EMPTY` for an empty Domain, BC or process description). The node, Closure or Service's own description is the prose above the chain. The Gesetz-Gate (invariant D, `StubChainRule`) checks the level lines — a node stub needs Domain, BC, Prozess, Knoten; a Closure stub Domain, BC, Closure; a Domain Service stub Domain, BC, Service — never the text.
+A level line is `<Level>: <Name>` at the start of a docblock line and carries the name only; description lines are indented, an empty description leaves the level line without text (the registry warns `V-DESC-EMPTY` for an empty Domain, BC or process description). The node, Closure or Service's own description is the prose above the chain. The Builder's own checks verify the level lines — a node stub needs Domain, BC, Prozess, Knoten; a Closure stub Domain, BC, Closure; a Domain Service stub Domain, BC, Service — never the text.
 
 **If the model cannot express it,** no new hand-code place opens up: a missing capability is a gap in Jardis. When you work on Jardis itself, build it in the package or the generator first and use it afterwards; when you work on an app, report it as an issue. A substitute in the project — an interim, a workaround, a class in a place that is not in the table — is a violation, not progress. Hand code at a place of the table that covers such a gap once is counted by its kind; the same kind a second time is no single case: park the affected place, report the missing capability and keep building everything that does not depend on it.
 
@@ -48,5 +48,5 @@ A level line is `<Level>: <Name>` at the start of a docblock line and carries th
 4. `{BC}/Process/{P}/ValueObject/` and free projector or helper classes → none.
 5. `v{N}/` variants of hermetic classes → none; `v{N}/` exists only for rows 5, 6 and 8. `App/**` is the delivery place of row 10; a process trigger by event or time is a project of its own, not a hand-code place.
 
-The generator emits none of these places any more; a developer body left there moves to `{BC}/Service/` with the next build (Hinweis per move).
+The generator emits none of these places any more; a developer body left there moves to `{BC}/Service/` with the next build (the build reports it as a move notice).
 
