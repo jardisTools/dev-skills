@@ -1,6 +1,6 @@
 ### 0. DDD positioning
 
-Contents: §0 DDD positioning (table) · §1 generated baseline — route convention, exposing child commands, Create as a door, `Remove{Agg}{Child}`, `routes.php`, notation, the one rule, directory tree, vocabulary glossary.
+Contents: §0 DDD positioning (table) · §1 generated baseline — route convention, exposing child commands, Create as a door, `Remove{Singular}`, `routes.php`, notation, the one rule, directory tree, vocabulary glossary.
 
 Jardis uses DDD vocabulary (BC, Aggregate, Domain Event, Repository, VO, Ubiquitous Language) under its own axioms — Closure-Orchestrator (`foundation-architecture` §3) and model-driven generation. See `foundation-architecture` § Positioning for the Functional-DDD stance this skill operates under.
 
@@ -24,8 +24,8 @@ Facade chain: Domain → BC → **Aggregate Read facade** (`{Agg}Read`, reached 
 |---|---|
 | `Update{Agg}` | `PUT /{bc}/{aggs}/{identifier}` *(patch semantics on the PUT door: only the address is required, a root scalar not delivered stays unchanged, an explicit `null` clears a nullable one; the body maps to `Update{Agg}Patch`, `Set{Something}` stays a full command; the verb `PATCH` is not used)* |
 | `Remove{Agg}` | `DELETE /{bc}/{aggs}/{identifier}` |
-| `Add{Agg}{Child}` | `POST /{bc}/{aggs}/{identifier}/{children}` |
-| `Remove{Agg}{Child}` | `DELETE /{bc}/{aggs}/{identifier}/{children}/{childKey}` |
+| `Add{Singular}` (singular child name, e.g. `AddOrderItem` for the child `order_items`) | `POST /{bc}/{aggs}/{identifier}/{children}` |
+| `Remove{Singular}` (e.g. `RemoveOrderItem`) | `DELETE /{bc}/{aggs}/{identifier}/{children}/{childKey}` |
 | `Set{Something}` | `PUT /{bc}/{aggs}/{identifier}/{something}` |
 | Process | `POST /{bc}/{name}` *(lcfirst of the process name — `processes/` no longer appears in the path; `operationId` is unchanged, still `{bc}_processes_{name}`)* |
 
@@ -33,7 +33,7 @@ Facade chain: Domain → BC → **Aggregate Read facade** (`{Agg}Read`, reached 
 
 **Create is a door like every other.** The row is `Create{Agg}` (one name in every form: facade method `create{Agg}()`, handler `Create{Agg}`, guard `GuardCreate{Agg}`, right `{bc}.{agg}:create{Agg}`). At `domain` or wider it is the facade door `{BC}::create{Agg}({Agg}DTO)`; at `outside` it also has the route `POST /{bc}/{aggs}` (answer 201) and a right. A method name that collides with another facade method of the BC (also with `{agg}()`) is `V-QDEF-23` (blocker). A creation that needs more than the aggregate's own Create still runs through a Process — model one, open its row, and it appears as `POST /{bc}/{name}`.
 
-**`Remove{Agg}{Child}` is not emitted for every child.** The table above gives the route *shape*; whether the command exists at all depends on the child. Two independent rules suppress the remove mutation of an `erm:one` child — and when either applies, there is **no** `Aggregate/Action/Remove{Child}.php`, **no** AggregateHandler method, **no** command and therefore **no** route:
+**`Remove{Singular}` is not emitted for every child.** The table above gives the route *shape*; whether the command exists at all depends on the child. Two independent rules suppress the remove mutation of an `erm:one` child — and when either applies, there is **no** `Aggregate/Action/Remove{Child}.php`, **no** AggregateHandler method, **no** command and therefore **no** route:
 
 | Case | Why |
 |---|---|
