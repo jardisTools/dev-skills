@@ -62,6 +62,13 @@
     "composer_require": "composer require jardiscore/kernel"
   },
   {
+    "package": "jardissupport/acl",
+    "capability": "per-record access entries on a SQL table (which group may reach which record of an information kind, up to which level), with a three-valued access check, group reassignment, query filters that restrict a record list to the records a person may see, and a backfill for records that exist already",
+    "use_when": "you need record-level sharing or visibility on top of role-based rights, so that a list or a single record is shown only to the groups that were given access",
+    "composer_require": "composer require jardissupport/acl",
+    "alternatives": "jardissupport/auth covers who a person is and which role-based rights a session carries; acl covers which records that person may reach"
+  },
+  {
     "package": "jardissupport/auth",
     "capability": "session management with signed access tokens (no database access per request) that carry subject, tenant and role, password hashing and authentication, a ready-made bundle of session and token services (also available through the kernel), and role-based access control with domain events",
     "use_when": "you need user login, session lifecycle management, password verification, or role-based permission checks",

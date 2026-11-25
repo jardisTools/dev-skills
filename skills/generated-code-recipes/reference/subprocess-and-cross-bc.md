@@ -27,6 +27,8 @@ public function __invoke(CounterChangeContext $ctx): NodeResult
 }
 ```
 
+**Session fields are never an open place.** `tenant` and `user` of the sub-process input (login world) come from the session field of the calling process, one source, even if the command the caller accepts carries a field of the same name; only business fields can be open places.
+
 **What the developer does:** replace each open place (`Sub-DTO-Feld <field> <Node>`) with the real value from the surrounding run — `$ctx->input()->…`, or explicitly from an earlier node through its typed getter, `$ctx-><node>()?->…`. The inner call (`$this->context(<Inner>Handler::class, …, depth: $ctx->depth() + 1)()`) and the `MapResponseInto` mapping are generated — do not touch them, and never map a response by hand.
 
 **What `MapResponse` does with the inner answer** (`JardisSupport\Workflow\Handler\Node\MapResponse`): success → `ok((array) data)` **carrying the Domain events of the inner run**, so they travel up to the outer answer (an inner run that was rolled back reports none; `Internal` events stay behind); a 4xx → a `reject` with the **same** status and the callee's plain context (so the outer wire form equals the inner one); a 5xx → throws a `CalleeFailureException` (the inner door has reported the cause). Events are part of the result, not of the data — there is no channel to fill.
@@ -78,6 +80,8 @@ final class CheckStockInCatalog extends EcommerceContext
     }
 }
 ```
+
+**Sharing a record is not a Cross-BC call.** To make a process assign responsibility ("hand this record to that person or group"), model a node that calls `Share{Agg}` of the OWN bounded context (offered from the stance `domain` of the `Share{Agg}` row, kind `access`); the build writes the body, you write none. A call into another BC, onto an aggregate without protection of its own or onto a `closed` row is `V-PROC-ACCESS-5`. Details: `generated-code-workflow-api`.
 
 **Cross-BC read: declare `crossBcCall`.** A node whose `consumedCalls` resolve into a foreign BC of the own domain (its `{Agg}Read` methods, each a read door of the owner at `domain` or wider) is a Cross-BC-Call node on its own; declare `crossBcCall: {ServiceName}` on it so that one shared Service per target serves every node with that target (without the declaration the generator derives one shared Service per target, named from the target's facade segments after the domain prefix and its call key, e.g. `BillingInvoiceGetById`). The generated Action contains no `use` of the foreign BC and delegates to the Service, and the Service reads through the foreign read facade (step 1 above). A missing foreign record is your Service's decision: a `reject` (404), or a `Route::OnFalse` when the process should carry on. Rules keep reading only in their own BC (M9) — a cross-BC existing-data check is process territory.
 
