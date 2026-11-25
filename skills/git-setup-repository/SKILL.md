@@ -10,8 +10,8 @@ prerequisites: []
 next: [git-check-compliance]
 ---
 
+Run this skill only when the human asked for it (for example by typing `/git-setup-repository`); if you loaded it on your own, stop and ask the human. Input: the GitHub repository as `org/repo` from the human; ask for it when it is missing. If your tool does not execute the lines below that start with `!`, run those commands yourself first and read their output.
 ## Current state
-
 !`git status --short 2>/dev/null || echo "No git repository"`
 !`git remote get-url origin 2>/dev/null || echo "No remote"`
 !`git branch -a 2>/dev/null | head -6`

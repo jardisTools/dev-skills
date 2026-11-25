@@ -14,7 +14,7 @@ A fresh session knows nothing of the last one. The progress file is the single l
 
 ### 1. Find the active progress file
 
-List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` is active until the closing deletes the folder; its `## Kopf` says `Phase`, and phase `close` is still active: docs sync, delivery and the deletion come after the human's acceptance.
+List `docs/vorhaben/*/`. A folder with a `PROGRESS.md` is active until the closing moves the folder to `tmp/archiv/<name>/`; its `## Kopf` says `Phase`, and phase `close` is still active: docs sync, the move into the archive and the delivery come after the human's acceptance.
 
 - The human named the undertaking: use `docs/vorhaben/<name>/PROGRESS.md` and skip the search.
 - Exactly one is active: that is the run.

@@ -1,6 +1,6 @@
 ---
 name: foundation-frontend-review
-description: Non-negotiable, stack-agnostic Jardis frontend review rules — component boundaries, state discipline, an e2e-heavy test pyramid, an accessibility minimum bar, and type-safety at the data boundary; the measuring stick a frontend architect or reviewer holds a UI plan or component against. Consult before reviewing any frontend plan or authoring a frontend component. The concrete UI framework arrives via the assignment, never from this constitution.
+description: Stack-agnostic Jardis frontend review rules — component boundaries, state discipline, an e2e-heavy test pyramid, an accessibility minimum, type safety at the data boundary. Use before reviewing or writing a UI plan or component; the UI framework comes with the assignment.
 zone: crosscut
 persona: C
 profile: core

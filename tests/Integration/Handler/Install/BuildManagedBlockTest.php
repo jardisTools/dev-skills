@@ -96,7 +96,7 @@ final class BuildManagedBlockTest extends TestCase
 
     public function testPoolPointerFromRouterTextAppearsExactlyOnce(): void
     {
-        $pointer = 'Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht';
+        $pointer = 'Knowledge pool `.claude/wissen/INDEX.md`: read before deciding; feat/fix commits note `Wissen:`.';
 
         $block = (new BuildManagedBlock())(
             [new AgentsDescriptor('jardisadapter/cache', 'Cache rules.')],
@@ -105,6 +105,6 @@ final class BuildManagedBlockTest extends TestCase
         );
 
         self::assertSame(1, substr_count($block, $pointer));
-        self::assertSame(1, substr_count($block, 'Wissenspool'));
+        self::assertSame(1, substr_count($block, 'Knowledge pool'));
     }
 }

@@ -453,7 +453,7 @@ final class SkillInstallerTest extends TestCase
         foreach ([...RouterTest::TIER_RULE_KEYWORDS, ...RouterTest::GATE_RULE_KEYWORDS] as $label => $keyword) {
             self::assertStringContainsString($keyword, $preface, sprintf('Opt-out AGENTS.md lacks the %s rule.', $label));
         }
-        self::assertStringContainsString('Wissenspool: `.claude/wissen/INDEX.md`', $agents);
+        self::assertStringContainsString('Knowledge pool `.claude/wissen/INDEX.md`', $agents);
         foreach (RouterTest::GIT_RULE_KEYWORDS as $label => $keyword) {
             self::assertStringNotContainsString($keyword, $agents, sprintf('Opt-out AGENTS.md still states the %s rule.', $label));
         }

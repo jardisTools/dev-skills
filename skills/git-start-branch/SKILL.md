@@ -10,6 +10,8 @@ prerequisites: []
 next: [git-commit-change]
 ---
 
+Run this skill only when the human asked for it (for example by typing `/git-start-branch`); if you loaded it on your own, stop and ask the human. Input: the description of the work the human gave (it stands for `$ARGUMENTS` below; ask for it when it is missing). If your tool does not execute the lines below that start with `!`, run those commands yourself first and read their output.
+
 ## Open issues
 
 First run `gh issue list --state open --limit 10` to see the open issues.

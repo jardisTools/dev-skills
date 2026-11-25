@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 /**
  * Validates every bundled SKILL.md against the format rules in
- * docs/SKILL-FORMAT.md. Chains three checks, each a closure:
+ * docs/SKILL-FORMAT.md. Chains four checks, each a closure:
  *   format  ValidateSkillMd   frontmatter, zone/persona, budgets, body rules
  *   links   CheckSkillLinks   prerequisites / next resolve to skill folders
+ *   size    CheckSkillSize    line length and byte caps of SKILL.md and reference/ leaves
  *   rules   CheckRuleMarkers  rule markers and cap figures of the process skills
  *
  * Exits 0 when all skills are conformant; non-zero otherwise.
@@ -21,6 +22,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use JardisTools\DevSkills\Handler\Validate\CheckRuleMarkers;
 use JardisTools\DevSkills\Handler\Validate\CheckSkillLinks;
+use JardisTools\DevSkills\Handler\Validate\CheckSkillSize;
 use JardisTools\DevSkills\Handler\Validate\ValidateSkillMd;
 
 $repoRoot   = dirname(__DIR__);
@@ -50,6 +52,7 @@ if ($skillFiles === []) {
 $perFileChecks = [
     'format' => new ValidateSkillMd(),
     'links'  => new CheckSkillLinks(),
+    'size'   => new CheckSkillSize(),
 ];
 $rulesCheck = new CheckRuleMarkers();
 

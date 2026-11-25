@@ -5,7 +5,7 @@ zone: crosscut
 persona: C
 profile: core
 prerequisites: []
-next: [foundation-architecture, design-model-capabilities]
+next: [foundation-architecture]
 ---
 
 ## Scope
@@ -37,7 +37,7 @@ Modelling and design decisions are not free: where data lives versus behaviour, 
 - The first idiom that comes to mind is an assumption until it passes that check.
 - A pure data container carries no behaviour or marker interface (data-behavior separation).
 - Prefer composition over inheritance; state dependencies explicitly.
-- When the strict reading produces clearly higher complexity, a conscious, stated compromise is allowed — never a silent one. The compromise never applies to the places and the corridor of hand code (`generated-code-extend` section 10).
+- When the strict reading produces clearly higher complexity, a conscious, stated compromise is allowed — never a silent one. The compromise never applies to the places and the corridor of hand code (`generated-code-extend` section 10, Jardis projects only).
 
 ### 4. Use the platform before you program
 
@@ -48,4 +48,4 @@ In a Jardis project, every model element is checked against the capabilities of 
 - Pillars, hexagonal direction, Closure-Orchestrator: `foundation-architecture`
 - Pattern catalogue: `foundation-patterns`
 - PHP conventions: `foundation-php`
-- Jardis tool capabilities per model element: `design-model-capabilities`
+- Jardis tool capabilities per model element: `design-model-capabilities` (Jardis projects only)

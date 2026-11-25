@@ -25,7 +25,7 @@ When a Process node needs a Jardis runtime tool (cache, mail, queue …), consul
 | Factory / container | `support-factory` |
 | `DomainKernelInterface` (the DomainKernel) + Bootstrap-Packer `BuildDomainKernelFromEnv` (ENV-driven DomainKernel assembly) | `core-kernel` — `DomainApp`/`BoundedContext`/`ServiceRegistry` do not exist; their role is carried by the generated Domain facade + `<Domain>Context` (this skill, §1) |
 | `DomainResponse`/`ContextResponse`/`TransformResponse`/`BuildResponseData` | `support-response` (package `jardissupport/response`, §7 above) |
-| One-time ENV-driven App entry point (`App/bootstrap.php` + `App/.env`, wires the DomainKernel + every workspace domain) | `core-kernel` (Bootstrap-Packer) — `jardiscore/foundation` does not exist; never reach for it |
+| One-time ENV-driven App entry point (`App/bootstrap.php`, reads the one project-root `.env`, wires the DomainKernel + every workspace domain) | `core-kernel` (Bootstrap-Packer) — `jardiscore/foundation` does not exist; never reach for it |
 
 ### 9. Anchors
 

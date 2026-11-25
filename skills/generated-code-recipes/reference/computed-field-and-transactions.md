@@ -2,7 +2,7 @@
 
 **Recipe 13 — Write a computed field from a process node (`Set{Entity}Computed`)**
 
-A column the process derives (a sum, a counter) is declared `computed: ["net_total", …]` on its entity in `Aggregate.json` (Designer field table switch "berechnet", MCP `save_aggregate` node field `computed`). Such a column is in **no** Create/Set/Add/Update command and in no OpenAPI request — a caller can neither send nor overwrite it (a body naming it is `400 unknown`); Read, list and Akte still carry it. The one write path is the generated, **family-internal** command `Set{Entity}Computed` (one per entity position with computed columns): its DTO is the entity's addressing path (root identifier; for an `erm: many` entity also the selector and the child identifier) plus exactly the computed columns, nothing else. It has no route, no OpenAPI path, no rule binding and no BC-facade method — the only way in is the kernel seam, from a Process node or Service:
+A column the process derives (a sum, a counter) is declared `computed: ["net_total", …]` on its entity in `Aggregate.json` (Designer field table switch "berechnet", MCP `save_aggregate` node field `computed`). Such a column is in **no** Create/Set/Add/Update command and in no OpenAPI request — a caller can neither send nor overwrite it (a body naming it is `400 unknown`); Read, list and the record read (UI term "Akte") still carry it. The one write path is the generated, **family-internal** command `Set{Entity}Computed` (one per entity position with computed columns): its DTO is the entity's addressing path (root identifier; for an `erm: many` entity also the selector and the child identifier) plus exactly the computed columns, nothing else. It has no route, no OpenAPI path, no rule binding and no BC-facade method — the only way in is the kernel seam, from a Process node or Service:
 
 ```php
 // {BC}/Process/{Name}/Command/Handler/Action/RecalculateTotals.php — node body is yours
@@ -31,7 +31,7 @@ Every Process runs in **one** transaction by default — nothing to model. `runI
 
 - **A route is a branch, a `reject` is an abort.** The `Route::OnFalse` path may write; only the **END status** of the run decides rollback — a 4xx `reject` or a technical failure rolls the whole run back. Do not model a manual rollback.
 - **One connection:** all BCs of a domain write through the same writer, so a Cross-BC write node (Recipe 9) is part of the caller's bracket — no saga.
-- **Events (Wurzel 3 unchanged):** the handler collects, nothing is dispatched; the caller publishes the events of the answer after the commit. With the opt-out there is no bracket, nothing is rolled back and the events are harvested unconditionally.
+- **Events (unchanged):** the handler collects, nothing is dispatched; the caller publishes the events of the answer after the commit. With the opt-out there is no bracket, nothing is rolled back and the events are harvested unconditionally.
 - **Opt-out** `runInTransaction: false` is for a process that must keep partial writes on purpose; the build warns once per process (`V-PROC-TX-OPTOUT`, a warning, never a blocker).
 - **Floor:** the savepoints come from the packages (`jardissupport/contracts` ≥ 2.4.0 `SavepointInterface`, `jardissupport/repository` ≥ 1.4.0, `jardisadapter/dbconnection` ≥ 1.2.0) — no raw `SAVEPOINT` SQL in your Dev code either.
 

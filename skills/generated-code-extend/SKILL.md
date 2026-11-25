@@ -14,7 +14,7 @@ Never edit `{BC}/Model/{Agg}/` — fix the model, then rebuild.
 
 ## Triggers
 
-Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Generator-owned and hermetic (ForceOverwrite, never edit). The BC facade's public surface exposes `{agg}(): {Agg}Read` (read-only queries + lists), `process()`, and a direct method per command door at `domain` or wider (stance rows of `Doors.json`); the write facade `{Agg}` (Commands + `event()`) is family-internal via the protected kernel seam (`$this->handle()`). Hand code stands only at the places of the one table in §10: process node bodies under `{BC}/Process/{Name}/Command/Handler/Action/`, Closure/Rule bodies under `{BC}/Closure/` (own-BC-read-only, M9), Domain Services under `{BC}/Service/`, and `App/**` delivery code without business logic. Covers computed fields (`Set{Entity}Computed`, family-internal), the aggregate entity with child getters at the Rule `aggregate` input, cross-BC reads as a derived Cross-BC-Call Service, V1–V13 prohibitions, decision tree, generated-file modes, DomainResponse construction incl. `RuleViolation` 422. ClassVersion → `generated-code-versioning`. Workflow API → `generated-code-workflow-api`. Recipes → `generated-code-recipes`.
+Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Generator-owned and hermetic (ForceOverwrite, never edit). The BC facade's public surface exposes `{agg}(): {Agg}Read` (read-only queries + lists), `process()`, and a direct method per command door at `domain` or wider (stance rows of `Doors.json`); the write facade `{Agg}` (Commands + `event()`) is family-internal via the protected kernel seam (`$this->handle()`). Hand code stands only at the places of the one table in §10: process node bodies under `{BC}/Process/{Name}/Command/Handler/Action/` (not Rule or Event nodes, generated whole), Closure/Rule bodies under `{BC}/Closure/` (own BC read-only — M9, the rule that a Rule, Closure or Domain Service reads only its own BC), Domain Services under `{BC}/Service/`, and `App/**` delivery code without business logic. Covers computed fields (`Set{Entity}Computed`, family-internal), the aggregate entity with child getters at the Rule `aggregate` input, cross-BC reads as a derived Cross-BC-Call Service, V1–V13 prohibitions, decision tree, generated-file modes, DomainResponse construction incl. `RuleViolation` 422. ClassVersion → `generated-code-versioning`. Workflow API → `generated-code-workflow-api`. Recipes → `generated-code-recipes`.
 
 ### Mandatory rules
 
@@ -22,8 +22,8 @@ Extending Designer-generated code — the whole `{BC}/Model/{Agg}/` tree is Gene
 
 | # | Rule |
 |---|---|
-| V1 | Never edit anything under `{BC}/Model/{Agg}/` — the whole aggregate tree is hermetic (ForceOverwrite). Hand code stands only at the places of §10 (node bodies, Closure/Rule bodies, `{BC}/Service/`, `App/**`). |
-| V2 | No `new` for Services / VOs / Entities — only `Exception`, `RuntimeException`, `DateTimeImmutable`, `DateTime`. No connection in a body (node, Closure, Domain Service) either: never `dbConnection()`, never a class whose constructor takes a connection — neither by `new` nor by `handle(X::class, …)`; the way is the Context's named function (`aclStore()`, §10 row 5; Gesetz-Gate invariant G) |
+| V1 | Never edit anything under `{BC}/Model/{Agg}/` — the whole aggregate tree is hermetic (ForceOverwrite). Hand code stands only at the places of §10 (node bodies except Rule and Event nodes, which are generated whole and rewritten on every build; Closure/Rule bodies; `{BC}/Service/`; `App/**` except the regenerated `App/middleware.php`). |
+| V2 | No `new` for Services / VOs / Entities — only `Exception`, `RuntimeException`, `DateTimeImmutable`, `DateTime`. No connection in a body (node, Closure, Domain Service) either: never `dbConnection()`, never a class whose constructor takes a connection — neither by `new` nor by `handle(X::class, …)`; the way is the Context's named function (`aclStore()`, §10 row 5) |
 | V3 | Never bypass `handle()` |
 | V4 | No logic in Command / Query Handler Orchestrators — logic belongs in Actions |
 | V5 | Never access Aggregate internals from outside — only via AggregateHandler |
@@ -43,17 +43,19 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 | Question the leaf answers | Leaf |
 |---|---|
 | I need the DDD stance, the hermetic output layout (directory tree), the route convention, exposing/creating commands, the notation, the vocabulary glossary or the Context-family seam (§0, §1) | reference/ddd-positioning-and-layout.md |
-| I need the facade mechanics (aggregate/process/BC facade), the file modes (ForceOverwrite, CreateIfNotExists, DeveloperOwned), the read base, the data block, tenant/user markers or the bulk-read recipe (§1, continued) | reference/facades-and-file-modes.md |
+| I need the table of generated classes with path and file mode (Domain/BC/aggregate/process facades, FieldMap, Rule stub, Guard, Process DTO, orchestrator, node, Service stub), the `protected` seam, or the AI path of a Rule with an existing-data check (§1, continued) | reference/generated-class-table.md |
+| I ask which file mode applies and what a rebuild keeps: ForceOverwrite, CreateIfNotExists, `@node-id` body-preserve, the Rule-stub merge, the generated test scaffold (§1, continued) | reference/file-modes.md |
+| I read an aggregate: the aggregate facade, the read base (`get<Agg>ById`, `ByIds`, `By<Key>`), the data block in PHP, per-record access, tenant/user markers, the bulk-read recipe (§1, continued) | reference/read-base-data-block-and-markers.md |
+| I need the mechanics of the process facade (`{BC}Process`, outcomes, process stance) or the BC facade (caches nothing) (§1, continued) | reference/process-and-bc-facade.md |
 | I want to customize generated code: where a change goes, the decision tree "I need to…", the new-code locations, or the implementation levels (§2, §4, §5, §6) | reference/customization-and-places.md |
 | I construct or read a `DomainResponse`: status codes, the Rules-Layer status staircase, `addError`, the result helpers (§7) | reference/domain-response.md |
 | I look for the Jardis package skill that covers a runtime tool (cache, mail, queue, HTTP, DB) or the sibling skills (§8, §9) | reference/toolbox-and-anchors.md |
 | I ask where hand code may stand: the one place-table, the Stub-Manifest, the PHPDoc context chain of a stub (§10) | reference/ablage.md |
-| I look for an entry that no longer applies (archive, currently empty) | reference/archiv.md |
 
 ### Zitate §N (citation targets)
 
 - §0 → „0. DDD positioning“ (ddd-positioning-and-layout)
-- §1 → „1. Generated baseline — Platform-free hermetic layout“ (ddd-positioning-and-layout, facades-and-file-modes)
+- §1 → „1. Generated baseline — Platform-free hermetic layout“ (ddd-positioning-and-layout, generated-class-table, file-modes, read-base-data-block-and-markers, process-and-bc-facade)
 - §2 → „2. Where customization goes — the aggregate has no edit slot“ (customization-and-places)
 - §3 → „3. Prohibitions (V1–V13)“ (this index)
 - §4 → „4. Decision tree — "I need to…"“ (customization-and-places)
@@ -62,7 +64,7 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 - §7 → „7. Constructing `DomainResponse`“ (domain-response)
 - §8 → „8. Toolbox — which skill covers which Jardis package“ (toolbox-and-anchors)
 - §9 → „9. Anchors“ (toolbox-and-anchors)
-- §10 → „10. Where hand code may stand — the one table“ (ablage; Builder gate 27e reads its generated zone)
+- §10 → „10. Where hand code may stand — the one table“ (ablage)
 - §11 → „11. The way“ (this index)
 
 ### 11. The way

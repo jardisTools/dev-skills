@@ -20,7 +20,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class RouterTest extends TestCase
 {
-    private const POOL_SENTENCE = 'Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht';
+    private const POOL_SENTENCE = 'Knowledge pool `.claude/wissen/INDEX.md`: read before deciding; feat/fix commits note `Wissen:`.';
     private const MAX_BYTES = 4096;
     /**
      * Keywords of the three tier sentences (E7 P7.3, smoke run 1): tier-3 precedence,
@@ -116,7 +116,7 @@ final class RouterTest extends TestCase
     public function testRouterHasThePoolSentenceExactlyOnce(): void
     {
         self::assertSame(1, substr_count($this->router(), self::POOL_SENTENCE));
-        self::assertSame(1, substr_count($this->router(), 'Wissenspool'));
+        self::assertSame(1, substr_count($this->router(), 'Knowledge pool'));
     }
 
     public function testRouterStatesTierThreePrecedenceLoadDutyAndDelegationBeforeTheTierTable(): void

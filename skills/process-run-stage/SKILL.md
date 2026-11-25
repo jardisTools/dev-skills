@@ -20,7 +20,7 @@ Read `docs/vorhaben/<name>/PROGRESS.md` and the stage plan. The head must say ph
 
 For each phase of the stage, in plan order:
 
-1. **Brief.** Write one brief from `templates/brief.md` (section 3). For a change to generated code the order of work is `generated-code-extend` §11 "The way".
+1. **Brief.** Write one brief from `templates/brief.md` (section 3). For a change to generated code the order of work is `generated-code-extend` §11 "The way" (Jardis projects only).
 2. **Implementer.** Start a fresh agent session with that brief (sections 4 and 5).
 3. **Commit.** When the report says `green`, the main session checks the files against the phase scope, names the commit message from the report and asks the human to commit it with `git-commit-change`: a human gate, see below. Work happens on the branch of the undertaking; it exists from the start. Create it only when it is missing. With the delegated git rules (see below) the session creates that branch when it is missing and makes the commit itself after that check, and reports the hash from `git log`.
 4. Next phase. Before a new phase, read the stop wish; if set: finish the phase, commit, set Next step, halt. Independent phases may run in parallel; see section 4.

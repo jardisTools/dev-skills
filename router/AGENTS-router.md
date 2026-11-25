@@ -1,6 +1,6 @@
 # Process router
 
-Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht
+Knowledge pool `.claude/wissen/INDEX.md`: read before deciding; feat/fix commits note `Wissen:`.
 
 Pick the lowest tier that fits a task and name it in one line — a present tier-3 criterion is never a matter of fit. Process is a means against size and risk, not a default: escalate only with a named reason. Two or more subtasks are never a single action. Tier 3 is not a judgement call: one tier-3 criterion in the task (an open decision, a public API or observable behaviour, data, migration, security) makes it tier 3 however small the change — start `process-concept`. Name tier 1 or 2 only after loading `process-choose-tier`. At tier 2 the main dialogue delegates every subtask to a sub-agent and verifies; it never implements itself. Skill first, then source code, then ask (`foundation-working-principles`). Before proposing anything new, ask what the environment already does (`process-check-existing`). Before acting in a phase, load its skill in full through the skill mechanism; reading parts of a skill file through the shell does not count. Before any write to a page of the knowledge pool, load `knowledge-record-decision`.
 
@@ -44,7 +44,7 @@ Merge and push are gates of the human: the session never merges or pushes on its
 
 Start with `start-orientation`: it walks packages, schema, design and code and names the skill for every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
 
-Platform boundary: packages and generator are immutable (no `vendor/` patches, no generated-code edits); report gaps as issues, meanwhile write interim process-scope code.
+Packages and generator are immutable, no `vendor/` patch; hand code only in stub bodies and `App/**` except `middleware.php`; report gaps, no interim code.
 <!-- /profile:jardis -->
 
 <!-- profile:core -->
