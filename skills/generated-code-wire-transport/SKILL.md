@@ -8,6 +8,8 @@ prerequisites: [generated-code-extend]
 next: []
 ---
 
+This skill is an index; the detail lives in `reference/`, one leaf per topic. Read exactly the leaf whose question matches your task, not all of them.
+
 ### 1. Call chain
 
 Two chains reach the transport layer — **read** and **process** — the BC facade's public surface (G2) exposes no general aggregate write accessor (a command door at stance `domain` or wider adds a narrow direct chain, G10 below):
@@ -49,166 +51,22 @@ The DomainKernel (`$kernel: DomainKernelInterface`) is a plain immutable value o
 
 Tenancy still matters at the adapter level: build a fresh DomainKernel (fresh DB credentials/connection, fresh cache namespace, …) per tenant when tenant isolation is required — there is no kernel-level `$sharedRegistry` mechanism to leak through.
 
-### 3. DomainResponse → transport
+### Navigation
 
-| Status | HTTP | CLI exit | Meaning |
-|---|---|---|---|
-| 200 | 200 OK | 0 | Success — every successful read and every successful Process answers 200 (a Process never answers 201, even when its Create node ran; the 201 of an aggregate Create handler reaches the wire only through the Create door `POST /{bc}/{aggs}`, row `Create{Agg}` at the stance `outside`). A Process answers with `@outcome` (the `gives.name` of the end node that ran, always) and the `gives` of that end node (identifier or value fields, one form per exit; workflow 5.2, `generated-code-recipes` Recipe 6): a process whose end node gives `nothing` (typically ending on a rule or event node) answers with no fields of its own — on the 2xx wire `data` carries only the process `@type` and the outcome, `{"@type":"<processName>","@outcome":"<gives.name>"}` (wire-contract case `200-empty`). The OpenAPI states several outcomes as `oneOf` plus `discriminator` on `@outcome`, one outcome as `$ref`; the union is open: a new outcome is additive, an unknown `@outcome` is the error branch of the client, and renaming or removing an outcome is a contract break like a field rename — a later node that needs an earlier answer reads it explicitly (`latest()` / `all()`) |
-| 204 | 204 No Content | 0 | Success, empty body |
-| 400 | 400 Bad Request | 2 | Field/DTO validation failed (before any Rule runs; a Process checks its command inputs even before its first node — `generated-code-extend`, process gate) — `data` is `{"@type":"validation","fields":[{field,reason,message,messageKey}]}` (one form for route guard, aggregate command and Process; `field` is the outer name per FieldMap as a dot path with the list index at every door, e.g. `customer.customerName` where the column is called `name`, `orderItem[0].qty` for a list element; `reason` comes from the validator kind (`jardissupport/validation` ≥ 1.2.0 `ValidationResult::getKinds()`): `missing` only for a validator implementing `MissingValueValidatorInterface` (contracts ≥ 2.3.0), otherwise `invalid`; a custom `message` never changes `reason`). At an Update / `Update{Kind}` door (patch form) `missing` applies only to the address fields: a field the body does not name is `Absent` and is skipped by the validator (it stays unchanged), an explicit `null` on a non-nullable field is 400. An empty string is no value: a NOT-NULL string column without a value list answers `""` and `null` with `reason: invalid` (not `missing`; `"  "` counts as a value) and its request schema carries `minLength: 1`; `missing` stays for enum, date, number, boolean, value-list and child-presence fields. The path form depends on the door: at the aggregate door (PUT / Command route) `field` is flat (`orderNumber`, `customer.customerName`), at a Process gate it is prefixed with the Process property name (`registration.serviceName`) — one form per door: the prefix also applies to the findings of the Command validator (e.g. an empty string), and there is no special case for a Process with exactly one property, so a frontend maps a Process's field faults through the property name. A third `reason`, `unknown` (message `Unknown field`), marks a body key the contract does not name — at the route root, in nested/list items path-prefixed (`contactAddress.street`), listed after the `missing`/`type` findings of the known fields; every request schema with body fields carries `additionalProperties: false` |
-| 401 | 401 Unauthorized | 2 | Auth missing — an app with a login: `RequireSession` of `core/app` answers 401 before the domain code (header `WWW-Authenticate: Bearer`), `data` is `{}` (wire-contract case 401); the process door checks nothing of its own |
-| 403 | 403 Forbidden | 2 | Auth insufficient — route middleware of `core/app` before the domain code, fail closed, `data` is `{}`: `access.rightMissing` (`RequireRight`, `context.right` = the right of the endpoint; missing right, missing or unparsable claim) or `request.attributeMissing` (`RequireRequestAttribute`, `context.attribute`). A second 403 comes from the generated handler of a protected record, not from middleware: `data` = `{"@type":"forbidden","context":{…}}`, `errors` empty (the session sees the record, its level is too low; no sight is a 404) |
-| 404 | 404 Not Found | 2 | A single read found nothing, or a write loaded its aggregate and missed it (Update/Remove/Add-child/Set — root, and the child a Remove looks up by identifier; never a Create) — `data` is `{"@type":"notFound","context":{<route parameter or load identifier>}}`, and a Process reaching such a loading Command node answers the same (the node's 4xx is a `reject`: the run ends with that status, rollback — `data` is `{"@type":"notFound","context":{…}}`, plus the node's declared `messageKey`); a bulk read never answers 404 (200 with `items: []`); the router's own 404/405 is the contract's `BoundaryEnvelope` |
-| 409 | 409 Conflict | 2 | Stale write / state conflict — `data` is `{"@type":"concurrencyConflict","reason","aggregate","context"}` — `reason` is `stale_write`, `stale_delete` or `duplicate` (a unique-key duplicate, typed from the repository package — always 409, never 422; an FK violation stays 500; a transient database conflict — snapshot/serialization failure, deadlock — is `stale_write`/`stale_delete` with `violated: []`, not 500: retry the whole request in a new transaction); `context` carries the root's outer-door identifier under its FieldMap name (`id` only without a unique key), never primary-key or column internals |
-| 422 | 422 Unprocessable Entity | 2 | Rules-Layer: a bound business Rule rejected the Command — or, at a Process door, a developer-owned node body of the own BC answered 422 (a unique-key violation is NOT a rule rejection, it is 409 `duplicate`) — `data` is `{"@type":"ruleViolation","rule","messageKey","context"}` (requires `jardiscore/kernel` ≥ 1.1.0); the Process door's OpenAPI declares this 422 whenever a Rule or an own-BC dev body is reachable (also through sub-processes) — `messageKey` is the closed enum of the catalog keys of the reachable Rules if all of them declare one, an open string as soon as a reachable Rule has no catalog key or an own-BC dev body is reachable, or a cross-BC call, external call or custom node with a foreign-BC call is reachable next to the Rules (its service body can answer 422 with its own key) (a Command door declares the same enum or stays open the same way); the response carries the catalog key when declared; a cross-BC or external call alone declares no 422; map `messageKey` to a localized message in this transport layer, never in the domain |
-| 500 | 500 Internal | 1 | Exception escaped the pipeline (incl. a technical failure inside a Rule's existing-data check — never a 422); the message is in `errors`. At a Process door `data` and `errors` are `{}` (wire-contract case 500): the cause is logged once by the package, nothing of it reaches the answer |
+Navigation: one leaf per topic under `reference/` (§3, §4). Pick the row whose question fits the task.
 
-> **Root update carries no child lists.** The root update (`PUT /…/{key}`) writes the delivered root fields only (patch form: a field not in the body stays unchanged, an explicit `null` clears a nullable one; the door builds `Update{Agg}Patch`); children are maintained through `Update{Child}` / `Add{Child}` / `Remove{Child}` (or as a block on the create path). A child field in a PUT body is a 400 with `reason: unknown`. The root PUT route exists only when the row `Update{Agg}` stands at `outside` in `Doors.json`.
-
-Envelope from `getStatus()` / `getData()` / `getErrors()` / `getMetadata()` (plus `isSuccess()` shortcut). **`getData()` is flat:** it is the business object itself, typed by its own `@type` field — there is no handler-name or aggregate-root level in between. **`getErrors()` is context-keyed** (`array<string, list<string>>`, e.g. `['counter' => ['message']]`); on the wire `errors` is an object `{<context>: [message, …]}`, `{}` when no component put a message there (never `[]`). **Where the cause of a failure lives:** only a **500** reliably fills `errors`; a **4xx** (400 field/guard, 403 level too low, 404, 409, 422) carries its cause in the typed `data` (`fields[]` / `context` / `rule`+`messageKey`), and `errors` may be `{}` there — the route guard's 400 and a node's 404 leave it empty, the aggregate CommandHandler's 400 fills it with the validator message. So a transport that needs the reason of a 4xx reads `getData()`, never only `getErrors()`. `meta` carries `duration`, `contexts`, `timestamp`, `version`. Per X-1 the generator emits a minimal payload — **Command** echoes only the reference values (root business key, plus the affected child key), **Query** returns the projected aggregate: the root fields flat in the `data` array, children as typed `{Child}Response` objects (in PHP read them with `->`; `json_encode` writes the same nested JSON as below). `@type` per answer kind (full table: `generated-code-recipes` Recipe 6): the aggregate's root key (`counter`) for a single read and a Command, `<agg>List` for list and bulk reads, for a Process the process name (lcfirst), always, with `@outcome` behind it (the `gives.name` of the end node that ran), `validation` / `notFound` / `concurrencyConflict` / `ruleViolation` / `forbidden` for 400 / 404 / 409 / 422 / 403 (a Process builds the form from the `reject(...)` of a dev body: `data` is `@type` plus the form's fields; a 4xx without a form, e.g. 401/403/405, is passed through unchanged; the `messageKey` the node declares with `rejects(status, key)` is set on `data` after forming, for every 4xx status — also when it is not a field of the form). Examples:
-
-```json
-// Command via a Process (e.g. createCounter) → 200, reference value only
-{
-  "status": 200,
-  "data":   { "@type": "createCounter", "@outcome": "counterCreated", "counterIdentifier": "018e..." },
-  "errors": {},
-  "meta":   { "duration": 12.4, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
-}
-
-// Query (e.g. getCounterByIdentifier; getCounterById on an aggregate without a public unique key) → 200, flat projected record
-{
-  "status": 200,
-  "data":   { "@type": "counter", "identifier": "018e...", "counterNumber": "M-1", "activeFrom": "2026-01-01", "recordedAt": "2026-10-07T10:00:00+00:00", "price": "19.90" },
-  "errors": {},
-  "meta":   { "duration": 8.1, "contexts": ["counter"], "timestamp": "2026-10-07T10:00:00+00:00", "version": "" }
-}
-
-// Bulk read (getCounterByIds / getCounterByIdentifiers) → 200
-{ "status": 200, "data": { "@type": "counterList", "items": [ { "identifier": "018e..." } ] }, "errors": {}, "meta": { … } }
-
-// Validation failure → 400
-{
-  "status": 400,
-  "data":   { "@type": "validation", "fields": [ { "field": "counterNumber", "reason": "missing", "message": "Field is required.", "messageKey": "validation.missing" } ] },
-  "errors": { "<context>": [ "…" ] },   // filled by the aggregate CommandHandler; {} from the route guard — the cause is always in data.fields
-  "meta":   { … }
-}
-
-// Not found on write (e.g. update of a missing counter) → 404, never 500
-{ "status": 404, "data": { "@type": "notFound", "context": { "counterIdentifier": "018e..." } }, "errors": {}, "meta": { … } }
-
-// Rule rejection (or own-BC dev-body 422 at a Process door) → 422
-{ "status": 422, "data": { "@type": "ruleViolation", "rule": "…", "messageKey": "counter.must_be_active", "context": { "identifier": "018e..." } }, "errors": {}, "meta": { … } }
-```
-
-Time leaves the door as an ISO string in UTC (`date` `Y-m-d`, `date-time` ATOM with `+00:00`; never a `DateTime` object), a decimal as a string (`format: decimal`, pattern `^-?\d+(\.\d+)?$`), a column bound to a Werteliste as a member of a closed `enum`. A single read or a loading write that finds nothing answers 404 `{"@type":"notFound","context":{<route parameter or load identifier>}}` at the outer door (inside the family, through the kernel seam, the payload stays empty). A list read through the aggregate read facade (`{agg}List(...)`) returns a `ReadResult` (`->items()`, `->total()`), not a `DomainResponse`; the generated route wraps it as `data = {"@type":"<agg>List", items, total, limit, offset}` (`limit`/`offset` come from the filter) — a hand-written transport that wants the same outer shape does the same.
-
-CQRS: the Command response carries only identity — to get full state after a write, issue the matching read-base query (`get<Agg>By<UniqueKey>` with the echoed business key, or `get<Agg>ById`) via `$app->{bc}()->{agg}()`. The read facade (`{Agg}Read`) of an aggregate carries the read base `get<Agg>ById` / `get<Agg>ByIds` (aggregate WITHOUT a public unique key) or `get<Agg>By<UniqueKey>` / `get<Agg>By<PluralKey>` (WITH one; then no ById/ByIds on the facade) plus `<agg>List`, each as a door at `domain` or wider — there is no suffix-less `get<Agg>` (catalog + bulk-read recipe: `generated-code-extend` §1). An aggregate with a public unique key also carries `get<Agg>By<PluralKey>` (bulk read on that key), and its list items lead with that key — not with `id` — as the public surface's canonical handle and the projected single-aggregate record of such an aggregate has no root `id` property at all; only an aggregate **without** a unique key leads list items with the root `id` and carries it (normalized as `id`) in the record. Family-internally `id` remains the reachable handle either way (`getById`/`getByIds` keep being emitted); whether ids are exposed outward at all is this transport layer's decision. Events (`getEvents()`) are collected on the response, not dispatched by the handler; publication after commit is the caller's job (`App/**` delivery code for an event an Event ◇ node announced — see `generated-code-recipes` §1). Include them in the transport response only for debug / fire-hose APIs.
+| Question the leaf answers | Leaf |
+| --- | --- |
+| Which HTTP status and CLI exit code belongs to each DomainResponse status, and what does `data` carry? (§3) | reference/status-mapping.md |
+| What does the envelope look like — JSON examples, time/decimal format, list ReadResult, reading back after a write? (§3) | reference/envelope-and-examples.md |
+| Do I use `jardiscore/app` and the generated `routes.php`, and how does `X-Jardis-Version` reach a facade door? (§4) | reference/http-delivery-and-routes.md |
+| How are the middleware pipeline, session and open routes, `RequireRight`, token model and the 401/403 path wired? (§4) | reference/middleware-and-session.md |
+| How do group middleware, share/unshare routes and the access backfill work when records are protected? (§4) | reference/per-record-access-and-backfill.md |
+| I hand-write an HTTP controller, a CLI command or a queue consumer — show me the shape. (§4) | reference/transport-examples.md |
 
 ### 4. Transport patterns
 
 > **Where transport code stands.** A hand-written transport — controller, CLI command, queue consumer, event listener, project middleware — is delivery code in `App/**` (row 10 of the table in `generated-code-extend` §10). It carries no business logic, writes nothing itself, and calls only the doors of §1 — `{agg}()` (reads), `process()` and the direct command method `{BC}::{command}()` of a command door at stance `domain` or wider (HTTP route from `outside`) — and the kernel's accessors; never `Model/**`, a repository or `DbQuery`. The examples below show that shape.
-
-> **Process input DTO name:** the examples below assume a Process `CreateCounter` was modelled around the `Counter` aggregate's `createCounter` command (`generated-code-extend` §2/§4) — its input DTO lives at `{BC}/Process/CreateCounter/Command/CreateCounter.php` (namespace `…\Process\CreateCounter\Command`), distinct from the aggregate's own Command DTO of the same simple name. Constructor fields like `name`/`obis` are **illustrative**, domain-specific to this example — not a fixed API; the real fields come from your process's own `input.fields`.
-
-**Optional ready-made HTTP delivery (`jardiscore/app`).** This skill stays transport-agnostic by design (§1/§6) — the hand-rolled `JsonResponse` examples below work for any PSR-15 framework and remain valid. For HTTP specifically, `jardiscore/app` is a ready-made alternative to hand-rolling this wiring yourself: routing, a PSR-15 middleware pipeline, and the canonical `DomainResponseInterface` → PSR-7 `{status,data,errors,meta}` envelope mapper. Pipeline internals (router/middleware wiring, the mapper's class): s. Skill `core-app`. What the transport author must know regardless of internals: the mapper covers every one of the 11 `ResponseStatus` cases, with two documented deviations — `204` returns a bare empty response (no body, no `Content-Type`), and `422` passes `getData()` through unreshaped. It is optional, not a requirement: CLI, queue, and worker transports (below) have no equivalent package and stay hand-rolled either way.
-
-**Generated route registration (`Api/{Domain}/routes.php`).** For `jardiscore/app` specifically, wiring §1's call chains onto `Routes` needs no hand-rolled controllers per route: the Builder emits `{outputDir}/Api/{Domain}/routes.php` — a closure file with signature `function (Routes $routes, {Domain} $domain, string $prefix = '', ?Closure $revokeSession = null): void` (fourth parameter `?Closure $revokeSession`: in a world with login the head of the file fails closed with `?? throw` if it is missing; the app template binds `auth()->sessions()->invalidateByReference`) — with at least one share/unshare route a fifth parameter `?DomainKernelInterface $kernel` follows (the app template passes it; without it mounting throws with the reason and the routes, never silently without targets) — that registers every route of a door at `outside` or `open` (read, process, command) from §1 against the app's own `Routes` instance, decoding the JSON body, dispatching through `$domain->{bc}()->…`, and mapping the `DomainResponseInterface` back through the same envelope as `core-app`'s mapper. The app calls this closure once at bootstrap and writes zero lines of its own routing code; it is built from the same route table as the OpenAPI spec (`Api/{Domain}/openapi.yaml`), so spec and registered routes are provably identical (verified in-vivo via route introspection). Decimal-typed request fields decode as PHP strings (`format: decimal` in the spec — same `decimal`→`string` convention as everywhere else). A path/method collision across BCs is a hard FastRoute boot failure unless the app passes a distinguishing `$prefix`. `routes.php` is hermetic — do not hand-edit, it is overwritten every build like the rest of `Api/{Domain}/`.
-
-**Middleware pipeline and doors (app template, `jardiscore/app` >= 1.6).** The delivery layer wires the pipeline before the generated routes; the call chain of §1 starts only after it:
-
-```
-public/index.php (Delivery)       ← loads src/App/bootstrap.php → the app config entry 'middleware' (list<MiddlewareInterface>)
-    ↓ $routes->middleware($m)     ← once per entry, registration order, BEFORE the route mount
-    ↓ (require routes.php)($routes, $domain)   ← registers the doors
-    ↓ App: 404/405 → ResolveVersion → pipeline (e.g. RequireSession) → route closure → $app->{bc}()->…
-```
-
-- **The pipeline is a project setting, not hand-written code.** The Builder project setting `middleware` (`update_project_settings`, see `design-headless-mcp`) lists standard names (`session`) and project classes (FQCN, delivery code in `App/**` without business logic); the build emits `src/App/middleware.php` and wires the session guard concretely there (`new RequireSession(new SignedTokenAuthenticator(base64_decode($kernel->env('auth_token_key'))), …)`; there is no middleware factory in the package any more), the once-written `bootstrap.php` returns it. Never set = `["session"]`. The front controller checks the entry strictly (list of `MiddlewareInterface`); a wrong shape or a failing factory/project class is a startup error answered by the 500 envelope, never a stack trace.
-- **Session door (default) and open route; `RequireRight` per route.** The door is the stance of the route in `Doors.json`: every route is behind the pipeline's `RequireSession` unless its process row stands at `open` (`save_doors`; only a process can be opened, never a query or command; the project setting `openRoutes` is retired, `V-DOOR-0`). Only a door at `outside` or `open` becomes a route at all. An open process registers as `$routes->anonymous()->{verb}(…)` — no session, no right, no `security` in the OpenAPI — and reaches no tenant-marked aggregate. Every other route of a world with login additionally carries `new RequireRight($psr17, $psr17, '<right>', $hasRight)` (`JardisCore\App\Middleware\RequireRight`, `jardiscore/app` >= 3.0; `$hasRight` = `HasRight` of `jardissupport/auth`, bound at the head of `routes.php`; the rights are the session claim in the request attribute `RequestAttribute::RIGHTS`): the right is derived from the route table, one per door (`{bc}.{aggregate}:{row}` with the row name of the door, e.g. `sales.order:orderList`, read ways such as `catalog.product:productByIdentifier`, `sales.order:createOrder`; a process is `{bc}.process:{name}`; an `open` process has none) and listed in `Api/{Domain}/rights.json` (MCP resource `jardis://domain/{domain}/rights`). A hand-written public route in the front controller does the same as an open route: `$routes->anonymous()->get('/status', $handler)`. `/health` is always anonymous and never under `$prefix`.
-- **Session life cycle and system run.** The project setting `sessionProcesses` marks the processes `signIn`, `signOut`, `switchTenant`; the `signOut` and `switchTenant` route additionally carries `new RevokeSessionOnSuccess($revokeSession)` (`jardiscore/app` >= 3.1). From `signIn` + `switchTenant` the build writes `Api/{Domain}/system.php` (one door call as a system user over `JardisCore\App\SignedInRun`, `jardiscore/app` >= 3.2; the sign-in body is the env value `SYSTEM_SIGN_IN_SECRET`; no tenant or an answer without exactly one session token is `SystemRunRefused`); the CLI is the template file `bin/console system`.
-- **Session attributes in the handler.** After `RequireSession` the request carries `RequestAttribute::SUBJECT` (`jardisSubject`), `::SUBJECT_ID`, the claim `::RIGHTS` and, only when the token has a tenant, `RequestAttribute::TENANT` (`jardisTenant`; absent, never null); a session-aware result adds `::SESSION`. The generated routes read them for the `tenant`/`user` markers and for the `session` process input; a hand-written controller reads them from the PSR-7 request, never from the body. Order matters: `session` must stand before any project middleware that reads these attributes.
-- **Group middleware for per-record sight (`jardiscore/app` >= 3.5, `jardissupport/contracts` >= 2.22).** A domain with a protected root (login AND groups AND a protected root table with a living number; no statement needed, `access: "everyone"` releases an aggregate) gets three more middleware from the same generated `src/App/middleware.php` / `routes.php`, all built over ONE directory that fulfils `JardisSupport\Contract\Auth\GroupLookupInterface`: the project class of the setting `groupLookup`, or `GroupDirectoryFromDoors` built from the read doors of the setting `groupDoors` (`jardiscore/app` >= 3.6; see `design-headless-mcp`; without either there is no sight and no group middleware, nothing fails at app start): `ResolveGroups` directly behind `session` sets `RequestAttribute::GROUPS` (`list<int>`, absent = no group) and `::PERSONAL_GROUP` (`int`, absent = none); `ResolveFallbackGroups` behind it sets `::FALLBACK_GROUPS` (`array<int, int>`, information kind => group) for a request without a personal group; `ResolveShareTargets` sits per create route behind `RequireRight` and sets `::SHARE_TARGETS` (group id => level word, `false` = a target cannot be resolved, absent = no indication) from the request header `X-Jardis-Share-With: 12=view, 15=edit` (comma-separated `group=level`, level one of `view`, `edit`, `all`). The share and unshare routes (`POST …/{key}/share{Agg}`, `…/unshare{Agg}`) read the same targets from the request body instead (`groups`, `person`, `level`; `ShareTargetSource::Body`) behind `RequireRight` (`jardiscore/app` >= 3.4); the route checks no level word and resolves no person, the group contract of the app does. The information route `GET …/{key}/{agg}Shares` fills `groups` like a read route. The generated read routes of a protected root read `GROUPS` into the `groups` filter (`ReadRequestAttributeIntList`; the owner `*` or a `seeAll:` entry, `new ReadSeesAll($hasRight)` with the same rule as `RequireRight` - `seeAll:<right of the route>`, or `seeAll:<resource>:*` for every door of the resource - passes `null` = no filter); the create route turns `PERSONAL_GROUP` (else `FALLBACK_GROUPS`) and `SHARE_TARGETS` into the access entries of the new record; the write routes of a protected root (update, delete, child operations) and the process routes whose process carries the statement `access` read `GROUPS` the same way into the carrier `groups` of the command or process input, and the handler asks the access level before it writes - one question at the owner, a second at the new owner when the change moves a dependent record (404 no sight, 403 `forbidden` level too low, both mapped by the same Envelope); a missing or unknown level answers 400 under the header name, `SHARE_TARGETS === false` answers 404. The attributes and the header appear in no OpenAPI parameter except the optional header at the create operation. A hand-written controller sets none of this and writes no group query: it reads the attributes like the session attributes above.
-- **Backfill of access entries (`jardissupport/acl` >= 1.2.1, `jardiscore/app` >= 3.7.0, app template with the console command).** Records that existed before protection have no entry and stay invisible. `make access-backfill` (`bin/console access:backfill`) loads the one generated `Api/{Domain}/backfill.php` (present when a root table has its own protection) and runs it with the kernel of the console; it never runs on its own in operation. First the optional prelude of the setting `backfillPrelude` runs outside the bracket (repeated by `RepeatWhileOpen` while its `repeatWhile` field is above zero), then ONE transaction covers every protected root table. A record gets the personal group of its creator, else the fallback group of its tenant (`PersonalGroupPerCreator`, `FallbackGroupPerTenant`); nothing is ever removed, a record that holds an entry is never touched, so a second run writes zero rows. Output: one progress line per page with running sums, then one line per table with `written`, `toFallback`, `skipped`, `withCreator`, `resolved`. Exit 0 = complete; 1 = the prelude answered from 400 or the run threw (`BackfillUnresolved` when records with a creator exist and none resolves, or `RepeatAborted`; the transaction rolls back, stderr names the next step: check the prelude or set a fallback group); 2 = call or setup error (argument, no or several `backfill.php`, file without a closure). Not a transport concern: never write a backfill by hand. No locking: a record created during the run is caught by the next run.
-- **Token model (`jardissupport/auth` >= 1.5).** The access token is signed (HMAC with the 32-byte key `AUTH_TOKEN_KEY`, base64 in `.env`, may be stored as `secret(...)`; generate with `php -r 'echo base64_encode(random_bytes(32));'`): `RequireSession` verifies it without any database access per request. Only refreshing a session goes through `DbTokenStore`. Login and identity doors are not generated by the pipeline: they come from the package side, not from this skill.
-- **Error path.** No/invalid token on a session door → the guard answers 401 `{status:401,data:{},errors:{message:"Authentication required."},meta:{}}` + `WWW-Authenticate: Bearer` before the route runs; a throwable from the token store is a 500, not a 401. A route whose right is missing in the session claim never reaches its handler: `RequireRight` answers 403 `access.rightMissing` with `context.right`. A route whose required request attribute is absent (tenant/subject/session — e.g. no guard in front, or a token without a tenant) never reaches its handler either: the per-route middleware `RequireRequestAttribute` (`jardiscore/app` >= 1.8, wired by the generated `routes.php`) answers 403 `{status:403,data:{},errors:{message,messageKey:"request.attributeMissing",context:{attribute:"<name>"}},meta:{}}`; a client state, never a 500 (the OpenAPI names this form, as `oneOf` next to a process-declared 403). 404, 405 and an unknown `X-Jardis-Version` (400) are answered before the pipeline, so they never need a session. With `AppConfig(requireSessionGuard: true)` (template default) a non-anonymous route without a guard already fails the app start.
-
-**Class version through the transport (`X-Jardis-Version`).** Every facade door takes the class version as an argument (`string $version = ''`); a hand-written controller passes it itself, the generated routes do it for you. With `jardiscore/app` >= 1.2.0 the header `X-Jardis-Version` is read **once** in the gate (`ResolveVersion`) against `AppConfig(knownVersions: …)` and handed on as the request attribute `jardisVersion` (`''` = baseline, so the attribute is always set); a value outside the known set, an empty value or a repeated header is answered `400` (validation form, field `X-Jardis-Version`, `messageKey` `request.versionUnknown`) before any route runs. Every generated route reads the attribute and passes it as `$version` to its facade door (read, list, declared query, exposed Command, Process) and to its own route-built answers (400 field fault, 404), so `meta.version` of every envelope names the requested version; a known version without a `v{N}/` class for the class that runs is served by the baseline class and `meta.version` still names the requested one. The known versions are the `versions` declaration in the domain manifest; each build writes them to `src/Api/{Domain}/versions.php`, which the app template's `public/index.php` collects. A hand-rolled transport does the same: read the header once at the edge, validate it, pass the result as `$version` to the facade door, never rely on a domain-wide default (there is none). Full model and recipe: Skill `generated-code-versioning` §3–§4.
-
-**HTTP (PSR-15) — write via process():**
-
-```php
-final class CreateCounterController implements RequestHandlerInterface
-{
-    public function __construct(private readonly MyApp $app) {}
-
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $body     = (array) json_decode((string) $request->getBody(), true);
-        $dto      = new CreateCounter(name: $body['name'], obis: $body['obis']);
-        $response = $this->app->counter()->process()->createCounter($dto);   // write — the aggregate write facade is not reachable from here (G2)
-
-        // Envelope is your app's mapper — build it inline from the DomainResponse getters:
-        return (new JsonResponse([
-            'status' => $response->getStatus(),
-            'data'   => $response->getData() ?: new \stdClass(),      // flat business object, typed by `@type`
-            'errors' => $response->getErrors() ?: new \stdClass(),    // object {<context>: [message]}, never []
-            'meta'   => $response->getMetadata(),
-        ]))->withStatus($response->getStatus());
-    }
-}
-```
-
-**HTTP (PSR-15) — read via the aggregate's read facade:**
-
-```php
-final class GetCounterController implements RequestHandlerInterface
-{
-    public function __construct(private readonly MyApp $app) {}
-
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $id       = (int) $request->getAttribute('id');
-        // aggregate WITHOUT a public unique key: getCounterById; WITH one: getCounterByIdentifier (no ById on the read facade)
-        $response = $this->app->counter()->counter()->getCounterById(new CounterById(id: $id));
-
-        return (new JsonResponse([
-            'status' => $response->getStatus(),
-            'data'   => $response->getData() ?: new \stdClass(),      // flat business object, typed by `@type`
-            'errors' => $response->getErrors() ?: new \stdClass(),    // object {<context>: [message]}, never []
-            'meta'   => $response->getMetadata(),
-        ]))->withStatus($response->getStatus());
-    }
-}
-```
-
-**CLI (Symfony Console):**
-
-```php
-protected function execute(InputInterface $input, OutputInterface $output): int
-{
-    $dto      = new CreateCounter(name: $input->getArgument('name'));
-    $response = $this->app->counter()->process()->createCounter($dto);   // write via process()
-    $output->writeln(json_encode($response->getData(), JSON_PRETTY_PRINT));
-    return match (true) {
-        $response->isSuccess()        => 0,
-        $response->getStatus() >= 500 => 1,
-        default                       => 2,
-    };
-}
-```
-
-**Queue / Worker:**
-
-```php
-public function __invoke(CreateCounterMessage $msg): void
-{
-    $response = $this->app->counter()->process()->createCounter($msg->toDto());   // write via process()
-    if ($response->getStatus() >= 500) throw new RecoverableException('infra error, retry');
-    if (!$response->isSuccess())      throw new UnrecoverableException(json_encode($response->getData()));   // a 4xx cause lives in data (fields[] / messageKey / context); errors may be empty
-}
-```
 
 ### 5. Error handling
 
@@ -233,3 +91,13 @@ public function __invoke(CreateCounterMessage $msg): void
 - `DomainResponse` / `ContextResponse` / `TransformResponse` / `BuildResponseData` (how a Process answer becomes the envelope's `data`): package classes of `jardissupport/response` (skill `support-response`); `ResponseStatus` + response/context interfaces: `jardissupport/contracts`
 - ENV-driven DomainKernel assembly + one-time App entry point (`App/bootstrap.php`): `core-kernel` (Bootstrap-Packer `BuildDomainKernelFromEnv`) — `jardiscore/foundation` does not exist; never reach for it
 - HTTP delivery (routing, PSR-15 middleware, canonical envelope mapper `MapDomainResponse`): `core-app` (`jardiscore/app`) — optional, one of several valid transports (§4)
+
+### Zitate §N (citation targets)
+
+- §1 → „1. Call chain“ (this index)
+- §2 → „2. Bootstrap lifetime“ (this index)
+- §3 → „3. DomainResponse → transport“ (status-mapping, envelope-and-examples)
+- §4 → „4. Transport patterns“ (this index; the four §4 leaves)
+- §5 → „5. Error handling“ (this index)
+- §6 → „6. Not in the transport layer“ (this index)
+- §7 → „7. Anchors“ (this index)

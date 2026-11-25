@@ -109,7 +109,7 @@ cover how to obtain it (no Packagist/binary distribution exists for the Builder 
 | Declare a Domain's Context Map (BC relationships via the eight canonical DDD patterns, external systems), or run the read-only drift check — declared boundaries vs. the real coupling of the built system | `design-headless-mcp` |
 | Declare a BC's declarative read Queries (`Queries.json`: condition tree, joins, parameters), preview the generated code, or drive Query rename/delete/duplicate — headless | `design-headless-mcp` |
 | Guard a Command with a business Rule, declare a BC's `Closures.json` catalog+bindings, or drive Closure rename/delete/duplicate — headless | `design-headless-mcp` |
-| Decide who may reach each door (read way, query, command, process) of a BC — the stances `closed · domain · outside · open` in `Doors.json` — headless | `design-headless-mcp` (`save_doors`, `jardis://doors/{domain}/{subdomain}/{bc}`), `design-model-capabilities` (§ 2.4a) |
+| Decide who may reach each door (read way, query, command, process) of a BC — the stances `closed · domain · outside · open` in `Doors.json` — headless | `design-headless-mcp` (`save_doors`, `jardis://doors/{domain}/{subdomain}/{bc}`), `design-model-capabilities` (`reference/queries-and-doors.md`, § 2.4a) |
 | Learn the working principles of every task: skill first, then source, then ask; verify instead of guessing | `foundation-working-principles` |
 | Write or review PHP 8.3 code: strict types, PSR-4, Closure-Orchestrator form, test naming | `foundation-php` |
 | Review a change for typing, security, error handling, API, performance before it is committed | `code-review-change` |

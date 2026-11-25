@@ -42,7 +42,7 @@ A depend leaf whose FKs are all nullable keeps its remove mutation. `Remove{Agg}
 
 Path parameters carry the **business identifier** wherever the aggregate or child has one; the internal id is a documented fallback only, and the build emits a warning when it has to fall back, so the gap stays visible. A door appears in the document only at the stance `outside` or wider (`Doors.json`; `domain` is facade only, `closed` nothing) — changing a stance moves it in and out of the document without touching a line of PHP. The document carries no `servers:` block: base URL and mount prefix are the surrounding app's business.
 
-**`openapi.yaml` has a sibling artefact:** `Api/{Domain}/routes.php`, a hermetic `jardiscore/app` route-registration closure built from the same route table — how a transport layer wires it, decoding/dispatch/envelope details, and its `Api/{Domain}/` neighbourhood: `generated-code-wire-transport` §4 "Generated route registration".
+**`openapi.yaml` has a sibling artefact:** `Api/{Domain}/routes.php`, a hermetic `jardiscore/app` route-registration closure built from the same route table — how a transport layer wires it, decoding/dispatch/envelope details, and its `Api/{Domain}/` neighbourhood: `generated-code-wire-transport` §4 "Generated route registration" (`reference/http-delivery-and-routes.md`).
 
 **Notation:** aggregate code lives under `{BC}/Model/{Agg}/`; this skill abbreviates that directory as `{Agg}/`. Processes live one level up, under `{BC}/Process/` — a sibling of `{BC}/Model/`, **not** under any aggregate.
 
