@@ -48,7 +48,7 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 | Question the leaf answers | Leaf |
 |---|---|
 | I want the surface in one view: Tools act vs Resources read, the build-control tools (`run_qa`, `run_make_target`, `post_studio_card`), the studio resources, why not to memorise the catalogue (§1) | reference/surface-tools-resources.md |
-| I walk the workflow from an empty workspace to readable code (§2): workspace and class versions, `import_blueprint`, `import_schema`, `save_aggregate` with its format markers (`identifier`, `computed`, `tenant`/`user`, `writeOnly`), `save_naming`, process modelling (input types, `gives`, `@outcome`, transaction), `build` / `build_domain`, reading the code, studio cards and `run_qa` / `run_make_target` preconditions | reference/workflow-steps-and-studio.md |
+| I walk the workflow from an empty workspace to readable code (§2): workspace and class versions, `import_blueprint`, `import_schema`, `save_aggregate` with its format markers (`identifier`, `computed`, `tenant`/`user`, `access`, `writeOnly`), `save_naming`, process modelling (input types, `gives`, `@outcome`, transaction, the access statement `access`), `build` / `build_domain`, reading the code, studio cards and `run_qa` / `run_make_target` preconditions | reference/workflow-steps-and-studio.md |
 | I work beyond the core walk (§2 continued): glossary, Steckbrief and planned BCs, BC-declared ENV keys (`save_bc_env`), the Context Map and its drift Resource, the Rules-Layer (`save_closures`, catalog merge, lifecycle tools, the Closure `…/work` package, rule node in a process), the Queries-Layer, doors (`save_doors`) and the `middleware` setting, confirm gates, Schema to SQL export | reference/workflow-strategic-rules-queries-doors.md |
 | I look for a GUI affordance with no MCP button (output directory, open in editor, switching projects), the documented limit of the workspace registry, or the startup freshness banner (§3, §4, §5) | reference/type-a-limits-freshness.md |
 | I look for an entry that no longer applies (archive, currently without entry) | reference/archiv.md |
@@ -70,7 +70,8 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 - Build control of the board: Tools `run_qa`, `run_make_target`, `stop_make_target`,
   `post_studio_card`; Resources `jardis://project/make-targets`, `jardis://studios`,
   `jardis://studios/{name}`, `jardis://closed-studios`, `jardis://mcp-log/{name}` (full log
-  of a prior `build`/`build_process`/`run_qa` call) — see §2 "Studio build control".
+  of a prior `build`/`build_process`/`build_domain`/`run_qa` call, and the findings file of a
+  `build_domain` run) — see §2 "Studio build control".
 - Once generated code exists and you are implementing behaviour inside it: `generated-code-extend`.
 - Designing a schema's content from a domain idea instead of introspecting a live database, then
   feeding it through `import_schema`: `design-draft-schema`.

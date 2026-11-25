@@ -15,7 +15,7 @@ The node, query or capsule has produced its result. Station 5 turns it into the 
 
 **Query answer**
 
-- A list passes its rows through `ProjectWire` into `ReadResult::ofList`; time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`. A tenant-marker column stands in no read output.
+- A list passes its rows through `ProjectWire` into a `ReadResult` (the sum is lazy: the list counts only when `total()` is read, `ofCountedList` / `ofCappedCountedList` of `jardissupport/response` >= 4.5); time leaves as an ISO string in UTC (`date` as `Y-m-d`, `date-time` as ATOM with `+00:00`), a decimal as a string, a bound value list as a closed enum. A point read maps through the FieldMap `fromAggregate`. The route builds `items`, `total`, `limit` and `offset`; a list filtered by the groups of the session adds `capped: true` when `total` reaches the cap (read `total` then as "at least"). A tenant-marker column stands in no read output.
 - The kernel read path of a list returns a `ReadResult` object, not an array.
 
 **Command answer**
@@ -24,7 +24,7 @@ The node, query or capsule has produced its result. Station 5 turns it into the 
 
 **Failure form and envelope**
 
-- The failure forms for 400, 404, 409 and 422 come from one table, identical for aggregate command, route and process: `validation` with `fields[]`, `notFound` with `context`, `concurrencyConflict` with `reason`, `aggregate`, `context`, `violated`, `ruleViolation` with `rule`, `messageKey`, `context`. A 4xx with a table status carries exactly `@type` and the fields of its form; a missing field stays empty and nothing is filled from `errors` or a node name. 401 and 403 come from the middleware without `@type`.
+- The failure forms for 400, 403, 404, 409 and 422 come from one table, identical for aggregate command, route and process: `validation` with `fields[]`, `notFound` with `context`, `concurrencyConflict` with `reason`, `aggregate`, `context`, `violated`, `ruleViolation` with `rule`, `messageKey`, `context`. A 4xx with a table status carries exactly `@type` and the fields of its form; a missing field stays empty and nothing is filled from `errors` or a node name. 401 and the 403 of the door (`RequireRight`, `RequireRequestAttribute`) come from the middleware without `@type`; the table's 403 is `forbidden` with `context` (the identifiers of the 404 of that door, no level), built by the generated handler of a protected root or by a process door with the statement `access` when the session sees the record but its level is too low (without sight it is the 404). A node never builds it.
 - A 5xx becomes a 500 only at the owner of the transaction; a nested run rethrows.
 - The envelope is `{status, data, errors, meta}`. `data` is flat and names itself with `@type`; `errors` is an object `{<context>: [message]}`, reliably filled only for a 500, and for a 4xx the cause stands in `data`. Events never stand in the envelope.
 - The caller publishes the events after the commit, which means the application (`App/**`: event listener, transport). There is no internal event system; the empty listener in the `{Agg}EventRouter` is an intended hook, not a gap. An application without a consumer publishes nothing, and that is as intended.
@@ -51,7 +51,7 @@ All paths are relative to the generated tree; `{P}` is a process, `{Agg}` an agg
 | Process with one outcome | `{BC}/Process/{BC}Process.php` | one `OutcomeForm` |
 | Process with several outcomes | `{BC}/Process/{BC}Process.php` | one `OutcomeForm` per outcome; OpenAPI `oneOf` with `discriminator` on `@outcome` |
 | Second cut at the route | `Api/{Domain}/routes.php` | the outer world has fewer fields than the facade, `ref` fields without a read door are dropped |
-| Query list | `{BC}/Model/{Agg}/Query/Handler/Get{Name}Handler.php`, route in `Api/{Domain}/routes.php` | `ReadResult` inside, envelope with `items`, `total`, `limit`, `offset` outside |
+| Query list | `{BC}/Model/{Agg}/Query/Handler/Get{Name}Handler.php`, route in `Api/{Domain}/routes.php` | `ReadResult` inside, envelope with `items`, `total`, `limit`, `offset` outside (plus `capped` only on a group-filtered list at the cap) |
 | Point read | `{BC}/Model/{Agg}/Query/Handler/Get{Agg}By{Key}Handler.php` | maps through `fromAggregate` |
 | Command reference | `{BC}/Model/{Agg}/Command/Handler/{Cmd}.php` | reference values, root `id` only inside |
 | Failure form from a node | the node body `Action/{Node}.php` returns `reject(status, messageKey, context)` | the package forms it through the failure table |

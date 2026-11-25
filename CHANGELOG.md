@@ -4,6 +4,21 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.51.0] - 2026-11-25
+
+### Changed
+- Skill `design-model-capabilities`: new row for the `access` statement (protection is the rule, `everyone` releases, inheriting through `{owner, via}`); `{user: true}` as a condition value and the "my records" query; the capped total; `chain` and `on.and` in the query settings.
+- Skill `design-headless-mcp`: `save_aggregate` `access` (protection follows the root table, the refused old form `own`, the access-type list in the domain manifest); the access statement of a process (`V-PROC-ACCESS-1..4`) and sharing as a node call (`V-PROC-ACCESS-5/6`); the rows of door kind `access` in `Doors.json`; the project settings `groupLookup`, `groupDoors` and `backfillPrelude`; value list `origin: "rights"`; `chain` and `on.and` through the MCP tools with the `jardissupport/dbquery` minimum versions.
+- Skill `start-orientation`: "Importing Access" lists the groups, suspension, roles and the backfill process of the blueprint and its stances; the owner rules (only an owner touches an owner, the last active owner stays).
+- Skill `generated-code-wire-transport`: group middleware for per-record sight (`jardiscore/app` >= 3.5, `jardissupport/contracts` >= 2.22), the directory built from read doors, the share and unshare routes, and the `access:backfill` command.
+- Skill `generated-code-extend`: the non-contract DTO fields `groups` and `accessEntries` and the access question on write doors; `aclStore()` at the Context seam and no connection in a body; the access doors in the places table.
+- Skill `generated-code-workflow-api`: the process input fields `groups`, `accessEntries` and `shareTargets`; the generated `Share{Agg}` node and its refusals.
+- Skill `generated-code-recipes`: troubleshooting rows for 403 `forbidden`, `V-PROC-ACCESS-5/6` and `BackfillUnresolved`; the lazy total of a list; sharing is not a Cross-BC call.
+- Skill `generated-code-request-path`: the reliance list and stations 1, 4 and 5 describe the groups of the session, the sight at the root and the lazy total.
+- Skill `foundation-testing`: the 403 `forbidden` of a protected record among the typed answers.
+- Skill `packages-find-existing`: `jardissupport/acl` added to the catalog.
+- Skill `design-headless-mcp`: the answer of `build_domain` is a head of fixed size (counts, `failedTotal`, the first ten blocked elements, `findingsByRule`, `logResourceUri`, `findingsResourceUri`) plus a findings file next to the log with the complete lists, read through `jardis://mcp-log/{name}`; `build` and `build_process` keep their lists. A standing note without need to act (`V-XBC-404-BOUNDARY`, `V-SUBPROC-400-BOUNDARY`) is one line per process with the number of its nodes, one line per domain list over several processes, and a domain run reports it only as a finding.
+
 ## [1.50.0] - 2026-11-14
 
 ### Changed
