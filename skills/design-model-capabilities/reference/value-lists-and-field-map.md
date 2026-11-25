@@ -1,6 +1,6 @@
 #### 2.3 Value lists
 
-Door: MCP `save_value_lists`, `validate_value_lists`, `preview_value_lists`, `adopt_value_list_values`, `rename/delete/duplicate_value_list`; UI value-list editor (create modal, Werte tab). One entry per `enum` column, seeded by the schema import (`origin: schema`).
+Door: MCP `save_value_lists`, `validate_value_lists`, `preview_value_lists`, `adopt_value_list_values`, `rename/delete/duplicate_value_list`; UI value-list editor (create modal, values tab, UI label "Werte"). One entry per `enum` column, seeded by the schema import (`origin: schema`).
 
 | Setting | Allowed values | Effect |
 |---|---|---|

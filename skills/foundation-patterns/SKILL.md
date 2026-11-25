@@ -10,7 +10,7 @@ next: []
 
 ## Scope
 
-Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`). Generated Domain code already applies most patterns for you (Facade on `<Agg>.php`, Repository for persistence, Factory/Strategy inside `handle()`). Phase-3 extensions most often use **Value Object**, **Decorator** (via `v2` overrides), **Adapter** (via Domain Services). The gate in §3 applies to all.
+Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`). Generated Domain code already applies most patterns for you (Facade on `<Agg>.php`, Repository for persistence, Factory/Strategy inside `handle()`). In a generated Jardis app no new pattern class is written: a value is checked by the model or by a Closure/Rule (there is no value-object class), a variant is a `v{N}/` class of a stub (a full replacement that ClassVersion picks, not a decorator), and an outside system is reached through a Domain Service under `{BC}/Service/` (the Adapter); the places are `generated-code-extend` section 10 (Jardis projects only). The catalogue below applies to package code; the gate in §3 applies to all.
 
 ### 1. Pattern catalogue
 

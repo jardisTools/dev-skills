@@ -10,6 +10,8 @@ prerequisites: [git-start-branch]
 next: [git-push-and-open-pr]
 ---
 
+Run this skill only when the human asked for it (for example by typing `/git-commit-change`); if you loaded it on your own, stop and ask the human. Input: optionally a short description of the change from the human; without it, derive the message from the diff. If your tool does not execute the lines below that start with `!`, run those commands yourself first and read their output.
+
 ## Current state
 !`git status --short 2>/dev/null`
 !`git diff --stat 2>/dev/null`

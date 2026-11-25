@@ -3,7 +3,7 @@
 | Element | Door (MCP / UI) | What it gives |
 |---|---|---|
 | Domain, subdomain, BC manifests | `create_domain`, `update_domain_manifest`, `create_subdomain`, `update_subdomain_manifest`, `add_bc`, `rename_*`, `delete_*` / domain map, master data | names (PascalCase, BC names unique per domain), classification of a subdomain `core`/`supporting`/`generic`/`unclassified` (a closed set: another value is refused, an update without the key keeps it, `null` clears it), owner, output directory (`update_project_settings`), client block |
-| Planned BC | `create/update/delete_planned_bc`, `promote_bc` / BC page | a BC drafted before it exists (steckbrief, glossary terms); promote turns it into a real BC |
+| Planned BC | `create/update/delete_planned_bc`, `promote_bc` / BC page | a BC drafted before it exists (BC canvas ("Steckbrief"), glossary terms); promote turns it into a real BC |
 | Steckbrief | `save_steckbrief` / BC page card | description, business model, Wardley evolution, business policies (ids referenced by closures), assumptions, owner |
 | Glossary | `save_glossary` / BC page card | ubiquitous language: term, description, code identifier |
 | Naming | `save_naming` | §2.7 |

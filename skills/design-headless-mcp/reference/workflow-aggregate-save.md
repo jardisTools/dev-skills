@@ -25,4 +25,4 @@
     "tenant": "region_code", "user": {"created_by": "onCreate"},
     "writeOnly": ["api_token_hash"]}
    ```
-   (An aggregate without any outer door has every read row of its block `closed` in `Doors.json`: write it with `save_doors` (gesture `closeReads`); `graph.visibility` is retired, see below.)
+   (An aggregate without any outer door has every read row of its block `closed` in `Doors.json`: write it with `save_doors` (gesture `closeReads`); `graph.visibility` is retired, see `reference/workflow-aggregate-format-markers.md`.)

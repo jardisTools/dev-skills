@@ -1,6 +1,6 @@
 ---
 name: generated-code-workflow-api
-description: Process door and engine API behind Process-Designer-generated use-case orchestrators (workflow 5.3, response 4.3, repository transaction bracket). Use when working with generated process handlers, node classes, NodeResult routes, answerFrom/@outcome, or failure forms.
+description: Process door and engine API behind Process-Designer-generated use-case orchestrators (workflow 5.4, response 4.5, repository transaction bracket). Use when working with generated process handlers, node classes, NodeResult routes, answerFrom/@outcome, or failure forms.
 zone: post-active
 persona: C
 profile: jardis
@@ -10,11 +10,11 @@ next: []
 
 ## Triggers
 
-Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.3 engine, `response` 4.3 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom([Node::class => 'outcome', …])`, `AnswerOutcome`, the answer field `@outcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), external call to another system (`DecodeAnswer`, `MapExternalResponse`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
+Process door and engine API behind Process-Designer-generated use-case orchestrators (`workflow` 5.4 engine, `response` 4.5 door steps, `repository` transaction bracket) — generated handler as the one door class (`ValidateInput`, `RunOwnedTransaction`, `ProcessRunner`, `definition()` with `answerFrom([Node::class => 'outcome', …])`, `AnswerOutcome`, the answer field `@outcome`), the typed run view `{Name}Context` with one getter per node, node classes `extends {Domain}Context` with `__invoke({Name}Context): NodeResult`, six routes plus reject, `read()` / `handle()` / `tenant` and `user` of the process input inside a node, call (`MapResponseInto`), external call to another system (`DecodeAnswer`, `MapExternalResponse`), sub-process (`MapResponse`/`MapResponseInto`), rule (hermetic) and event nodes, the object value of `gives`, rule modes, strict routing, transaction bracket with savepoints, failure forms with envelope data and message keys, 5xx cause logged by the door.
 
-> Applies to `workflow` 5.3 (engine only, no session knowledge in its API) and `response` 4.3, and the generator of that release, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
+> Applies to `workflow` >= 5.4 (engine only, no session knowledge in its API) and `response` >= 4.5 — the package floors the current generator checks — and to that generator, whose handler is the door built from `response` and `repository` steps. Truth for the APIs: skills `support-workflow` (engine), `support-response` (door steps, failure forms, envelope data), `support-repository` (transaction bracket).
 
-The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`, only where the input carries a rule), checks the required kernel resources (`RequireResource`, one line per `requires` name), opens the transaction bracket `RunOwnedTransaction` around `ProcessRunner::run($definition, $input, $nodeFactory, $depth)` and answers through the `response` closures (`AnswerFindings`, `AnswerOutcome`, `AnswerThrowable`, `LogFailure`). It is ONE class: the graph is its private method `definition()`, there is no run-step class and no definition class next to it. The door itself computes nothing: it chains these calls and branches on what they hand back. The runner is the engine only: it walks the `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction, answers no 5xx and knows no session: who calls is decided in front of the door by the route middleware (`RequireSession`, `RequireRight` of `core/app` 3.2, set in the generated `routes.php`); the door fills the fields `tenant` and `user` of the process input from the request attributes, a node reads them as `$ctx->input()->tenant` / `->user`. Handler and facades check no right themselves. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
+The Process-Designer handler (`<Name>Handler.php`, generated under `{BC}/Process/{Name}/`) is the **door** of the process: it checks the input (`ValidateInput`, only where the input carries a rule), checks the required kernel resources (`RequireResource`, one line per `requires` name), opens the transaction bracket `RunOwnedTransaction` around `ProcessRunner::run($definition, $input, $nodeFactory, $depth)` and answers through the `response` closures (`AnswerFindings`, `AnswerOutcome`, `AnswerThrowable`, `LogFailure`). It is ONE class: the graph is its private method `definition()`, there is no run-step class and no definition class next to it. The door itself computes nothing: it chains these calls and branches on what they hand back. The runner is the engine only: it walks the `ProcessDefinition`, builds each node through the factory, invokes it and answers with one `ProcessOutcome` (status, response object, errors, events, message key, context). It validates nothing, opens no transaction, answers no 5xx and knows no session: who calls is decided in front of the door by the route middleware (`RequireSession`, `RequireRight` of `core/app` >= 3.0, set in the generated `routes.php`); the door fills the fields `tenant` and `user` of the process input from the request attributes, a node reads them as `$ctx->input()->tenant` / `->user`. Handler and facades check no right themselves. Knowing this API is mandatory for node bodies and for `App/**` delivery code around the handler.
 
 ### 1. Where it lives
 
@@ -86,6 +86,17 @@ Every node is a class `final class <Node> extends {Domain}Context` with NO const
 public function __invoke(LendBookContext $ctx): NodeResult
 ```
 
+The examples of §4 to §6 use these package imports (the generated classes import them the same way):
+
+```php
+use JardisSupport\Contract\Kernel\DomainResponseInterface;
+use JardisSupport\Contract\Kernel\ResponseStatus;
+use JardisSupport\Workflow\Data\NodeResult;
+use JardisSupport\Workflow\Data\Route;
+use JardisSupport\Workflow\Handler\Node\MapResponse;
+use JardisSupport\Workflow\Handler\Node\MapResponseInto;
+```
+
 `{Domain}Context` is the generated kernel seam; a node reaches the rest of the world through it:
 
 | In a node body | Use |
@@ -96,7 +107,7 @@ public function __invoke(LendBookContext $ctx): NodeResult
 | `$ctx->input()->accessEntries` | only when the process reaches a Create of a root whose root table is protected (no `access` statement in a world that protects; the table decides, not the creating aggregate; directly or through a sub-process): the access entries per information kind (one per root table), `array<int, list<Entry>>` (`Entry` of `jardissupport/acl`), a non-contract field of the process input — in no request schema, no header at the process door. The route fills it with the entry of the caller (personal group in level `all`, without one the fallback group of the kind); the command node hands the list of its root's kind to the Create, a sub-process node hands the whole map on. A node body only passes it along, never builds or changes entries; a run that fails after the Create leaves neither record nor entries |
 | `$ctx->input()->shareTargets` | only when the process calls `Share{Agg}` of its own BC (a generated node, you never write it): the sharing targets (`groups`, `person`, `level`) a non-contract field of the process input that the route fills from the body behind `RequireRight`; the generated node passes it to `{BC}::share{Agg}()` inside the bracket, without a sight question. A refusal (404 unknown target, 422 last entry with `all`) rolls the whole run back. Never read, fill or name an input field `shareTargets`/`groups`/`person`/`level` yourself (`V-PROC-ACCESS-6`) |
 | `$ctx-><node>()` | typed getter per node, generated in `{Name}Context` over `latest()`: the type is what the node `gives` (a read aggregate: `{Agg}Response`; an identifier: the `{Command}Response` of the call; a scalar value: `bool`/`int`/`string`…; an object value: its `{Name}{Value}` class; always nullable, `null` until the node ran); the raw access stays (`latest($node)`, `all($node)`, `previous()`, `iteration($node)`, `chain()`, `depth()`) |
-| `$this->read(Handler::class, $filter): ReadResult` | read through an own-BC query handler: `->first()`, `->items()`, `->total()`, `->isEmpty()`; a handler of another BC throws `LogicException` (M9) |
+| `$this->read(Handler::class, $filter): ReadResult` | read through an own-BC query handler: `->first()`, `->items()`, `->total()`, `->isEmpty()`; a handler of another BC throws `LogicException` (M9: reads stay in the own BC) |
 | `$this->context(Get{Agg}By{Key}Handler::class, $query)(): DomainResponseInterface` | the read base of an own-BC aggregate (`ById`, `ByIds`, `By{Key}`, `By{Key}s`): the whole aggregate with its children; a key without a record answers a success with empty data (`getData() === []`), never a 404 (§5, read node) |
 | `$this->handle(Class::class)` | any class through the kernel seam (aggregate write facade, closure, `Identity`, `SystemClock`); this is also how the factory builds nodes |
 
@@ -164,7 +175,7 @@ return (new MapResponseInto())($response, NotifyMemberResult::class);
 
 ### 6. The handler (door) and the `nodeFactory`
 
-The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine and orchestrates only (Gesetz P6): every step is a call onto a closure, the door branches on what a step hands back and has no loop, no status comparison, no `new`. No hand code is written into the door:
+The generated handler is the only place that starts a run. It composes the steps of `response` and `repository` around the engine and orchestrates only: every step is a call onto a closure, the door branches on what a step hands back and has no loop, no status comparison, no `new`. No hand code is written into the door:
 
 ```php
 $definition = $this->definition();                    // private method of the door: the ProcessDefinition of §3

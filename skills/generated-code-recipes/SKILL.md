@@ -9,7 +9,6 @@ next: []
 ---
 
 This skill is an index; the detail lives in `reference/`, one leaf per topic. Read exactly the leaf whose question matches your task, not all of them.
-Descriptions that no longer apply go to `reference/archiv.md` (currently empty — every historical note still carries present-day facts and stays in its topic leaf).
 
 ## Triggers
 
@@ -21,7 +20,7 @@ Phase-3 recipes and troubleshooting for Designer-generated code — Event announ
 
 #### §1 — Event transport
 
-An **HTTP webhook** goes the same way through the kernel's PSR-18 `httpClient()` (`adapter-http`). A projection or audit trail is not a free projector class: model it as a Process (or an aggregate Command) that the delivery code calls through `process()` (or, for a command door at `domain` or wider, `{BC}::{command}()`).
+An **HTTP webhook** is published like a Kafka message — from `App/**` delivery code after the commit (`reference/event-transport.md`) — through the kernel's PSR-18 `httpClient()` (`adapter-http`). A projection or audit trail is not a free projector class: model it as a Process (or an aggregate Command) that the delivery code calls through `process()` (or, for a command door at `domain` or wider, `{BC}::{command}()`).
 
 **Rules:**
 
@@ -44,11 +43,11 @@ An **HTTP webhook** goes the same way through the kernel's PSR-18 `httpClient()`
 
 **Rules:**
 - Never `new` a Rule — always `$this->handle({Rule}::class)` (ClassVersion-capable, `Closure/v{N}/`).
-- Read existing data only from your **own** BC (V13/M9) — via that BC's read facade, or directly via the kernel seam (`context()`) for a BC-internal read — a declared list read with `limit: 1`, decided over `total` — a cross-BC existing-data check is process territory, not a Rule. **Worked example (`query-ist-immer-eine-liste.md`):** "customer has open invoices" — Query `openInvoicesByCustomer` (stance `closed`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, $this->handle(OpenInvoicesByCustomerFilter::class, customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
-- **An `aggregate` input is the aggregate entity, not just the root:** `{Agg}\Model\{Agg}\Aggregate\Entity\{Agg}` with the child getters `get{Kind}()` (list for `erm: many`). Check children directly (`foreach ($root->getLines() as $line) …`) instead of declaring a helper query in `reads` for data the Guard already holds; the example's `given.root` carries the children under their relation names and `ClosureTestCase::aggregate()` builds the entity. A body that only uses root getters is unaffected.
+- Read existing data only from your **own** BC (V13/M9 — M9 is the rule that a Rule, Closure or Domain Service reads only its own BC) — via that BC's read facade, or directly via the kernel seam (`context()`) for a BC-internal read — a declared list read with `limit: 1`, decided over `total` — a cross-BC existing-data check is process territory, not a Rule. **Worked example:** "customer has open invoices" — Query `openInvoicesByCustomer` (stance `closed`, `limit: 1`) declared via `save_queries`, bound via `Closures.json` `reads:`; the Rule body reads `$this->context(GetOpenInvoicesByCustomerHandler::class, $this->handle(OpenInvoicesByCustomerFilter::class, customerId: $cmd->customerId, limit: 1))()` and rejects when `total > 0`.
+- **An `aggregate` input is the aggregate entity, not just the root:** `{Domain}\{BC}\Model\{Agg}\Aggregate\Entity\{Agg}` with the child getters `get{Kind}()` (list for `erm: many`). Check children directly (`foreach ($root->getLines() as $line) …`) instead of declaring a helper query in `reads` for data the Guard already holds; the example's `given.root` carries the children under their relation names and `ClosureTestCase::aggregate()` builds the entity. A body that only uses root getters is unaffected.
 - A Rule never throws to reject — `RuleResult::reject(...)` is data, not an exception. Only let a genuinely technical failure (DB down) propagate as an exception (→ 500), never mis-signal it as a 422 by wrapping it in `reject()`.
-- A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()` (G03). An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
-- Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (M5, `generated-code-versioning`); a catalog-declared `messageKey` guarantees this across versions.
+- A freshly generated, **not-yet-implemented** stub throws too — but for the opposite reason: the emitted body is `throw new \RuntimeException('Not implemented: write the rule predicate for ' . self::class)`, not `RuleResult::pass()`. An unfinished Rule fails loud (500) instead of silently letting every Command through — implement `__invoke()` before binding it live.
+- Versioning a Rule (`Closure/v2/`) may **tighten** the accepted set, but must keep the payload shape + `messageKey` stable — that's the contract callers (and i18n) depend on (`generated-code-versioning`); a catalog-declared `messageKey` guarantees this across versions.
 - TOCTOU is a known v1 boundary (`generated-code-extend` §7) — a concurrent write between the Rule's read and the Command's persist is not locked against. If the invariant is truly hard, close it in the model: a DB constraint in `Schema.json` (Recipe 12) or state with a conditional write (Recipe 11).
 
 ### Navigation
@@ -65,7 +64,6 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 | I secure an invariant as state (uniqueness across process boundaries: gatekeeper node, CAS-UPDATE, retry, 409) or map a duplicate on a unique key to 409 `duplicate` (§2, Recipes 11–12) | reference/invariant-uniqueness.md |
 | I write a computed field from a process node (`Set{Entity}Computed`) or control the process transaction bracket (4xx rollback, events after commit, `runInTransaction: false`) (§2, Recipes 13–14) | reference/computed-field-and-transactions.md |
 | I debug a symptom: ClassVersion miss, edit lost after rebuild, V-* build failure, 400/403/409/422 answer, node not invoked (§3) | reference/troubleshooting.md |
-| I look for an entry that no longer applies (archive, currently without entry) | reference/archiv.md |
 
 ### Zitate §N (citation targets)
 

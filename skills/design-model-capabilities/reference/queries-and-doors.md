@@ -5,7 +5,7 @@ Door: MCP `save_queries`, `validate_queries`, `preview_queries`, `probe_query`, 
 | Setting | Allowed values | Effect |
 |---|---|---|
 | Base list `{agg}List` | seeded once per aggregate on first save, editable afterwards | the list every aggregate has; rules and process nodes read counts and keys through it |
-| `root` | an entity of the own BC; only a query rooted on the aggregate root has a door row (a query on a child entity is always `closed`, Wurzel 1) | owning aggregate |
+| `root` | an entity of the own BC; only a query rooted on the aggregate root has a door row (a query on a child entity is always `closed`) | owning aggregate |
 | `name` | PascalCase stem | its class stem must not equal `{Agg}{ById\|ByIds\|By<Key>\|By<Key>s}` of the emitting aggregate (a derived read way): blocker V-QDEF-26 instead of a silent first-wins |
 | stance (no key in `Queries.json`: the row of the query in the block of its root entity in `Doors.json`) | `closed` (default) / `domain` / `outside` | `domain` becomes a read method on `{Agg}Read` for the BCs of the domain; `outside` also an API route and a right (needs `limit`). A query that reads inward (`closed`/`domain`) is the only read that projects `writeOnly` columns. A `visibility` key in `Queries.json` is retired (V-DOOR-0) |
 | `limit` | int, mandatory | cap on the page size (above 500 warns); paging continues |

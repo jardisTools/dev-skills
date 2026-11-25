@@ -11,7 +11,7 @@
    `date`, `datetime`, `time`, `decimal`, `uuid`, … plus `string|array|mixed`), and an input field
    may reference a value list of the BC as `valueList: <Name>` instead of `type`
    (`input.fields[].type` / `valueList`; an unknown list is the blocker `V-INPUT-VALUELIST`, a field typed
-   `array`/`mixed` warns `V-INPUT-UNTYPED`). (FIX3) A field can also be a list (`list: true` with the element `type`; no minimum length, `[]`
+   `array`/`mixed` warns `V-INPUT-UNTYPED`). A field can also be a list (`list: true` with the element `type`; no minimum length, `[]`
    is valid) or an object (`fields: [...]`, members scalar or object, at most two object levels;
    `fields` + `list: true` = object list) — `save_process` refuses a third object level, an empty
    object, `default` on a list/object, `accepts` inside an object and any key that contradicts the

@@ -12,12 +12,12 @@ This skill is an index; the detail lives in `reference/`, one leaf per topic. Re
 
 ## Triggers
 
-Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, Steckbrief, planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), blueprint import (`import_blueprint`, resource `jardis://blueprints`, its 404/412/409 refusals), the door stances of a bounded context (`save_doors`, resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}`, `V-DOOR-0`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
+Driving a Jardis workspace headless through `jardis mcp` — Tools as actions vs Resources as read-only, the Workspace to Schema to Aggregate to Process to Build to Code-read workflow, the strategic-design surface (glossary, BC canvas ("Steckbrief"), planned BCs, Context-Map edges with the eight canonical DDD patterns, and the read-only drift check declared-vs-real coupling), the Type-A GUI-replacement pattern (output directory via update_project_settings, code via code-file/code-tree resources, a new workspace means a new process), documented workspace-registry limits, computed columns (`computed` on `save_aggregate`), process input types from the backend (`inputTypes`, `valueList`), the transaction default with its opt-out warning (`runInTransaction`, `V-PROC-TX-OPTOUT`), declared class `versions` (`update_domain_manifest`, resource `jardis://domain/{domain}/manifest`), blueprint import (`import_blueprint`, resource `jardis://blueprints`, its 404/412/409 refusals), the door stances of a bounded context (`save_doors`, resources `jardis://doors/{domain}/{subdomain}/{bc}` and `jardis://doors/{domain}`, `V-DOOR-0`), and structured error envelopes (confirm flags, BUILD_RUNNING/DRAFT_EXISTS). Use when an AI must design, build, or inspect a Jardis domain without a browser.
 
 ## Scope
 
 This skill is the headless twin of driving the Jardis Designer by hand. There is deliberately no
-"Designer-Companion" persona in this bundle (`docs/SKILL-FORMAT.md` §3a) — an AI that drives
+"Designer-Companion" persona in this bundle — an AI that drives
 `jardis mcp` end to end is doing that companion's job through a different transport. It keeps the `post-active`/`C` label deliberately: the moment `build`
 succeeds, this same AI is already the Persona-C implementer that `generated-code-extend`
 addresses next. The stretch is the transport (MCP calls instead of UI clicks), not the phase.
@@ -43,6 +43,16 @@ supply the confirmation, then retry.
 
 ### Navigation
 
+The walk of §2 in order (each step in full in its leaf):
+
+1. **Workspace** — point `jardis mcp` at a project root → `reference/workflow-workspace-and-schema.md`
+2. **`import_schema`** — write the BC's schema (or `import_blueprint` for a ready-made BC) → `reference/workflow-workspace-and-schema.md`
+3. **`save_aggregate`** — persist the aggregate graph, then its format markers → `reference/workflow-aggregate-save.md`, `reference/workflow-aggregate-format-markers.md`
+4. **`save_naming`** — apply the field-mapping naming conventions → `reference/workflow-process-modelling.md`
+5. **`create_process` / `save_process` / `validate_process`** — model a BC-level process → `reference/workflow-process-modelling.md`
+6. **`build`** — generate the code tree, read the findings → `reference/workflow-build-and-read-code.md`
+7. **Read the generated code** — `code-tree` / `code-file` Resources → `reference/workflow-build-and-read-code.md`
+
 Navigation: one leaf per topic under `reference/`. Pick the row whose question fits the task.
 
 | Question the leaf answers | Leaf |
@@ -60,7 +70,6 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 | I decide who reaches a door (§2 continued): `save_doors`, door stances, access rows, the `middleware` setting, `sessionProcesses`, `groupLookup`, `groupDoors`, `backfillPrelude`, the rights list | reference/workflow-doors-and-project-settings.md |
 | I meet a confirm gate (`rename_value_list`, `set_stack_selection`) or want the Schema to SQL export (§2 continued) | reference/workflow-confirm-gates-and-sql-export.md |
 | I look for a GUI affordance with no MCP button (output directory, open in editor, switching projects), the documented limit of the workspace registry, or the startup freshness banner (§3, §4, §5) | reference/type-a-limits-freshness.md |
-| I look for an entry that no longer applies (archive, currently without entry) | reference/archiv.md |
 
 ### Zitate §N (citation targets)
 

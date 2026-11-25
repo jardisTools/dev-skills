@@ -30,7 +30,7 @@ final class FullInstallEndToEndTest extends TestCase
 {
     private const RELEASE = '1.3.6';
     private const CANDIDATE = '1.4.0';
-    private const POOL_SENTENCE = 'Wissenspool: `.claude/wissen/INDEX.md` — vor Entscheiden lesen, Vermerk-Pflicht';
+    private const POOL_SENTENCE = 'Knowledge pool `.claude/wissen/INDEX.md`: read before deciding; feat/fix commits note `Wissen:`.';
     private const POOL_INDEX = '.claude/wissen/INDEX.md';
     private const PROFILE = '.claude/PROJECT_PROFILE.md';
     private const VENDOR_SKILL = 'adapter-fakecache';
@@ -126,7 +126,7 @@ final class FullInstallEndToEndTest extends TestCase
         self::assertStringContainsString(AnalyzeAgentsMd::FOOTER, $agentsMd);
         self::assertStringContainsString($router, $agentsMd);
         self::assertSame(1, substr_count($agentsMd, self::POOL_SENTENCE));
-        self::assertSame(1, substr_count($agentsMd, 'Wissenspool'));
+        self::assertSame(1, substr_count($agentsMd, 'Knowledge pool'));
         self::assertStringContainsString('FAKE_VENDOR_AGENTS_BODY_MARKER', $agentsMd);
 
         // CLAUDE.md: created with the import block and nothing else.

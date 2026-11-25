@@ -38,7 +38,7 @@ Navigation: one leaf per topic under `reference/` (the per-tool sections §2.1�
 | What can a declared query express (joins, parameters, where/op, chain, limit, total, "my records"), and what do the door stances of `Doors.json` do? | reference/queries-and-doors.md |
 | Which process and node settings exist (input types, node kinds, edges, rejects, gives, end node, reads, access statement)? | reference/process.md |
 | When and how is a Closure (rule, value, set) declared, bound and answered (422)? | reference/closures.md |
-| Which strategic elements (manifests, planned BC, Steckbrief, glossary, context map) and tooling surfaces (stack, build, reading, studios, human-only handles) exist? | reference/strategic-and-tooling.md |
+| Which strategic elements (manifests, planned BC, BC canvas ("Steckbrief"), glossary, context map) and tooling surfaces (stack, build, reading, studios, human-only handles) exist? | reference/strategic-and-tooling.md |
 
 #### Continuation 2.9 — where the hand code sits
 
@@ -47,10 +47,10 @@ Where the hand code sits (full table: `generated-code-extend` §10):
 ```
 {BC}/
 ├── Model/{Agg}/                                 generated, never edited
-├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand)
+├── Process/{Name}/Command/Handler/Action/{Node}.php   node body (hand; a Rule or Event node is generated whole)
 ├── Closure/{Name}.php                           rule / closure body (hand)
 └── Service/{Name}.php                           Domain Service (hand)
-App/                                             delivery only, no domain logic
+App/                                             delivery only, no domain logic (App/middleware.php is regenerated)
 ```
 
 A capability that is missing is not replaced by hand code: report it (app developer) or build it in the package or generator (Jardis developer).

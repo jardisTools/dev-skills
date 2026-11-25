@@ -7,7 +7,7 @@ Door: MCP `save_closures`, `validate_closures`, `rename/delete/duplicate_closure
 | `catalog.<Name>` | PascalCase | class `{BC}/Closure/{Name}.php` — body is dev code, stub is generated |
 | `input[]` | 0..n of `{name, type:{kind: command\|aggregate\|scalar\|valuelist, name, optional?, list?}}`; names refer to the OWN BC | typed arguments of the stub |
 | `output` | `verdict` or a scalar type | a verdict is accept/reject; any other output is a computed value |
-| `messageKey`, `policyRef` | `{bc}.{cause}`; id of a steckbrief business policy | verdict only (`messageKey`, binding: the 422 of every generated rejection carries it); `policyRef` on any kind; shown by the governance coverage |
+| `messageKey`, `policyRef` | `{bc}.{cause}`; id of a business policy of the BC canvas ("Steckbrief") | verdict only (`messageKey`, binding: the 422 of every generated rejection carries it); `policyRef` on any kind; shown by the governance coverage |
 | `reads[]` | `{query, needs, binds}` on queries of the own BC (a declared query or the read base `{agg}ById`, `{agg}By{Key}`, …) | declares what the body reads (M9: own BC only); V-PROC-READ-UNDECLARED holds the Closure and Service bodies against it |
 | `compose: "all"` + `uses[]` | names of catalog entries of the same BC, no set inside a set, no cycle | a rule set; `uses` without `compose` is a free sub-closure reference |
 | `examples[]` | `{name, given, reads?, uses?, expect}` | contract for the test the AI writes (Jardis generates no test); missing on a non-set closure is a warning, a set carries none |

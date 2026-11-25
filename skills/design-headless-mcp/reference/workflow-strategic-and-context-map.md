@@ -1,9 +1,9 @@
-#### Continuation §2 — strategic design, Context Map, Rules-Layer, Queries-Layer, doors, confirm gates, SQL export
+#### Continuation §2 — strategic design, subdomain classification, value lists from the rights catalog, BC-declared ENV keys, Context Map and drift check
 
 Any step can be re-run idempotently against its own Resource first (e.g. read `jardis://tree`
 or the aggregate Resource before `save_aggregate`) to confirm the current state before writing.
 
-**Strategic-design tools (optional, additive to the workflow above):** `save_glossary` (a BC's
+**Strategic-design tools (optional, additive to the workflow of the `workflow-*` step leaves):** `save_glossary` (a BC's
 Ubiquitous-Language glossary), `save_steckbrief` (a BC's canvas — purpose, classification
 read-through, collaborators), `create_planned_bc` / `update_planned_bc` / `delete_planned_bc`
 (a not-yet-built BC's canvas, at Domain/Subdomain level) and `promote_bc` (turn a planned BC

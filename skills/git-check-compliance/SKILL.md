@@ -9,6 +9,8 @@ prerequisites: []
 next: []
 ---
 
+Run this skill only when the human asked for it (for example by typing `/git-check-compliance`); if you loaded it on your own, stop and ask the human. Input: none; it checks the current repository. If your tool does not execute the lines below that start with `!`, run those commands yourself first and read their output.
+
 ## Repo info
 !`git remote get-url origin 2>/dev/null`
 !`git branch --show-current 2>/dev/null`

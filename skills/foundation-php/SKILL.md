@@ -81,7 +81,7 @@ final class Filesystem
 
 ### 4. Directory layout
 
-This layout holds for building a Jardis package. It does not hold for hand code in an app: there, hand code sits only in the places of `generated-code-extend` section 10, and no helper or base class is added beside them.
+This layout holds for building a Jardis package. It does not hold for hand code in an app: there, hand code sits only in the places of `generated-code-extend` section 10 (Jardis projects only), and no helper or base class is added beside them.
 
 ```
 src/
@@ -141,11 +141,11 @@ Generated entity properties are typed `?type = null` with nullable getters, inde
 
 - Handle a nullable getter at every call site, also for NOT NULL columns.
 - Treat a value as guaranteed only after hydration and validation.
-- Never edit a generated entity to tighten its types — see `generated-code-extend`.
+- Never edit a generated entity to tighten its types — see `generated-code-extend` (Jardis projects only).
 
 ### 9. Reference
 
 - Architecture pillars, hexagonal direction, Closure-Orchestrator concept: `foundation-architecture`
 - Pattern catalogue: `foundation-patterns`
 - Test rules: `foundation-testing`
-- Generated code boundaries: `generated-code-extend`
+- Generated code boundaries: `generated-code-extend` (Jardis projects only)

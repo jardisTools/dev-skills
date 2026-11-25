@@ -5,7 +5,7 @@
 condition tree, parameters, joins; every query is a paginated list answering
 `{items,total,limit,offset}`, so there is no output-form key — a document still carrying `form:`
 is rejected by the Blocker V-QDEF-24) is fully MCP-reachable, same
-pattern as Rules above. `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
+pattern as the Rules-Layer (`reference/workflow-rules-layer-closures.md`). `save_queries` persists the whole artefact (LockedSave — mtime `CONFLICT`
 like `save_aggregate`/`save_closures`; a draft with findings still writes, `valid`/`errors`/
 `warnings`/`suggestions` travel in the response; the saved query set is echoed only with `echo: true`, otherwise read it through the queries Resource); `validate_queries` checks a not-yet-saved query
 set against V-QDEF-1..34 (without the retired 17, 22, 28, 29; 25 = `limit` above 500, warning; 26 = the query's class stem equals a derived read way `{Agg}ById`/`ByIds`/`By<Key>` of its aggregate, blocker) plus RB1 (name collision with the read base, Blocker) —

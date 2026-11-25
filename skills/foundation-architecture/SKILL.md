@@ -10,11 +10,11 @@ next: []
 
 ## Positioning
 
-Jardis treats DDD as **vocabulary**, not orthodoxy. It sits **closer to Functional DDD (Wlaschin) than to Rich Domain Model (Evans)**: entities and value objects hold data, behaviour lives in Actions, Commands, Queries, Domain Services — never as methods on entities. Invariants are enforced by the pipeline, not by entity guards. This is **why** the five pillars below take the shape they do — particularly Data-Behavior Separation (§1.4) and Composition over Inheritance (§1.3). Implementation skills (`generated-code-extend`, `generated-code-wire-transport`) extend this stance into the Designer-generated layer.
+Jardis treats DDD as **vocabulary**, not orthodoxy. It sits **closer to Functional DDD (Wlaschin) than to Rich Domain Model (Evans)**: entities and value objects hold data, behaviour lives in Actions, Commands, Queries, Domain Services — never as methods on entities. Invariants are enforced by the pipeline, not by entity guards. This is **why** the five pillars below take the shape they do — particularly Data-Behavior Separation (§1.4) and Composition over Inheritance (§1.3). Implementation skills (`generated-code-extend`, `generated-code-wire-transport`; Jardis projects only) extend this stance into the Designer-generated layer.
 
 ## Scope
 
-Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`) and library code inside the hexagonal cake. The five pillars (§1) also hold on the Designer-generated Domain layer, but the physical directory contract there is different — see `generated-code-extend`.
+Applies to Jardis packages (`JardisAdapter/*`, `JardisSupport/*`, `JardisTools/*`) and library code inside the hexagonal cake. The five pillars (§1) also hold on the Designer-generated Domain layer, but the physical directory contract there is different — see `generated-code-extend` (Jardis projects only).
 
 ### 1. Five pillars
 
@@ -47,7 +47,7 @@ JardisTools -> JardisAdapter -> JardisSupport -> Domain Core
           JardisSupport\Contract <-<-<-----------<-<
 ```
 
-`jardiscore/kernel` (infrastructure DomainKernel + ENV bootstrap) and `jardiscore/app` (HTTP delivery) drive the Domain Core — they are not it. **Their `JardisAdapter\*` imports are correct:** Application code may know concrete infrastructure (`core/kernel/README.md:277`). Inner boundary: `DomainKernel` itself stays adapter-free, only `Bootstrap\` imports adapters; generated code only ever sees `DomainKernelInterface`.
+`jardiscore/kernel` (infrastructure DomainKernel + ENV bootstrap) and `jardiscore/app` (HTTP delivery) drive the Domain Core — they are not it. **Their `JardisAdapter\*` imports are correct:** Application code may know concrete infrastructure (README of `jardiscore/kernel`, section on the bootstrap). Inner boundary: `DomainKernel` itself stays adapter-free, only `Bootstrap\` imports adapters; generated code only ever sees `DomainKernelInterface`.
 
 Adapters implement Contracts. Any inner-layer `use` pointing outward is a review blocker.
 
@@ -92,7 +92,7 @@ Multi-method interfaces (`hash`/`verify`/`needsRehash`) → each method delegate
 
 ### 4. Directory structure
 
-This structure holds for building a Jardis package. In an app, hand code sits only in the places of `generated-code-extend` section 10.
+This structure holds for building a Jardis package. In an app, hand code sits only in the places of `generated-code-extend` section 10 (Jardis projects only).
 
 ```
 src/

@@ -1,6 +1,6 @@
 ---
 name: foundation-testing
-description: Jardis testing rules — Integration over Unit, mock only at port boundaries, mandatory process for failing tests (no assertion weakening), Phase-3 test patterns for generated Domain code.
+description: Jardis testing rules — integration over unit, mock only at port boundaries, the mandatory process for a failing test (no assertion weakening), test patterns for generated domain code. Use when writing a test or when a test fails.
 zone: crosscut
 persona: C
 profile: core
@@ -29,11 +29,13 @@ Tests assert behaviour at the package boundary, not internal implementation. A r
 
 ```php
 // tests/Support/InMemoryCache.php
+use Psr\SimpleCache\CacheInterface;
 final class InMemoryCache implements CacheInterface
 {
     private array $data = [];
     public function get(string $key, mixed $default = null): mixed { return $this->data[$key] ?? $default; }
-    public function set(string $key, mixed $value, int|null $ttl = null): bool { $this->data[$key] = $value; return true; }
+    public function set(string $key, mixed $value, null|int|\DateInterval $ttl = null): bool { $this->data[$key] = $value; return true; }
+    // … has(), delete(), clear(), getMultiple(), setMultiple(), deleteMultiple() omitted here: PSR-16 requires all eight methods
 }
 ```
 
@@ -57,11 +59,9 @@ Before changing test or code:
 Green test asserting wrong behaviour is worse than red test.
 
 ### 4. Docker services
-
 External dependencies are part of the package. Canonical templates → `docker-compose.yml`; ENV vars → `.env.example`. `make start` brings up everything; `make phpunit` runs with no manual prep. A test green only because Redis happens to run on the developer's laptop is broken.
 
 ### 5. Checklist
-
 - [ ] Integration (preferred) or Unit (with docblock justification)?
 - [ ] Mirror path?
 - [ ] Name `test{Action}{Condition}{ExpectedResult}`?
@@ -73,7 +73,6 @@ External dependencies are part of the package. Canonical templates → `docker-c
 - [ ] Failing test: §3 followed, assertions not weakened?
 
 ### 6. Testing generated Domain code (Phase 3)
-
 Every build generates the test scaffold under `tests/Support/{Domain}/` (namespace `Tests\Support\{Domain}`). Jardis owns these files — ForceOverwrite, never hand-edited; hand-written files in the same folder (Fakes) stay untouched. Three kinds:
 
 | File | Per | Purpose |
@@ -102,11 +101,11 @@ final class TestMeterDevice
 
     public function counter(): Counter { return $this->domain->counter(); }          // read chain, one per BC
 
-    public function counterWrite(): CounterWriteHarness { return new CounterWriteHarness($this->kernel); }
+    public function counterWrite(): CounterWriteHarness { return new CounterWriteHarness($this->kernel, null, ''); }
 }
 ```
 
-**Write access needs a family-internal harness.** The BC accessor (`$domain->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context family). Hence the generated `{BC}WriteHarness`: a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` kernel seam (no Reflection tricks). The wrapper builds it directly from the DomainKernel (`new CounterWriteHarness($this->kernel)`); it has no `handle()` of its own — it extends nothing generated.
+**Write access needs a family-internal harness.** The BC accessor (`$domain->counter()->counter()`) returns the read-only `{Agg}Read` facade — aggregate **commands are not reachable from a TestCase** (outside the Context family). Hence the generated `{BC}WriteHarness`: a genuine subclass of the generated **BC** facade (BC facades are plain `class {BC} extends {Domain}Context`, **not** `final` — only the top-level Domain facade is), reaching the write facade over the inherited `protected` kernel seam (no Reflection tricks). The wrapper builds it directly from the DomainKernel (`new CounterWriteHarness($this->kernel, null, '')`). The wrapper `Test{Domain}` extends nothing and has no `handle()` of its own — it holds the Domain facade by composition; the harness extends the BC facade.
 
 ```php
 // tests/Support/MeterDevice/CounterWriteHarness.php — generated shape
@@ -121,6 +120,8 @@ final class CounterWriteHarness extends Counter {   // the generated Counter BC 
 
 ```php
 // tests/Integration/MeterDevice/Counter/CreateCounterTest.php — hand-written door test
+use MeterDevice\Counter\Model\Counter\Command\Counter as CommandCounter;   // real class `Counter`, the alias is this file's own
+use MeterDevice\Counter\Process\CreateCounter\Command\CreateCounter;
 final class CreateCounterTest extends MeterDeviceTestCase   // generated base
 {
     public function testCreateCounterWithValidDataReturnsCreated(): void
@@ -196,28 +197,28 @@ final class InMemoryHttpClient implements HttpClientInterface
 **E. Rule (Rules-Layer) — pure predicate PLUS endpoint integration, both mandatory.** A Rule (`{BC}/Closure/{Name}.php`) is a legitimate rare case for a Unit test — its `__invoke({Cmd}DTO): RuleResult` signature is a pure yes/no predicate, and faking the read facade it calls is the whole point:
 
 ```php
-final class CounterMustBeActiveTest extends TestCase
+final class CounterMustBeActiveTest extends ClosureTestCase   // generated tests/Unit/Closure/{Domain}/ClosureTestCase.php
 {
     public function testRejectsInactiveCounter(): void
     {
-        $rule = new CounterMustBeActive(/* constructed against a Fake read facade returning an inactive aggregate record */);
+        $rule = $this->make(CounterMustBeActive::class, [GetCounterListHandler::class => $this->readsReturn(['items' => [/* an inactive counter row */], 'total' => 1])]);
 
         $result = $rule(new UpdateCounter(identifier: 'M-1'));
 
-        self::assertFalse($result->passed());
-        self::assertSame('counter.must_be_active', $result->messageKey());
+        self::assertFalse($result->passed);                                // RuleResult carries public readonly properties
+        self::assertSame('counter.must_be_active', $result->messageKey);
     }
 }
 ```
 
-In a Jardis-generated domain the Rule test extends the generated `tests/Unit/Closure/{Domain}/ClosureTestCase.php` instead of `TestCase` directly: `$rule = $this->make(CounterMustBeActive::class, [GetCounterListHandler::class => $this->readsReturn(['items' => [...], 'total' => 1])])`; use `usesReturn()` for `uses` stand-ins; write one test case per `examples[]` entry.
+A generated Rule declares no constructor, so the test never builds it with `new` and a fake: it extends the generated `ClosureTestCase` instead of `TestCase` directly, `make()` builds the Rule with its stand-ins, `readsReturn()` stands in for a read, `usesReturn()` for a `uses` entry; write one test case per `examples[]` entry.
 
-This Unit test does **not** replace an integration test — PRD A16 makes both mandatory. The **endpoint integration test** proves the whole chain: the Guard closure actually runs (short-circuit on the first rejection — assert an invocation count on a second Rule in the chain to prove it), a rejection surfaces as `RuleViolation` (422) with `data` = `{"@type":"ruleViolation","rule","messageKey","context"}` (assert the catalog `messageKey` here — the Unit test sees the body's `reject()` key, the endpoint answers with the catalog key when declared, so declare the same key in both), and — if the Command is exposed — that the exposed BC-facade method runs through the identical chain as the internal call. Never assert only the Unit test and call the Rule "covered" — the Guard wiring, the 422-response shape, and the exposed-door path are exactly what an isolated predicate test cannot see.
+This Unit test does **not** replace an integration test — both are mandatory. The **endpoint integration test** proves the whole chain: the Guard closure actually runs (short-circuit on the first rejection — assert an invocation count on a second Rule in the chain to prove it), a rejection surfaces as `RuleViolation` (422) with `data` = `{"@type":"ruleViolation","rule","messageKey","context"}` (assert the catalog `messageKey` here — the Unit test sees the body's `reject()` key, the endpoint answers with the catalog key when declared, so declare the same key in both), and — if the Command is exposed — that the exposed BC-facade method runs through the identical chain as the internal call. Never assert only the Unit test and call the Rule "covered" — the Guard wiring, the 422-response shape, and the exposed-door path are exactly what an isolated predicate test cannot see.
 
 **Do not:**
 
-- Mock `DomainKernelInterface` / the generated `{Domain}Context` (the former `BoundedContext`, now generated per domain — see `core-kernel`/`generated-code-extend`) — too broad, leaks everywhere.
+- Mock `DomainKernelInterface` / the generated `{Domain}Context` (the former `BoundedContext`, now generated per domain — see `core-kernel`/`generated-code-extend`, Jardis projects only) — too broad, leaks everywhere.
 - Assert a command's events via a dispatcher listener — the handler collects, it doesn't dispatch; assert `$response->getEvents(EventScope::…)` instead. (`EventCollector` is for listener / transport-side tests only.)
 - Hand-edit `tests/Support/{Domain}/{Domain}TestCase.php`, `Test{Domain}.php` or `{BC}WriteHarness.php` — every build overwrites them. Put Fakes and helpers in their own files next to them.
 - Test generated files directly — they are covered at the generator level. Test your overrides, custom Commands/Queries, Services.
-- Test only a Rule's pure predicate and call it done — the endpoint-chain integration test (Guard wiring, 422 shape, short-circuit) is a separate, mandatory assertion surface (A16).
+- Test only a Rule's pure predicate and call it done — the endpoint-chain integration test (Guard wiring, 422 shape, short-circuit) is a separate, mandatory assertion surface.

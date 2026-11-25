@@ -2,7 +2,7 @@
 
 **Rules-Layer — full MCP parity:** a BC's `Closures.json`
 (the Rule catalog + per-Command bindings that guard writes between the aggregate and its process,
-`generated-code-extend`) is fully MCP-reachable, same as everything above — no browser-only
+`generated-code-extend`) is fully MCP-reachable, same as every step of the workflow (the `workflow-*` leaves) — no browser-only
 capability here. Child commands included: every `erm: many` child's `Add{Singular}` / `Update{Singular}` /
 `Remove{Singular}` appears in the `catalog` Resource (with `httpMethod` and `target`) and is opened through
 its stance row in `Doors.json` (`save_doors`) exactly like a root command — no browser-only step. `save_closures` answers lean: findings and `newMtime`, not the saved catalog/bindings — pass `echo: true` to get

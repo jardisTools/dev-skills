@@ -1,6 +1,6 @@
 ---
 name: design-draft-schema
-description: Design the CONTENT of a Schema.json for the Jardis Designer — from a plain-text domain idea, draft tables (snake_case plural), columns with realistic types, primary keys, indexes (primary/unique/index), optional foreign keys. The finished draft enters the workspace through an authoring door — MCP `import_schema` or the schema import in `jardis ui` — never as a file placed into the workspace by hand. Output matches the DB-export format the Designer's importer parses.
+description: Drafts the content of a Jardis Schema.json (snake_case tables, typed columns, primary and foreign keys, indexes) from a plain-text domain idea, for import through MCP import_schema or the jardis ui schema import, never as a file placed by hand.
 zone: pre
 persona: A
 profile: jardis
@@ -11,7 +11,7 @@ next: [generated-code-extend]
 ## Driving rules
 
 1. Ask for the domain idea (one paragraph). If vague: **one** sharp clarifying question, not an interrogation.
-2. Tables = plural snake_case. Implicit collections → own tables.
+2. Tables = plural snake_case. Implicit collections → own tables. Column names: the name conventions that attach a validator without code match the lower-cased name `email` / `*_email`, `url` / `*_url` / `website`, `phone` / `phone_*` / `*_phone`, `uuid` / `*_uuid`, `iban` / `*_iban`; a camelCase name such as `contactEmail` attaches none (`design-model-capabilities`, `reference/schema.md`).
 3. Every table: PK (`int` autoincrement default; UUID only if domain dictates). Business identifier → `unique` index. Lookup/filter column → non-unique `index`.
 4. FKs **optional** — only include when the relation is unambiguous. Otherwise `foreignKeys: {}` and let the Designer model relations interactively.
 5. Output = one complete `Schema.json` block + explicit assumption list. This block is a **draft handed to an authoring door**, not a file you write into the workspace yourself — Jardis definition files are maintained exclusively by the app.
@@ -35,11 +35,11 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
         {
           "name": "<column_name>",
           "type": "<SQL type, see catalogue>",
-          "length": "<optional integer, for varchar/char>",
+          "length": 255,
           "enumValues": ["<only for type enum>"],
-          "nullable": "<true | false>",
-          "primary": "<true | false>",
-          "autoincrement": "<true | false>",
+          "nullable": false,
+          "primary": false,
+          "autoincrement": false,
           "auto": "<optional: created | modified — only on datetime/timestamp>"
         }
       ],
@@ -62,6 +62,7 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
 }
 ```
 
+**Value types:** `length` is a JSON integer (only for `varchar`/`char`), `nullable`, `primary` and `autoincrement` are JSON booleans — never strings; the numbers and booleans in the template are examples.
 **Column required:** `name`, `type`, `nullable`. `length` required for `varchar`. `enumValues` (non-empty, no duplicates) for `type: enum`. `primary`/`autoincrement` only on PK. **Never write `phpType`** — the importer rejects a schema carrying it (hard load error, rule CUT3); the PHP type is derived from `type`.
 **`auto` marker (rule S23, Blocker):** optional, value `created` or `modified`, only on a `datetime`/`timestamp` column, each value at most once per table, never on a primary key, a unique column or an FK. The generated persist then stamps the column server-side in UTC (`created` on insert; `modified` on insert and on every change, also a child change of the root) — the column is name-independent and absent from the Command DTO. Mark the creation and last-change columns instead of relying on a database default; a datetime column named `updated_at` without the marker draws a suggestion.
 **Index required:** `name`, `columns`, `type`. PK index = `PRIMARY`.
@@ -69,7 +70,7 @@ The table name is the map key (no separate `name` field). `foreignKeys` is an em
 
 ### 2. Types
 
-The `type` vocabulary is closed (`column_type_vocabulary.go`); a token outside it is a warning (S22) and would render as PHP `mixed`:
+The `type` vocabulary is closed (the table below is the whole list); a token outside it is a warning (S22) and would render as PHP `mixed`:
 
 | Family | Allowed `type` tokens | Notes |
 |---|---|---|
