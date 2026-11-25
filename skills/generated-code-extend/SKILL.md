@@ -43,7 +43,10 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 | Question the leaf answers | Leaf |
 |---|---|
 | I need the DDD stance, the hermetic output layout (directory tree), the route convention, exposing/creating commands, the notation, the vocabulary glossary or the Context-family seam (§0, §1) | reference/ddd-positioning-and-layout.md |
-| I need the facade mechanics (aggregate/process/BC facade), the file modes (ForceOverwrite, CreateIfNotExists, DeveloperOwned), the read base, the data block, tenant/user markers or the bulk-read recipe (§1, continued) | reference/facades-and-file-modes.md |
+| I need the table of generated classes with path and file mode (Domain/BC/aggregate/process facades, FieldMap, Rule stub, Guard, Process DTO, orchestrator, node, Service stub), the `protected` seam, or the AI path of a Rule with an existing-data check (§1, continued) | reference/generated-class-table.md |
+| I ask which file mode applies and what a rebuild keeps: ForceOverwrite, CreateIfNotExists, `@node-id` body-preserve, the Rule-stub merge, the generated test scaffold (§1, continued) | reference/file-modes.md |
+| I read an aggregate: the aggregate facade, the read base (`get<Agg>ById`, `ByIds`, `By<Key>`), the data block in PHP, per-record access, tenant/user markers, the bulk-read recipe (§1, continued) | reference/read-base-data-block-and-markers.md |
+| I need the mechanics of the process facade (`{BC}Process`, outcomes, process stance) or the BC facade (caches nothing) (§1, continued) | reference/process-and-bc-facade.md |
 | I want to customize generated code: where a change goes, the decision tree "I need to…", the new-code locations, or the implementation levels (§2, §4, §5, §6) | reference/customization-and-places.md |
 | I construct or read a `DomainResponse`: status codes, the Rules-Layer status staircase, `addError`, the result helpers (§7) | reference/domain-response.md |
 | I look for the Jardis package skill that covers a runtime tool (cache, mail, queue, HTTP, DB) or the sibling skills (§8, §9) | reference/toolbox-and-anchors.md |
@@ -53,7 +56,7 @@ Navigation: one leaf per topic under `reference/`. Pick the row whose question f
 ### Zitate §N (citation targets)
 
 - §0 → „0. DDD positioning“ (ddd-positioning-and-layout)
-- §1 → „1. Generated baseline — Platform-free hermetic layout“ (ddd-positioning-and-layout, facades-and-file-modes)
+- §1 → „1. Generated baseline — Platform-free hermetic layout“ (ddd-positioning-and-layout, generated-class-table, file-modes, read-base-data-block-and-markers, process-and-bc-facade)
 - §2 → „2. Where customization goes — the aggregate has no edit slot“ (customization-and-places)
 - §3 → „3. Prohibitions (V1–V13)“ (this index)
 - §4 → „4. Decision tree — "I need to…"“ (customization-and-places)
