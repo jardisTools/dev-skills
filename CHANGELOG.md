@@ -4,6 +4,22 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.52.0] - 2026-11-25
+
+### Added
+- `validate-skills` check `size`: no line longer than 2,000 characters in `SKILL.md` and reference leaves; `SKILL.md` at most 12,288 bytes once it has reference leaves (30,720 without); each leaf at most 30,720 bytes.
+
+### Changed
+- `design-model-capabilities`, `generated-code-wire-transport` and `generated-code-workflow-api` are split into an index plus flat `reference/` leaves; three oversized leaves of `generated-code-extend` and `design-headless-mcp` are split by topic. Content is unchanged by the splits. After a context compaction an assistant keeps only the first 5,000 tokens of a skill, so the tail of the former single files was lost.
+- Router and skills agree: no interim code outside the stub bodies. The edit ban names the places that survive a build; Rule and Event node bodies and `App/middleware.php` are regenerated and are not hand-code places.
+- `foundation-patterns` no longer recommends value-object classes or a decorator via `v{N}` for generated code.
+- Process right strings state that every segment starts lower-case (`sales.process:placeOrder`); child commands are `Add{Singular}` / `Remove{Singular}`.
+- Package versions, `.env` location, build command and `process-close` behaviour follow the builder and package sources; examples carry their `use` lines; a complete query example with `like`, `match` and `param`.
+- No line exceeds 2,000 characters; six descriptions tightened; German remnants translated; the git skills state up front that they run only on explicit user request.
+
+### Removed
+- Three empty `archiv.md` leaves and references to files that are not shipped.
+
 ## [1.51.0] - 2026-11-25
 
 ### Changed
