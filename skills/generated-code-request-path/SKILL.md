@@ -55,7 +55,7 @@ Reach for the means in this order and stop at the first that carries the need:
 Ask both before every node, before saving the process.
 
 1. **Does a station already do it?** If the route guard, the process door, a query or the command capsule covers it, there is no node (compare the reliance list).
-2. **Can the model say it?** If a means higher in the order carries it, use that; if none does, report a missing capability and build no node around the gap outside the hand-code places of the table (`generated-code-extend`, section 10). When you work on Jardis itself, the gap is closed in the package or the generator. Hand code at a place of the table that covers such a gap once is counted by its kind; the same kind a second time is no single case: park the affected place, report the missing capability and keep building everything that does not depend on it.
+2. **Can the model say it?** If a means higher in the order carries it, use that; if none does, the hand-code places of the table come next (`generated-code-extend`, section 10). When you work on Jardis itself, a gap is closed in the package or the generator. When you work on an app and the frame is not enough, write your own code: it follows DDD and the architecture of the application (no infrastructure in the domain; data access through a Query and a Repository, never SQL directly in the code; files where DDD places them) and never changes a generated file.
 
 ## Signs of a superfluous node
 

@@ -54,8 +54,8 @@ final class RenderCatalogTable
                 . 'and presuppose a Jardis domain.',
             '',
             'Packages are consumed from Packagist only: they are not forked, vendored or patched. '
-                . 'A capability a package lacks is an issue in that package\'s repository, '
-                . 'not project code that imitates the package.',
+                . 'A capability a package lacks is own code beside the package in an app, '
+                . 'never a patched copy of the package.',
         );
 
         return implode("\n", $lines) . "\n";
