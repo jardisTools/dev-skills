@@ -7,13 +7,13 @@ A column the process derives (a sum, a counter) is declared `computed: ["net_tot
 ```php
 // {BC}/Process/{Name}/Command/Handler/Action/RecalculateTotals.php — node body is yours
 $response = $this->handle(Offer::class)->setOfferComputed(     // the aggregate WRITE facade, family-internal
-    new SetOfferComputed(                                       // {Domain}\{BC}\Model\Offer\Command\SetOfferComputed
+    $this->handle(SetOfferComputed::class,                      // {Domain}\{BC}\Model\Offer\Command\SetOfferComputed
         offerIdentifier: $offerIdentifier,
         netTotal: $net,                                         // only the computed columns
         grossTotal: $gross,
     )
 );
-return (new MapResponse())($response);   // 2xx → ok(reference payload), 4xx (404 missing aggregate, 409 stale write) → reject, the run ends
+return ($this->handle(MapResponse::class))($response);   // 2xx → ok(reference payload), 4xx (404 missing aggregate, 409 stale write) → reject, the run ends
 ```
 
 **Rules:** the command is applied through the position's regular aggregate method (root `set{Agg}`, `erm: one` `set{Sub}`, `erm: many` `update{Kind}`) — persist, change tracking and the stale-write 409 are exactly those of the regular write; a missing aggregate answers 404 like every loading command. Like every command it raises **exactly one event** (one event per command): its own `{Agg}ComputedUpdated` at the root, `{Agg}{Fragment}ComputedUpdated` below it — never the event of the position's regular Update/Set — collected by the handler (`EventScope::Internal`, not dispatched; the caller publishes after commit), registered in `{Agg}Events` and `{Agg}EventRouter`, carrying the entity's public fields after the write (children: identifier plus the computed fields). A `computed` column must be nullable or carry a DB default (`V-CALC-1`) — after Create it holds that null/default until this command writes it. A process **input** field named like a computed property is warned (`V-CALC-2`) and a Closure example using `command.<computed>` too (`V-CALC-3`): take the inputs the value is computed FROM, then write the result with this command. A `erm: one` entity that does not exist yet is created by the Set path with the computed values only — write the entity first. In the node catalogue the command is marked `internal` (no HTTP verb); it is a Command for the process classification (loads the aggregate, validated, identity chain).

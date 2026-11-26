@@ -116,7 +116,7 @@ tests/Support/                ← Test fakes (NOT in src/)
 | Handlers scattered in feature dirs | Centralise under `Handler/` |
 | VOs/Enums **scattered** in feature dirs | Centralise under `Data/` (or a cohesive sub-package like `Config/`) |
 | Test fakes in `src/` | Move to `tests/Support/` |
-| `new Handler()` direct call | Package building: bind via `(new Handler())->__invoke(...)`. In a `handle()` class of an app: no `new`, call through `->handle()` |
+| `new Handler()` direct call | Package building: bind via `(new Handler())->__invoke(...)`. In a `handle()` class of an app: `new` only for exceptions and built-in PHP value classes (V2 in `generated-code-extend`), everything else through `->handle()` |
 
 ### 6. Per-class checklist
 
