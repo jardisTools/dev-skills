@@ -4,6 +4,17 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.52.2] - 2026-11-26
+
+### Changed
+- The way in every Jardis project is model, generate, program; there is no other. This replaces the v1.52.1 rule that an app may write own code beyond the stubs: hand code stands only at the stub places and `App/**`, generated code is never changed, and "no helper or base classes" is back. What fits no stub is added to the model first, then the project is rebuilt and the new stubs are filled.
+- If nothing carries a need after that, the assistant stops and tells the human in the project what is missing and builds nothing of its own beside it. If the human explicitly instructs another way, the assistant follows the instruction; the responsibility is theirs. The rule is the same for app projects and for projects of Jardis itself; only when working on Jardis itself is the missing capability additionally built in the package or generator. There is still no duty to report a gap as an issue.
+- `generated-code-extend` section 10 states what a build deletes as a warning, not as an invitation to create own directories. Updated in the router and in `start-orientation`, `generated-code-extend`, `generated-code-request-path`, `foundation-working-principles`, `design-model-capabilities`, `process-write-prd` and `packages-find-existing`.
+
+### Added
+- The question of the cut before a gap is declared (which building block carries it: a bounded context of its own, aggregate, process, query, closure) in `design-model-capabilities` and `generated-code-extend`.
+- Decision-tree rows in `generated-code-extend` and capability-table rows in `design-model-capabilities` for key figures (a bounded context of its own), a file format as the answer (delivery code in `App/**`) and a third-party library or a system without HTTP (Domain Service, library object from the kernel container).
+
 ## [1.52.1] - 2026-11-26
 
 ### Fixed

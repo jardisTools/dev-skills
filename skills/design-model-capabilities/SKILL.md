@@ -20,6 +20,7 @@ Capability map of the Jardis modelling tools for the AI that decides WHAT is mod
 1. Whatever is built on Jardis must know and use the capabilities of EVERY Jardis tool completely, for every model element. Programming what a setting already generates is a defect, not a shortcut.
 2. Order of means: declarative tools first (Process, Query, Aggregate including its schema-column settings and value lists, field map, strategic layer) → a Closure only where a rule crosses an aggregate boundary → hand code only in the hand-code places (§2.9; table in `generated-code-extend` §10).
 3. This knowledge is required when the interview is held and the PRD is written, not only at build time. Every option, concept line and PRD decision names the carrying capability.
+4. "Jardis cannot do this" is a question about the cut before it is a finding about Jardis. Before a requirement is called a gap, ask which building block carries it: a bounded context of its own, an aggregate, a process, a query, a closure. A requirement that fits no place in the bounded context at hand usually belongs to another bounded context (examples: the last three rows of §3).
 
 Doors: every write goes through a door (MCP tool or the matching UI surface). Hand-edited definition files are not a supported entry. "MCP" columns below name the tool or resource; "UI" names the surface.
 
@@ -53,7 +54,7 @@ Where the hand code sits (full table: `generated-code-extend` §10):
 App/                                             delivery only, no domain logic (App/middleware.php is regenerated)
 ```
 
-A capability that is missing: build it in the package or generator (Jardis developer), or write own code that follows DDD and the architecture of the application and never changes generated code (app developer; `generated-code-extend` section 10).
+A capability that is missing is not replaced by hand code: extend the model and rebuild; if nothing carries it, stop and tell the human what is missing. When working on Jardis itself, additionally build it in the package or generator. If the human explicitly instructs another way, follow it; the responsibility is theirs.
 
 ### 3. What Jardis does NOT have — do not plan for it
 
@@ -69,6 +70,9 @@ A capability that is missing: build it in the package or generator (Jardis devel
 | Role pairs / inverse roles in value lists | one list; the inverse label is a frontend label |
 | Locking between rule check and command apply | database constraint for hard invariants |
 | A second target language | PHP only |
+| Sums, averages or grouping in a query (key figures, reports, dashboards); a query answers a paginated list of its root rows | a bounded context of its own that owns the figures as state: a process updates them when the source BC announces an event, a process fills or recomputes them by reading the source BC through its doors; the dashboard is a plain query on that BC (`generated-code-extend` §4) |
+| A file format as the answer (PDF, spreadsheet, CSV) | presentation, not domain: the process or query gives the data, delivery code in `App/**` renders the file |
+| A system reached without HTTP, or a third-party PHP library inside a use case (SFTP, LDAP) | a Domain Service (closure kind `service`) called from a node; its body takes the library object from the kernel container, never `new` (`generated-code-extend` §4) |
 
 ### 4. Mandatory artefact form
 
