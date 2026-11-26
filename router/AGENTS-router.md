@@ -42,9 +42,9 @@ Merge and push are gates of the human: the session never merges or pushes on its
 <!-- profile:jardis -->
 ## Jardis projects
 
-Start with `start-orientation`: it walks packages, schema, design and code and names the skill for every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
+Start with `start-orientation`: it routes every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
 
-No `vendor/` patch, no edit of generated files; hand code first in stub bodies and `App/**`; beyond that, own code that follows DDD.
+Model, generate, program: no other way. No `vendor/` patch; hand code only in stubs and `App/**`. No stub fits: extend the model and rebuild; if nothing carries it, stop, tell the human, build nothing of your own.
 <!-- /profile:jardis -->
 
 <!-- profile:core -->
