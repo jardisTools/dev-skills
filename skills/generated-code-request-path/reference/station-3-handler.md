@@ -24,7 +24,7 @@ The process door `{Name}Handler`: second check up front, resources, transaction,
 - Catch a throwable to build an answer, log a failure, or map an exception to a status. A 4xx is `NodeResult::reject(...)`, a technical error is thrown.
 - Check a field of the input in a body: type, value list, presence, range, length or format. A form or type error is 400 before the first node; a command field is checked by that command's validator (up front with `accepts:`, otherwise at the capsule).
 - Express a field-content check as a node 400 (own `reason`, own `messageKey`); outside the closed vocabulary it has no form.
-- Create a validator, an entity, a DTO or a handler of the project namespace with `new` in a body; `new` bypasses class versioning and stand-ins. Obtain it through the kernel seam (`$this->handle(...)`); only PHP built-ins and package data classes are created with `new`.
+- Create a validator, an entity, a DTO, a handler, a package object or a third-party library object with `new` in a body; `new` bypasses class versioning and stand-ins. Obtain it through the kernel seam (`$this->handle(...)`); only exceptions and built-in PHP value classes (`DateTimeImmutable`) are created with `new` (V2, `generated-code-extend`).
 - Write graph logic (loops, branching, ordering of nodes) in a handler. Order and branching are modelled in the process graph; a body only returns its own result (`ok`, `route`, `reject`).
 - Add a rights or session check; station 1 is done.
 

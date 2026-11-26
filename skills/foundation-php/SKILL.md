@@ -75,7 +75,7 @@ final class Filesystem
 }
 ```
 
-- Store the closure once (`(new Handler())->__invoke(...)`); never call `new Handler()` inline in a method body. This is the form of package building. In a class that owns `handle()` (a Jardis app: generated or hand-written) there is no `new` on a class of the project namespace; a package closure is called through `->handle()` too (decision 2026-10-19).
+- Store the closure once (`(new Handler())->__invoke(...)`); never call `new Handler()` inline in a method body. This is the form of package building. In a class that owns `handle()` (a Jardis app: generated or hand-written) `new` creates only exceptions and built-in PHP value classes; every project class, package object (a package closure too) and third-party library comes through `->handle()`, which is V2 for a stub body in `generated-code-extend` (decision 2026-10-19).
 - A closure may wrap another closure (decorator): an authorisation closure takes the permission check as a closure argument, a retry closure wraps the transport closure.
 - When an interface prescribes several public methods, the orchestrator implements each one by delegating to its own closure.
 
@@ -117,7 +117,7 @@ tests/
 | Handlers scattered in feature directories | Central `Handler/` with category subdirectories |
 | Value objects or enums scattered in feature directories | Central `Data/` or a cohesive `Config/` |
 | Test fakes in `src/` | Move to `tests/Support/` |
-| `new Handler()` called inline | Package building: bind `(new Handler())->__invoke(...)` once. In a `handle()` class of an app: no `new`, call through `->handle()` |
+| `new Handler()` called inline | Package building: bind `(new Handler())->__invoke(...)` once. In a `handle()` class of an app: `new` only for exceptions and built-in PHP value classes (V2), everything else through `->handle()` |
 
 ### 6. Pattern syntax
 

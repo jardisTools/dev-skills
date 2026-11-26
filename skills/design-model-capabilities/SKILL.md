@@ -54,7 +54,7 @@ Where the hand code sits (full table: `generated-code-extend` §10):
 App/                                             delivery only, no domain logic (App/middleware.php is regenerated)
 ```
 
-A capability that is missing is not replaced by hand code: extend the model and rebuild; if nothing carries it, stop and tell the human what is missing. When working on Jardis itself, additionally build it in the package or generator. If the human explicitly instructs another way, follow it; the responsibility is theirs.
+A capability that is missing is not replaced by hand code: extend the model and rebuild; if nothing carries it, stop and tell the human what is missing. When working on Jardis itself, additionally build it in the package or generator. If the human explicitly instructs another way, follow it (the responsibility is theirs), after saying once that it departs from the model way and noting the departure in the code or the project.
 
 ### 3. What Jardis does NOT have — do not plan for it
 

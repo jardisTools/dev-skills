@@ -4,6 +4,16 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.52.3] - 2026-11-26
+
+### Changed
+- When the human explicitly instructs another way than model, generate, program, the assistant still follows, but first says once, clearly, that the way departs from the model way, and notes the departure in the code or in the project so that it can be found later. The same in every project, also in projects of Jardis itself. Full rule in `generated-code-extend` (`reference/ablage.md`); short forms in `foundation-working-principles`, `design-model-capabilities` and `start-orientation`.
+- One rule for `new` in a stub body: only exceptions and built-in PHP value classes (`DateTimeImmutable`, `DateTime`); every project class, package object and third-party library comes through `handle()` (V2 in `generated-code-extend`). `generated-code-request-path` (station 3), `foundation-php` and `foundation-architecture` now say the same; the examples for a call node, a read node, an External-Call Service, a computed-field node and the routing of a sub-process answer use `handle()` instead of `new`.
+- A foreign bounded context of the same domain is reached only from a Domain Service (the Cross-BC call), never directly from a node body; the node calls the Service through `handle()`. Changed in V6 of `generated-code-extend` and in the troubleshooting table of `generated-code-recipes`.
+
+### Added
+- No infrastructure in the domain: a stub reaches technology only through the kernel, the packages or a Domain Service. One sentence, in `generated-code-extend` section 10 (`reference/ablage.md`).
+
 ## [1.52.2] - 2026-11-26
 
 ### Changed
