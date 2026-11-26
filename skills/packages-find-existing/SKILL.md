@@ -42,4 +42,4 @@ Recommend `composer require <package>` — do not install automatically. The ful
 
 Every `jardissupport/*` and `jardisadapter/*` package installs on its own in any PHP project: they depend only on each other (`contracts`, `dotenv`, `dbquery`), and no package requires `jardiscore/*`. `jardiscore/kernel` and `jardiscore/app` are the application layer for generated domains and presuppose a Jardis domain.
 
-Packages are consumed from Packagist only: they are not forked, vendored or patched. A capability a package lacks is an issue in that package's repository, not project code that imitates the package.
+Packages are consumed from Packagist only: they are not forked, vendored or patched. A capability a package lacks is own code beside the package in an app, never a patched copy of the package.

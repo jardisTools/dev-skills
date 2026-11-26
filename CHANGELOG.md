@@ -4,6 +4,12 @@ All notable changes to `jardis/dev-skills` are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.52.1] - 2026-11-26
+
+### Fixed
+- App development is not restricted to the stub places: use the generated frame, the stubs and the packages first; when that is not enough, write own code that follows DDD and the architecture of the application (no infrastructure in the domain, data access through a Query and a Repository, never SQL directly in the code) and never changes a generated file. The duty to report a gap as an issue and to wait for its delivery is gone from the router and from `start-orientation`, `generated-code-extend`, `generated-code-request-path`, `foundation-working-principles`, `design-model-capabilities`, `process-write-prd` and `packages-find-existing`.
+- `generated-code-extend` section 10 names where own files survive a build and where a build or a rename removes them.
+
 ## [1.52.0] - 2026-11-25
 
 ### Added

@@ -44,7 +44,7 @@ Merge and push are gates of the human: the session never merges or pushes on its
 
 Start with `start-orientation`: it walks packages, schema, design and code and names the skill for every question. Before hand-building a reusable component, check `packages-find-existing`. Rules: `foundation-architecture`, `foundation-patterns`, `foundation-testing`, `foundation-php`, `foundation-frontend-review`.
 
-Packages and generator are immutable, no `vendor/` patch; hand code only in stub bodies and `App/**` except `middleware.php`; report gaps, no interim code.
+No `vendor/` patch, no edit of generated files; hand code first in stub bodies and `App/**`; beyond that, own code that follows DDD.
 <!-- /profile:jardis -->
 
 <!-- profile:core -->
