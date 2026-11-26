@@ -53,7 +53,7 @@ Where the hand code sits (full table: `generated-code-extend` §10):
 App/                                             delivery only, no domain logic (App/middleware.php is regenerated)
 ```
 
-A capability that is missing is not replaced by hand code: report it (app developer) or build it in the package or generator (Jardis developer).
+A capability that is missing: build it in the package or generator (Jardis developer), or write own code that follows DDD and the architecture of the application and never changes generated code (app developer; `generated-code-extend` section 10).
 
 ### 3. What Jardis does NOT have — do not plan for it
 

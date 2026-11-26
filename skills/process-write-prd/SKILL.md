@@ -43,7 +43,7 @@ The solution part has this format:
 - **Changed:** what existing thing is altered
 ```
 
-Describe the solution in building blocks of the model: Aggregate, Process, Query, Rule, Value list and the like. Every line under `New` and `Changed` answers the check question "can the model express this?". What the model does not carry is a Jardis gap: it is written as a question or a report (a missing capability is built in the package or generator, or reported as an issue), not as a hand-code item and not as a workaround. Hand code exists only in the places of `generated-code-extend` section 10 (Jardis projects only) and uses Jardis artefacts only.
+Describe the solution in building blocks of the model: Aggregate, Process, Query, Rule, Value list and the like. Every line under `New` and `Changed` answers the check question "can the model express this?". What the model does not carry is named as such: when working on Jardis itself it is a gap, built in the package or generator; in an app it is an own-code item that follows DDD and the architecture of the application and never changes generated code. Hand code goes first into the places of `generated-code-extend` section 10 (Jardis projects only), which also says where own files survive a build.
 
 The decisions part has this format, one block per decision:
 
