@@ -63,12 +63,12 @@ final class SendInvoiceToLedger extends ShopContext
 
         try {
             $reply = $http->post(self::URL, ['invoiceNumber' => $cmd->invoiceNumber, 'amount' => $cmd->amount]);
-            $answer = (new DecodeAnswer())((string) $reply->getBody(), $reply->getStatusCode());
+            $answer = ($this->handle(DecodeAnswer::class))((string) $reply->getBody(), $reply->getStatusCode());
         } catch (ClientExceptionInterface | NoJardisAnswerException) {
             return NodeResult::route(Route::OnFalse);
         }
 
-        return (new MapExternalResponse())($answer);
+        return ($this->handle(MapExternalResponse::class))($answer);
     }
 }
 ```

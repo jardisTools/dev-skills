@@ -1,6 +1,6 @@
 ### 5. Node kinds
 
-**Call node, aggregate command.** `$this->handle(Loan::class)->createLoan(new CommandLoan(...))` returns a `DomainResponseInterface`; `(new MapResponseInto())($response, CreateLoanResponse::class)` maps it: 2xx becomes `ok(<typed object>)` (the `{Command}Response` the getter of this node returns), 4xx a `reject` with the callee's plain context, every other status throws. `MapResponse` is the same mapping without the typed object (`ok(array)`).
+**Call node, aggregate command.** `$this->handle(Loan::class)->createLoan($this->handle(CommandLoan::class, …))` returns a `DomainResponseInterface`; `(new MapResponseInto())($response, CreateLoanResponse::class)` maps it: 2xx becomes `ok(<typed object>)` (the `{Command}Response` the getter of this node returns), 4xx a `reject` with the callee's plain context, every other status throws. `MapResponse` is the same mapping without the typed object (`ok(array)`).
 
 **Read node, one aggregate by its key.** A node whose task is to fetch an aggregate of the own BC, with the key at hand (process input or an earlier answer), reads the read base and not a declared query: the point read answers the whole aggregate with its children, and `MapResponseInto` hands it on as the `{Agg}Response` the getter of this node returns. A key without a record is a success with empty data; the 404 is the node's own (declared in `rejects`). Model: `reads: [{query: loanByLoanNumber}]`, `gives: {kind: aggregate, aggregate: Loan}`. A tenant-marked aggregate takes `tenant: $ctx->input()->tenant` as the first argument of the query class.
 
@@ -14,7 +14,7 @@ if ($response->isSuccess() && $response->getData() === []) {
     return NodeResult::reject(ResponseStatus::NotFound, 'lending.loan.notFound', ['loanNumber' => $loanNumber]);
 }
 
-return (new MapResponseInto())($response, LoanResponse::class);
+return ($this->handle(MapResponseInto::class))($response, LoanResponse::class);
 ```
 
 A declared query is the wrong means here. It is a paginated list of flat rows of its declared columns and never fills an aggregate, so `->first()` of it is a row: no children, not the type the getter returns. A query leads to an aggregate only when the key is not known: query, key of the row, read base.
